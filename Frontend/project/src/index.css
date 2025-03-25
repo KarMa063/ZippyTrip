@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .hover-text {
+    @apply transition-all duration-200 hover:text-blue-600 hover:scale-105;
+  }
+
+  .nav-link {
+    @apply transition-all duration-200 hover:text-blue-600 hover:-translate-y-0.5;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300;
+  }
+
+  .hover-glow:hover {
+    @apply scale-105;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+  }
+}
+
+.carousel-slide {
+  @apply transition-opacity duration-1000 ease-in-out;
+}
