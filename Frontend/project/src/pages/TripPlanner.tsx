@@ -1,4 +1,3 @@
-import React from 'react';
 import { Compass, Map, Heart, Calendar, Clock, Sun } from 'lucide-react';
 
 const categories = [

@@ -156,7 +156,7 @@ function Preferences() {
               <h2 className="text-2xl font-bold text-white">Travel Time</h2>
             </div>
             <p className="text-gray-300 mb-4 text-base">
-              When do you prefer to travel?
+              When do you like to travel?
             </p>
             <div className="grid grid-cols-1 gap-2">
               {['Morning', 'Afternoon', 'Evening', 'Night'].map((time) => (
