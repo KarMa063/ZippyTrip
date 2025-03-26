@@ -51,7 +51,7 @@ const Navigation: React.FC = () => {
             </button>
             <div className="flex items-center space-x-2 border-2 border-blue-600 rounded-full px-4 py-1 hover:bg-blue-50 transition-colors">
               <User className="h-5 w-5 text-blue-600" />
-              <span className="text-blue-600 font-medium hover-text">Profile</span>
+              <span className="text-blue-600 font-medium hover-text">User</span>
             </div>
           </div>
         </div>
