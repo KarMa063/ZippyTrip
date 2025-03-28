@@ -56,7 +56,8 @@ export default function Landing() {
             </h1>
             <p className="text-xl text-gray-200 mb-8">
               Join ZippyTrip to discover amazing destinations, plan your perfect
-              trips, and create unforgettable memories.
+              trips, and Make moments that last a lifetime.
+              
             </p>
             <button
               onClick={() => navigate('/auth?mode=signup')}
