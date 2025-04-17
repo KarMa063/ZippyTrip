@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../gcomponents/button";
 import { Card, CardContent } from "../gcomponents/card";
 import { Input } from "../gcomponents/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../gcomponents/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,7 +33,6 @@ type Property = {
 const GProperties = () => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
-  const [view, setView] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -63,9 +61,9 @@ const GProperties = () => {
             email: "everest@zippytrip.com",
             images: [guesthouse2],
             rooms: 3,
-          }    
+          },
         ];
-        
+
         localStorage.setItem("properties", JSON.stringify(dummy));
         setProperties(dummy);
       }
@@ -73,8 +71,6 @@ const GProperties = () => {
       console.error("Failed to load properties:", error);
     }
   }, []);
-  
-
 
   const saveToStorage = (updated: Property[]) => {
     localStorage.setItem("properties", JSON.stringify(updated));
@@ -111,12 +107,6 @@ const GProperties = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Tabs value={view} onValueChange={(val) => setView(val as "grid" | "list")}>
-            <TabsList className="grid grid-cols-2">
-              <TabsTrigger value="grid">Grid</TabsTrigger>
-              <TabsTrigger value="list">List</TabsTrigger>
-            </TabsList>
-          </Tabs>
           <Button onClick={() => navigate("/gproperties/add")}>
             <Plus className="h-4 w-4 mr-1" />
             Add Property
@@ -124,72 +114,68 @@ const GProperties = () => {
         </div>
       </div>
 
-      {/* Grid/List View */}
-      <Tabs value={view}>
-        <TabsContent value="grid">
-          {filteredProperties.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">
-              No properties found.
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredProperties.map((property) => (
-                <Card key={property.id} className="group overflow-hidden">
-                  <Link to={`/gproperties/${property.id}`}>
-                    <div className="aspect-video overflow-hidden">
-                      <img
-                        src={property.images?.[0] || placeholderImage}
-                        alt={property.name}
-                        onError={(e) => (e.currentTarget.src = placeholderImage)}
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform"
-                      />
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold text-lg">{property.name}</h3>
-                      <p className="text-sm text-muted-foreground">{property.address}</p>
-                      <div className="text-sm mt-1 text-primary font-medium">
-                        {property.rooms} {property.rooms === 1 ? "Room" : "Rooms"}
-                      </div>
-                    </CardContent>
-                  </Link>
-                  <div className="px-4 pb-3 flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/gproperties/edit/${property.id}`)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-red-500">
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Property</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{property.name}"?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteProperty(property.id)}>
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+      {/* Grid View */}
+      {filteredProperties.length === 0 ? (
+        <div className="text-center py-10 text-muted-foreground">
+          No properties found.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredProperties.map((property) => (
+            <Card key={property.id} className="group overflow-hidden">
+              <Link to={`/gproperties/${property.id}`}>
+                <div className="aspect-video overflow-hidden">
+                  <img
+                    src={property.images?.[0] || placeholderImage}
+                    alt={property.name}
+                    onError={(e) => (e.currentTarget.src = placeholderImage)}
+                    className="object-cover w-full h-full group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-lg">{property.name}</h3>
+                  <p className="text-sm text-muted-foreground">{property.address}</p>
+                  <div className="text-sm mt-1 text-primary font-medium">
+                    {property.rooms} {property.rooms === 1 ? "Room" : "Rooms"}
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                </CardContent>
+              </Link>
+              <div className="px-4 pb-3 flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(`/gproperties/edit/${property.id}`)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-red-500">
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Property</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{property.name}"?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDeleteProperty(property.id)}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
