@@ -463,8 +463,8 @@ const Schedule = () => {
         onClose={() => setIsAddModalOpen(false)} 
         onSuccess={handleScheduleAdded}
       />
-    
+    </div>
   );
-};
+}
 
 export default Schedule;
