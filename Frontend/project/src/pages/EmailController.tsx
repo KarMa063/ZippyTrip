@@ -3,19 +3,6 @@ import React from "react";
 
 emailjs.init("00yKrhJ5D0m_ow_w2");
 
-interface FlightDetails {
-    email: string;
-    from: string;
-    to: string;
-    departure: string;
-    arrival: string;
-    airline: string;
-    date: string;
-    passengerName: string;
-    seatNumber: string;
-    flightNumber: string;
-}
-
 interface BusDetails {
     email: string;
     from: string;
@@ -28,37 +15,6 @@ interface BusDetails {
     seats: string[];
     busType: string;
 }
-
-// Function to send flight booking reminder
-export const sendFlightReminder = async (details: FlightDetails) => {
-    try {
-        console.log('Sending flight reminder with details:', details);
-        
-        const response = await emailjs.send(
-            "service_529qzso",
-            "template_jj4z6fk",
-            {
-                email: details.email,
-                name: details.passengerName,
-                from: details.from,
-                to: details.to,
-                departure: details.departure,
-                arrival: details.arrival,
-                airline: details.airline,
-                date: details.date,
-                seat: details.seatNumber,
-                flight: details.flightNumber,
-                title: "Flight Booking Confirmation"
-            },
-            "00yKrhJ5D0m_ow_w2"
-        );
-        console.log('Email sent successfully:', response);
-        return response;
-    } catch (error) {
-        console.error("Error sending flight reminder:", error);
-        throw error;
-    }
-};
 
 // Function to send bus rental reminder
 export const sendBusReminder = async (details: BusDetails) => {
