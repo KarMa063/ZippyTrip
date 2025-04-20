@@ -17,9 +17,10 @@ import {
   DialogTitle,
 } from "../gcomponents/dialog";
 import { toast } from "react-hot-toast";
-import { DayPicker } from "react-day-picker";
-import 'react-day-picker/dist/style.css';
+import { DayPicker } from "react-day-picker"; // Import DayPicker
+import 'react-day-picker/dist/style.css'; // Import styles for the calendar
 
+// Mock data for bookings
 const bookings = [
   {
     id: "1",
@@ -56,33 +57,53 @@ const bookings = [
   },
 ];
 
-const GBooking = () => {
+const Bookings = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedBooking, setSelectedBooking] = useState<typeof bookings[0] | null>(null);
   const [actionDialog, setActionDialog] = useState<{ open: boolean, type: string }>({ open: false, type: '' });
-
+  
   const handleDateChange = (selectedDate: Date | undefined) => {
     setDate(selectedDate);
   };
-
+  
   const handleBookingAction = (action: string) => {
-    if (action === "cancel") {
-      toast.success(`Booking for ${selectedBooking?.guestName} has been cancelled`);
+    let message = "";
+    
+    switch (action) {
+      case "checkin":
+        message = `Check-in processed for ${selectedBooking?.guestName}`;
+        break;
+      case "checkout":
+        message = `Check-out processed for ${selectedBooking?.guestName}`;
+        break;
+      case "cancel":
+        message = `Booking for ${selectedBooking?.guestName} has been cancelled`;
+        break;
     }
+    
+    toast.success(message);
+    
     setActionDialog({ open: false, type: '' });
     setSelectedBooking(null);
   };
-
+  
+  // Function to format the date as YYYY-MM-DD
+  const formatDate = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+  
+  // Filter bookings for the selected date (if any)
   const filteredBookings = date 
     ? bookings.filter(booking => {
         const checkInDate = new Date(booking.checkIn);
         const checkOutDate = new Date(booking.checkOut);
         const selectedDate = new Date(date);
-
+        
+        // Reset time part for comparison
         checkInDate.setHours(0, 0, 0, 0);
         checkOutDate.setHours(0, 0, 0, 0);
         selectedDate.setHours(0, 0, 0, 0);
-
+        
         return selectedDate >= checkInDate && selectedDate <= checkOutDate;
       })
     : bookings;
@@ -93,29 +114,31 @@ const GBooking = () => {
         <h1 className="text-3xl font-bold tracking-tight">Bookings</h1>
         <p className="text-muted-foreground">Manage your property bookings</p>
       </div>
-
+      
       <Tabs defaultValue="calendar">
         <TabsList>
           <TabsTrigger value="calendar">Calendar View</TabsTrigger>
           <TabsTrigger value="list">List View</TabsTrigger>
         </TabsList>
-
+        
         <TabsContent value="calendar" className="space-y-4">
           <div className="grid gap-6 md:grid-cols-[320px_1fr]">
             <Card>
-              <CardContent className="p-2">
-                <DayPicker 
-                  selected={date} 
-                  onDayClick={handleDateChange}
-                  className="custom-day-picker"
-                  modifiersClassNames={{
-                    selected: "bg-primary text-primary-foreground",
-                    today: "bg-accent text-accent-foreground"
-                  }}
-                />
-              </CardContent>
-            </Card>
+          <CardContent className="p-2">
+            {/* Custom DayPicker component */}
+            <DayPicker 
+              selected={date} 
+              onDayClick={handleDateChange}
+              className="custom-day-picker"
+              modifiersClassNames={{
+                selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                today: "bg-accent text-accent-foreground"
+              }}
+            />
 
+          </CardContent>
+        </Card>
+            
             <Card>
               <CardHeader>
                 <CardTitle>
@@ -153,7 +176,27 @@ const GBooking = () => {
                           <span>Check-in: {booking.checkIn}</span>
                           <span>Check-out: {booking.checkOut}</span>
                         </div>
-                        <div className="mt-3 pt-3 border-t flex justify-end">
+                        <div className="mt-3 pt-3 border-t flex justify-end gap-2">
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setActionDialog({ open: true, type: 'checkin' });
+                            }}
+                          >
+                            Check-in
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setActionDialog({ open: true, type: 'checkout' });
+                            }}
+                          >
+                            Check-out
+                          </Button>
                           <Button 
                             variant="outline"
                             size="sm"
@@ -174,7 +217,7 @@ const GBooking = () => {
             </Card>
           </div>
         </TabsContent>
-
+        
         <TabsContent value="list">
           <Card>
             <CardHeader>
@@ -229,17 +272,39 @@ const GBooking = () => {
                           </span>
                         </td>
                         <td className="p-3">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setActionDialog({ open: true, type: 'cancel' });
-                            }}
-                          >
-                            Cancel
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedBooking(booking);
+                                setActionDialog({ open: true, type: 'checkin' });
+                              }}
+                            >
+                              Check-in
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedBooking(booking);
+                                setActionDialog({ open: true, type: 'checkout' });
+                              }}
+                            >
+                              Check-out
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-destructive"
+                              onClick={() => {
+                                setSelectedBooking(booking);
+                                setActionDialog({ open: true, type: 'cancel' });
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -250,11 +315,16 @@ const GBooking = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
+      
+      {/* Check-in/Check-out/Cancel Dialog */}
       <Dialog open={actionDialog.open} onOpenChange={(open) => setActionDialog({ ...actionDialog, open })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Booking</DialogTitle>
+            <DialogTitle>
+              {actionDialog.type === 'checkin' ? 'Process Check-in' : 
+               actionDialog.type === 'checkout' ? 'Process Check-out' : 
+               'Cancel Booking'}
+            </DialogTitle>
           </DialogHeader>
           {selectedBooking && (
             <div className="py-4">
@@ -265,9 +335,11 @@ const GBooking = () => {
                 <p><span className="font-medium">Check-in Date:</span> {selectedBooking.checkIn}</p>
                 <p><span className="font-medium">Check-out Date:</span> {selectedBooking.checkOut}</p>
               </div>
-              <div className="mt-4 p-3 bg-destructive/10 rounded-md text-destructive text-sm">
-                <p>Warning: This will cancel the booking and update room availability. This action cannot be undone.</p>
-              </div>
+               {actionDialog.type === 'cancel' && (
+                <div className="mt-4 p-3 bg-destructive/10 rounded-md text-destructive text-sm">
+                  <p>Warning: This will cancel the booking and update room availability. This action cannot be undone.</p>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -275,10 +347,12 @@ const GBooking = () => {
               Cancel
             </Button>
             <Button 
-              onClick={() => handleBookingAction('cancel')}
-              variant="destructive"
+              onClick={() => handleBookingAction(actionDialog.type)}
+              variant={actionDialog.type === 'cancel' ? 'destructive' : 'default'}
             >
-              Cancel Booking
+              {actionDialog.type === 'checkin' ? 'Complete Check-in' : 
+               actionDialog.type === 'checkout' ? 'Complete Check-out' : 
+               'Cancel Booking'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -287,4 +361,4 @@ const GBooking = () => {
   );
 };
 
-export default GBooking;
+export default Bookings;
