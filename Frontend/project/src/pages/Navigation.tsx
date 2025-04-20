@@ -45,7 +45,7 @@ const Navigation: React.FC = () => {
   const [showTickets, setShowTickets] = useState(false);
 
   const handleSettingsClick = () => {
-    navigate('/settings');
+    navigate('/setting');
     setProfileMenuOpen(false);
   };
 
