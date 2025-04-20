@@ -4,6 +4,12 @@ import AuthForm from './components/AuthForm';
 import Home from './pages/Home';
 import Landing from './pages/Landing';
 import Preferences from './pages/Preferences';
+import Attraction from './pages/Attraction.tsx';
+import SettingsPage from './pages/SettingsPage';
+import BusRentalPage from './pages/BusRentalPage';
+import TripPlanner from './pages/TripPlanner';
+import PopularDestinations from './pages/PopularDestinations';
+
 import GLogin from './guesthouse/gpages/GLogin';
 import GDashboard from './guesthouse/gpages/GDashboard';
 import GProperties from './guesthouse/gpages/GProperties';
