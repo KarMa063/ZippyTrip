@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
-import {
-  User, Mail, Lock, Globe, Moon, Sun,
-  ChevronLeft, Languages, CreditCard,
-  Shield, Bell, BellRing, Eye, EyeOff, Camera
+import { 
+  User, Mail, Lock, Globe, Moon, Sun, 
+  ChevronLeft, Languages, CreditCard, 
+  Shield, Bell, BellRing, Eye, EyeOff, Camera 
 } from 'lucide-react';
 
 const SettingsPage = () => {
