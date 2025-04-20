@@ -4,7 +4,7 @@ import AuthForm from './components/AuthForm';
 import Home from './pages/Home';
 import Landing from './pages/Landing';
 import Preferences from './pages/Preferences';
-// import Attraction from './pages/Attraction.tsx';
+import GuestHouseBooking from './pages/GuestHouseBooking';
 import SettingsPage from './pages/SettingsPage';
 import BusRentalPage from './pages/BusRentalPage';
 import PopularDestinations from './pages/PopularDestinations';
@@ -30,10 +30,11 @@ function App() {
         <Route path="/auth" element={<AuthForm />} />
         <Route path="/home" element={<Home />} />
         <Route path="/preferences" element={<Preferences />} />
-        {/* <Route path="/attraction" element={<Attraction />} /> */}
         <Route path="/setting" element={<SettingsPage />} />
         <Route path="/bus" element={<BusRentalPage />} />
         <Route path="/attractions" element={<PopularDestinations />} />
+        <Route path="/guesthouses" element={<GuestHouseBooking />} />
+
 
         {/* Guesthouse Owner Routes*/}
         <Route path="/glogin" element={<GLogin />} />
