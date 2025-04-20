@@ -1,0 +1,203 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 262 83% 58%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 262 83% 58%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 262 83% 58%;
+    
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 262 83% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-zippy-dark text-foreground dark;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: theme('colors.zippy.darkGray');
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.zippy.lightGray');
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.zippy.purple');
+  }
+  
+  /* Light mode styles */
+  :root.light-mode {
+    color-scheme: light;
+  }
+
+  .light-mode {
+    /* Main backgrounds */
+    --zippy-dark: #f8f9fa;
+    --zippy-darker: #f0f2f5;
+    --zippy-darkGray: #ffffff;
+    --zippy-gray: #edf0f5;
+    --zippy-lightGray: #d8dde6;
+
+    /* Colors */
+    background-color: var(--zippy-dark);
+    color: #333;
+  }
+  
+  .light-mode .bg-zippy-dark {
+    background-color: var(--zippy-dark);
+  }
+  
+  .light-mode .bg-zippy-darker {
+    background-color: var(--zippy-darker);
+  }
+  
+  .light-mode .bg-zippy-darkGray {
+    background-color: var(--zippy-darkGray);
+  }
+  
+  .light-mode .bg-zippy-gray {
+    background-color: var(--zippy-gray);
+  }
+  
+  .light-mode .bg-zippy-lightGray {
+    background-color: var(--zippy-lightGray);
+  }
+  
+  .light-mode .border-zippy-gray {
+    border-color: var(--zippy-lightGray);
+  }
+
+  /* Fix text colors in light mode */
+  .light-mode .text-white,
+  .light-mode .text-foreground {
+    color: #333;
+  }
+
+  .light-mode .text-muted-foreground {
+    color: #555;
+  }
+
+  /* Fix button text contrast in light mode */
+  .light-mode .bg-zippy-purple {
+    color: white;
+  }
+
+  /* Fix card text colors */
+  .light-mode .card {
+    color: #333;
+  }
+
+  /* Fix gradient text for light mode */
+  .light-mode .text-gradient {
+    background: linear-gradient(to right, #8B5CF6, #9B87F5);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+  
+  /* Scrollbar for light mode */
+  .light-mode ::-webkit-scrollbar-track {
+    background: #f0f2f5;
+  }
+  
+  .light-mode ::-webkit-scrollbar-thumb {
+    background: #d8dde6;
+  }
+  
+  .light-mode ::-webkit-scrollbar-thumb:hover {
+    background: #8B5CF6;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-zippy-purple to-zippy-lightPurple bg-clip-text text-transparent;
+  }
+}
