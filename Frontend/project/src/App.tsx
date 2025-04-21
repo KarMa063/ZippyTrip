@@ -31,7 +31,11 @@ function App() {
         <Route path="/auth" element={<AuthForm />} />
         <Route path="/home" element={<Home />} />
         <Route path="/preferences" element={<Preferences />} />
-
+        <Route path="/attraction/:destination" element={<Attraction />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/bus-rental" element={<BusRentalPage />} />
+        <Route path="/trip-planner" element={<TripPlanner />} />
+        <Route path="/destinations" element={<PopularDestinations />} />
 
         {/* Guesthouse Owner Routes*/}
         <Route path="/glogin" element={<GLogin />} />
