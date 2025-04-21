@@ -46,6 +46,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 
 // Define mock user data
 interface User {
@@ -124,14 +125,6 @@ const userFormSchema = z.object({
   status: z.enum(["active", "inactive", "pending"]),
 });
 
-const passwordFormSchema = z.object({
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
 export default function Users() {
   const [users, setUsers] = useState<User[]>(mockUsers);
   const [searchTerm, setSearchTerm] = useState("");
@@ -139,7 +132,7 @@ export default function Users() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   
   // Initialize form
   const userForm = useForm<z.infer<typeof userFormSchema>>({
@@ -149,14 +142,6 @@ export default function Users() {
       email: "",
       role: "",
       status: "active" as const,
-    },
-  });
-  
-  const passwordForm = useForm<z.infer<typeof passwordFormSchema>>({
-    resolver: zodResolver(passwordFormSchema),
-    defaultValues: {
-      password: "",
-      confirmPassword: "",
     },
   });
   
@@ -225,21 +210,10 @@ export default function Users() {
     userForm.reset();
   };
   
-  // Handle change password
-  const handleOpenChangePassword = (user: User) => {
+  // Handle password reset
+  const handleOpenResetPassword = (user: User) => {
     setSelectedUser(user);
-    passwordForm.reset();
-    setIsChangePasswordOpen(true);
-  };
-  
-  const onChangePassword = (data: z.infer<typeof passwordFormSchema>) => {
-    if (selectedUser) {
-      // In a real app, you would send this to an API
-      // For now, we'll just show a success message
-      toast.success(`Password for ${selectedUser.name} has been updated.`);
-      setIsChangePasswordOpen(false);
-      passwordForm.reset();
-    }
+    setIsResetPasswordOpen(true);
   };
   
   // Reset form when opening add user dialog
@@ -359,8 +333,8 @@ export default function Users() {
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8 text-amber-600"
-                          onClick={() => handleOpenChangePassword(user)}
-                          title="Change password"
+                          onClick={() => handleOpenResetPassword(user)}
+                          title="Reset password"
                         >
                           <Lock className="h-4 w-4" />
                         </Button>
@@ -394,7 +368,7 @@ export default function Users() {
       
       {/* User details sidebar */}
       {selectedUser && (
-        <Sheet open={!!selectedUser && !isEditUserOpen && !isDeleteDialogOpen && !isChangePasswordOpen} onOpenChange={() => setSelectedUser(null)}>
+        <Sheet open={!!selectedUser && !isEditUserOpen && !isDeleteDialogOpen && !isResetPasswordOpen} onOpenChange={() => setSelectedUser(null)}>
           <SheetContent>
             <SheetHeader>
               <SheetTitle>User Details</SheetTitle>
@@ -680,65 +654,15 @@ export default function Users() {
         </DialogContent>
       </Dialog>
       
-      {/* Change Password Dialog */}
-      <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription>
-              {selectedUser && `Update password for ${selectedUser.name}.`}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...passwordForm}>
-            <form onSubmit={passwordForm.handleSubmit(onChangePassword)} className="space-y-4 py-4">
-              <FormField
-                control={passwordForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>New Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={passwordForm.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  type="button"
-                  onClick={() => setIsChangePasswordOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  className="bg-zippy-blue hover:bg-zippy-blue/90"
-                  type="submit"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Update Password
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      {/* Reset Password Dialog */}
+      {selectedUser && (
+        <ResetPasswordDialog
+          userId={selectedUser.id}
+          userName={selectedUser.name}
+          open={isResetPasswordOpen}
+          onOpenChange={setIsResetPasswordOpen}
+        />
+      )}
       
       {/* Delete User Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
