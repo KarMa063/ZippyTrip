@@ -16,6 +16,7 @@ import Analytics from "./pages/Analytics";
 import Users from "./pages/Users";
 import Stays from "./pages/Stays";
 import SignIn from "./pages/SignIn";
+import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -37,6 +38,7 @@ const App = () => (
             <SidebarProvider>
               <Routes>
                 <Route path="/sign-in" element={<SignIn />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 
                 <Route path="/" element={
                   <ProtectedRoute>

@@ -4,11 +4,6 @@ import AuthForm from './components/AuthForm';
 import Home from './pages/Home';
 import Landing from './pages/Landing';
 import Preferences from './pages/Preferences';
-import GuestHouseBooking from './pages/GuestHouseBooking';
-import SettingsPage from './pages/SettingsPage';
-import BusRentalPage from './pages/BusRentalPage';
-import PopularDestinations from './pages/PopularDestinations';
-
 import GLogin from './guesthouse/gpages/GLogin';
 import GDashboard from './guesthouse/gpages/GDashboard';
 import GProperties from './guesthouse/gpages/GProperties';
@@ -30,10 +25,6 @@ function App() {
         <Route path="/auth" element={<AuthForm />} />
         <Route path="/home" element={<Home />} />
         <Route path="/preferences" element={<Preferences />} />
-        <Route path="/setting" element={<SettingsPage />} />
-        <Route path="/bus" element={<BusRentalPage />} />
-        <Route path="/attractions" element={<PopularDestinations />} />
-        <Route path="/guesthouses" element={<GuestHouseBooking />} />
 
 
         {/* Guesthouse Owner Routes*/}
