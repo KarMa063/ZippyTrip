@@ -28,12 +28,20 @@ const Sidebar = () => {
     label: "Analytics",
     icon: <BarChart size={20} />,
     path: "/analytics"
+  },
+  // Move Cancellations above Settings
+  {
+    id: 7,
+    label: "Cancellations",
+    icon: <Calendar size={20} />,
+    path: "/cancellations"
   }, {
     id: 6,
     label: "Settings",
     icon: <Settings size={20} />,
     path: "/settings"
-  }];
+  }
+  ];
   return <SidebarWrapper>
       <SidebarHeader className="p-4 flex flex-col items-center justify-center">
         <div className="flex items-center space-x-2">

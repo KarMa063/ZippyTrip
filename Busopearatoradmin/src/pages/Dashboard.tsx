@@ -20,6 +20,7 @@ import { Route as RouteType } from "@/services/api/routes";
 import { ScheduleWithRelations } from "@/services/api/schedules";
 import { BookingWithRelations } from "@/services/api/bookings";
 import { Bus as BusType } from "@/services/api/buses";
+import { formatNPR } from "@/utils/formatters";
 
 interface RevenueDataPoint {
   name: string;
@@ -247,7 +248,7 @@ const Dashboard = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">NPR {totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatNPR(totalRevenue)}</div>
             <p className="text-xs text-muted-foreground">
               +20.1% from last month
             </p>
@@ -382,7 +383,7 @@ const Dashboard = () => {
                       <div className="text-sm text-muted-foreground">{route.passengers} passengers</div>
                     </div>
                   </div>
-                  <div className="font-medium">NPR {route.revenue}</div>
+                  <div className="font-medium">{formatNPR(route.revenue)}</div>
                 </div>
               ))}
             </div>

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { ValidTableName, isValidTableName, castToValidTableName, fromSafeTable } from '@/utils/tableTypes';
+import { ValidTableName, isValidTableName } from '@/utils/tableTypes';
 
 type FetchFunction<T> = () => Promise<T[]>;
 
@@ -75,8 +75,8 @@ export function useRealtime<T>(
         // Cast to ValidTableName for type safety
         const safeTable = validatedTable as ValidTableName;
         
-        await supabase.rpc('enable_realtime_for_table', { 
-          table_name: safeTable
+        await supabase.rpc('enable_realtime_for_table' as any, { 
+          table_name: safeTable 
         });
       } catch (error) {
         console.warn(`Error enabling realtime for ${validatedTable}:`, error);
