@@ -48,6 +48,10 @@ const Navigation: React.FC = () => {
     navigate('/setting');
     setProfileMenuOpen(false);
   };
+  const handleProfileClick = () => {
+    navigate('/profile');
+    setProfileMenuOpen(false);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -94,12 +98,18 @@ const Navigation: React.FC = () => {
                 onClick={() => setProfileMenuOpen((prev) => !prev)}
                 className="flex items-center space-x-2 border-2 border-blue-600 rounded-full px-4 py-1 hover:bg-blue-50 transition-colors"
               >
-                <User className="h-5 w-5 text-blue-600" />
                 <span className="text-blue-600 font-medium hover-text">Profile</span>
               </button>
 
               {profileMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-1 z-50">
+                  <button
+                    onClick={handleProfileClick}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 flex items-center"
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Your Bookings
+                  </button>
                   <button
                     onClick={handleSettingsClick}
                     className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 flex items-center"

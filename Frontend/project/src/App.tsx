@@ -8,6 +8,7 @@ import GuestHouseBooking from './pages/GuestHouseBooking';
 import SettingsPage from './pages/SettingsPage';
 import BusRentalPage from './pages/BusRentalPage';
 import PopularDestinations from './pages/PopularDestinations';
+import Profile from './pages/Profile';
 
 import GLogin from './guesthouse/gpages/GLogin';
 import GDashboard from './guesthouse/gpages/GDashboard';
@@ -31,6 +32,7 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/preferences" element={<Preferences />} />
         <Route path="/setting" element={<SettingsPage />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/bus" element={<BusRentalPage />} />
         <Route path="/attractions" element={<PopularDestinations />} />
         <Route path="/guesthouses" element={<GuestHouseBooking />} />
