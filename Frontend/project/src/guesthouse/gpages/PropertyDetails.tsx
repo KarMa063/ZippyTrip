@@ -279,7 +279,7 @@ const PropertyDetails = () => {
           <div className="space-y-4">
             {property.reviews.map((review: any) => (
               <Card key={review.id}>
-                <CardContent className="p-5">
+                <CardContent className="p-5 space-y-3">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="font-medium">{review.guestName}</div>
@@ -287,7 +287,38 @@ const PropertyDetails = () => {
                     </div>
                     {renderStars(review.rating)}
                   </div>
-                  <p className="mt-3">{review.comment}</p>
+                  <p className="mt-2">{review.comment}</p>
+
+                  {/* Response if exists */}
+                  {review.response && (
+                    <div className="mt-3 pl-4 border-l-2 border-muted text-sm text-muted-foreground">
+                      <p className="font-medium">Owner's Response:</p>
+                      <p>{review.response}</p>
+                    </div>
+                  )}
+
+                  {/* Respond to review */}
+                  {!review.response && (
+                    <div className="mt-4 space-y-2">
+                      <textarea
+                        rows={2}
+                        placeholder="Write a response..."
+                        className="w-full rounded p-2 text-sm bg-background text-foreground border border-input placeholder:text-muted-foreground"
+                        onChange={(e) => review.tempResponse = e.target.value}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          const updatedReviews = property.reviews.map((r: any) =>
+                            r.id === review.id ? { ...r, response: review.tempResponse } : r
+                          );
+                          setProperty({ ...property, reviews: updatedReviews });
+                        }}
+                      >
+                        Respond
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

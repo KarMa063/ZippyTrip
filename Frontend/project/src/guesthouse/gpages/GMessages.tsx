@@ -26,8 +26,7 @@ function GMessages() {
       initials: 'JD',
       name: 'John Doe',
       messages: [
-        { sender: 'John Doe', text: 'Hi, I have a question about the Ocean View Suite.', time: '10:23 AM' },
-        { sender: 'You', text: 'Hello, how can I assist you?', time: '10:25 AM' },
+        { sender: 'John Doe', text: 'Hi, I have a question about Himalayan Retreat.', time: '10:23 AM' },
       ],
       status: 'unread',
     },
@@ -115,34 +114,34 @@ function GMessages() {
       </div>
 
       {!isConversationView && (
-        <>
-          <div className="relative mb-4">
-            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search messages..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-2 pl-10 rounded border border-gray-750 bg-transparent text-white placeholder-gray-400"
-            />
-          </div>
+        <div className="relative mb-4">
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search messages..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-2 pl-10 rounded border border-gray-750 bg-transparent text-white placeholder-gray-400"
+          />
+        </div>
+      )}
 
-          <div className="w-full grid grid-cols-3 gap-2 mb-4">
-            {['All', 'Unread', 'Sent by You'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab as 'All' | 'Unread' | 'Sent by You')}
-                className={`px-4 py-2 rounded font-semibold transition-colors border border-gray-750 rounded-lg ${
-                  activeTab === tab
-                    ? 'bg-blue-500 text-white'
-                    : 'hover:bg-accent/50 transition-colors'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </>
+      {!isConversationView && (
+        <div className="w-full grid grid-cols-3 gap-2 mb-4">
+          {['All', 'Unread', 'Sent by You'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as 'All' | 'Unread' | 'Sent by You')}
+              className={`px-4 py-2 rounded font-semibold transition-colors border border-gray-750 rounded-lg ${
+                activeTab === tab
+                  ? 'bg-blue-500 text-white'
+                  : 'hover:bg-accent/50 transition-colors'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
       )}
 
       {isConversationView ? (
@@ -158,29 +157,35 @@ function GMessages() {
               <div className="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center bg-muted text-primary font-medium">
                 {selectedConversation.initials}
               </div>
-              <h2 className="font-medium text-lg">{selectedConversation.name}</h2>
+              <div>
+                <h2 className="font-medium text-lg">{selectedConversation.name}</h2>
+              </div>
             </div>
           </div>
 
+          {/* Scrollable chat area only */}
           <div className="flex-1 overflow-y-auto p-4 border border-gray-750 rounded-lg hide-scrollbar">
-            <div className="space-y-6 max-w-3xl mx-auto pb-4">
-              {selectedConversation.messages.map((message, index) => (
-                <div key={index} className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}>
-                  {message.sender !== 'You' && (
-                    <div className="h-8 w-8 rounded-full mr-2 bg-muted text-primary flex items-center justify-center">
-                      {selectedConversation.initials}
+            <div className="h-[calc(100vh-280px)] overflow-y-auto pr-2">
+              <div className="space-y-6 max-w-3xl mx-auto pb-4">
+                {selectedConversation.messages.map((message, index) => (
+                  <div key={index} className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}>
+                    {message.sender !== 'You' && (
+                      <div className="h-8 w-8 rounded-full mr-2 bg-muted text-primary flex items-center justify-center">
+                        {selectedConversation.initials}
+                      </div>
+                    )}
+                    <div className={`max-w-[85%] sm:max-w-[70%] px-4 py-3 rounded-lg shadow-sm ${
+                      message.sender === 'You'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-secondary text-secondary-foreground'
+                    }`}>
+                      <div className="text-sm">{message.text}</div>
+                      <div className="text-xs opacity-70 text-right mt-1">{message.time}</div>
                     </div>
-                  )}
-                  <div className={`max-w-[85%] sm:max-w-[70%] px-4 py-3 rounded-lg shadow-sm ${message.sender === 'You' ? 'bg-blue-500 text-white' : 'bg-secondary text-secondary-foreground'}`}>
-                    <div className="text-sm">
-                      {message.sender === 'You' ? 'You: ' : ''}
-                      {message.text}
-                    </div>
-                    <div className="text-xs opacity-70 text-right mt-1">{message.time}</div>
                   </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
             </div>
           </div>
 
@@ -224,7 +229,9 @@ function GMessages() {
                 <div>
                   <p className="font-semibold">{conversation.name}</p>
                   <p className={`text-sm ${conversation.status === 'unread' ? 'font-semibold' : 'text-gray-400'}`}>
-                    {conversation.messages[conversation.messages.length - 1].text}
+                    {conversation.messages[conversation.messages.length - 1].sender === 'You'
+                      ? `You: ${conversation.messages[conversation.messages.length - 1].text}`
+                      : conversation.messages[conversation.messages.length - 1].text}
                   </p>
                 </div>
               </div>
