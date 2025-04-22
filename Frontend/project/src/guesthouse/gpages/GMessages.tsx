@@ -1,12 +1,23 @@
+import { useState } from 'react';
 import { FaPlus, FaSearch } from 'react-icons/fa';
 
 function GMessages() {
+  const [activeTab, setActiveTab] = useState('All');
+
   const conversations = [
-    { initials: 'JD', name: 'John Doe', message: 'Hi, I have a question about the Ocean View Suite.', time: '10:23 AM' },
-    { initials: 'JS', name: 'Jane Smith', message: 'Thanks for the information!', time: 'Yesterday' },
-    { initials: 'RB', name: 'Robert Brown', message: 'I\'ll arrive around 3 PM.', time: '3 days ago' },
-    { initials: 'SW', name: 'Sandra Williams', message: 'You: I\'ve sent over the booking confirmation.', time: '5 days ago' },
+    { initials: 'JD', name: 'John Doe', message: 'Hi, I have a question about the Ocean View Suite.', time: '10:23 AM', status: 'unread' },
+    { initials: 'JS', name: 'Jane Smith', message: 'Thanks for the information!', time: 'Yesterday', status: 'read' },
+    { initials: 'RB', name: 'Robert Brown', message: 'I\'ll arrive around 3 PM.', time: '3 days ago', status: 'read' },
+    { initials: 'SW', name: 'Sandra Williams', message: 'You: I\'ve sent over the booking confirmation.', time: '5 days ago', status: 'sent by you' },
   ];
+
+  // Filter conversations based on the active tab
+  const filteredConversations = conversations.filter((conversation) => {
+    if (activeTab === 'All') return true;
+    if (activeTab === 'Unread') return conversation.status === 'unread';
+    if (activeTab === 'Sent by You') return conversation.status === 'sent by you';
+    return true;
+  });
 
   return (
     <div className="p-4">
@@ -29,14 +40,18 @@ function GMessages() {
 
       <div className="flex gap-2 mb-4">
         {['All', 'Unread', 'Sent by You'].map((tab) => (
-          <button key={tab} className="px-4 py-2 bg-gray-700 rounded text-white font-semibold">
+          <button
+            key={tab}
+            className={`px-4 py-2 rounded font-semibold ${activeTab === tab ? 'bg-blue-500 text-white' : 'bg-gray-700 text-white'}`}
+            onClick={() => setActiveTab(tab)}
+          >
             {tab}
           </button>
         ))}
       </div>
 
       <div className="space-y-4">
-        {conversations.map(({ initials, name, message, time }) => (
+        {filteredConversations.map(({ initials, name, message, time, status }) => (
           <div key={name} className="flex items-start justify-between p-4 bg-gray-800 rounded">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center font-bold">
@@ -44,7 +59,9 @@ function GMessages() {
               </div>
               <div>
                 <p className="font-semibold">{name}</p>
-                <p className="text-gray-400 text-sm">{message}</p>
+                <p className={`text-sm ${status === 'unread' ? 'font-bold text-white' : 'text-gray-400'}`}>
+                  {message}
+                </p>
               </div>
             </div>
             <span className="text-sm text-gray-400">{time}</span>
