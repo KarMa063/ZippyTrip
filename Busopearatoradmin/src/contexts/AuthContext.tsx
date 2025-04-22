@@ -1,11 +1,9 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { enableRealtimeUpdates } from "@/services/api";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../integrations/supabase/client";
 
 type AuthContextType = {
   isAuthenticated: boolean;
-  user: { id: string; email?: string } | null;  // Add user property to the type
+  user: { id: string; email?: string } | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
 };
@@ -14,29 +12,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<{ id: string; email?: string } | null>(null); // Add user state
-  const [realtimeChannel, setRealtimeChannel] = useState<ReturnType<typeof enableRealtimeUpdates> | null>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
 
   // Check if user is authenticated on component mount
   useEffect(() => {
     const authStatus = localStorage.getItem("isAuthenticated");
     if (authStatus === "true") {
       setIsAuthenticated(true);
-      
-      // Set mock user data since we're using a simplified auth system
       setUser({ id: "admin-user", email: "admin@zippytrip.com" });
-      
-      // Enable real-time updates when authenticated
-      const channel = enableRealtimeUpdates();
-      setRealtimeChannel(channel);
     }
-    
-    return () => {
-      // Clean up channel on unmount
-      if (realtimeChannel) {
-        supabase.removeChannel(realtimeChannel);
-      }
-    };
   }, []);
 
   // Login function
@@ -44,14 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (username === "admin" && password === "zippytrip123") {
       localStorage.setItem("isAuthenticated", "true");
       setIsAuthenticated(true);
-      
-      // Set mock user data
       setUser({ id: "admin-user", email: "admin@zippytrip.com" });
-      
-      // Enable real-time updates on login
-      const channel = enableRealtimeUpdates();
-      setRealtimeChannel(channel);
-      
       return true;
     }
     return false;
@@ -62,12 +39,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("isAuthenticated");
     setIsAuthenticated(false);
     setUser(null);
-    
-    // Clean up real-time subscription on logout
-    if (realtimeChannel) {
-      supabase.removeChannel(realtimeChannel);
-      setRealtimeChannel(null);
-    }
   };
 
   return (

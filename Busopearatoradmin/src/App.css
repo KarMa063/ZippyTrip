@@ -1,10 +1,13 @@
+
+/* Remove root width limit that might be causing problems */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
 
+/* Keep other styles but make them not interfere with layout */
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -33,10 +36,64 @@
   }
 }
 
-.card {
-  padding: 2em;
+/* Add animations for dashboard */
+@keyframes fadeSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.read-the-docs {
-  color: #888;
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.gold-stroke {
+  text-shadow: 
+    -1px -1px 0 #FFD700,
+    1px -1px 0 #FFD700,
+    -1px 1px 0 #FFD700,
+    1px 1px 0 #FFD700,
+    0 0 8px rgba(255, 215, 0, 0.6);
+}
+
+.animate-fadeSlideUp {
+  animation: fadeSlideUp 0.8s ease forwards;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.4), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
