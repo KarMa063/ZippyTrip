@@ -1,8 +1,9 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+
+import { Toaster } from "./components/ui/toaster";
+import { Toaster as Sonner } from "./components/ui/sonner";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import RoutesPage from "./pages/Routes";
@@ -15,10 +16,10 @@ import Settings from "./pages/Settings";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Bookings from "./pages/Bookings";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { useAuth } from "./contexts/AuthContext";
 import EditRoute from "./pages/EditRoute";
 import CancellationManagement from "./pages/CancellationManagement";
+import TripReminders from "./pages/TripReminders";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const AppRoutes = () => {
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
         <Route path="cancellations" element={<CancellationManagement />} />
+        <Route path="trip-reminders" element={<TripReminders />} />
       </Route>
       
       <Route path="*" element={<NotFound />} />
@@ -66,19 +68,13 @@ const AppRoutes = () => {
 };
 
 const App = () => (
-  <ThemeProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ThemeProvider>
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <AppRoutes />
+      <Toaster />
+      <Sonner />
+    </TooltipProvider>
+  </QueryClientProvider>
 );
 
 export default App;
