@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ValidTableName, isValidTableName, castToValidTableName, fromSafeTable } from "@/utils/tableTypes";
+import { ValidTableName, isValidTableName } from "@/utils/tableTypes";
 
 // Function to enable realtime for a table
 export const enableRealtimeForTable = async (tableName: string) => {
@@ -12,11 +12,11 @@ export const enableRealtimeForTable = async (tableName: string) => {
     }
     
     // Convert to valid table name for type safety
-    const validTableName = castToValidTableName(tableName);
+    const validTableName = tableName as ValidTableName;
     
     // First, make the table replica identity full to get complete data in changes
     const { error: replicaError } = await supabase.rpc(
-      'set_replica_identity_full', 
+      'set_postgres_replica_identity_full' as any, 
       { table_name: validTableName }
     );
     
@@ -26,7 +26,7 @@ export const enableRealtimeForTable = async (tableName: string) => {
     
     // Then add the table to the realtime publication
     const { error } = await supabase.rpc(
-      'add_table_to_publication', 
+      'add_to_realtime_publication' as any, 
       { table_name: validTableName }
     );
     
@@ -61,6 +61,10 @@ export const enableRealtimeUpdates = () => {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, payload => {
       console.log('Bookings change received!', payload);
+      return payload;
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'cancellation_notifications' }, payload => {
+      console.log('Cancellation notifications change received!', payload);
       return payload;
     })
     .subscribe();

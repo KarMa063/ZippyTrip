@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +18,7 @@ import Bookings from "./pages/Bookings";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import EditRoute from "./pages/EditRoute";
+import CancellationManagement from "./pages/CancellationManagement";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +57,7 @@ const AppRoutes = () => {
         <Route path="bookings" element={<Bookings />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="cancellations" element={<CancellationManagement />} />
       </Route>
       
       <Route path="*" element={<NotFound />} />
