@@ -1,31 +1,100 @@
-require('dotenv').config(); // Load .env variables
-const express = require('express');
-const nodemailer = require('nodemailer');
-const cors = require('cors');
+import dotenv from 'dotenv';
+dotenv.config(); // Load .env variables
+import express from 'express';
+import nodemailer from 'nodemailer';
+import cors from 'cors';
 
 const app = express();
 const port = process.env.BACKEND_PORT || 3001; // Use a port different from your frontend, e.g., 3001
 
 // --- Middleware ---
-// Enable CORS for requests from your frontend (adjust origin if needed)
-// For development, allowing all origins might be okay, but be more specific for production.
-app.use(cors()); 
+app.use(cors());
 app.use(express.json()); // To parse JSON request bodies
 
 // --- Nodemailer Transporter Setup ---
-// Use credentials from your .env file
+const emailPort = parseInt(process.env.EMAIL_PORT || '587', 10); // Default to 587
+const emailSecure = process.env.EMAIL_SECURE === 'false' || emailPort === 465; // Secure true for port 465 or if explicitly set
+
+console.log('Configuring transporter with:', {
+  host: process.env.EMAIL_HOST,
+  port: emailPort, // Use the parsed port
+  secure: emailSecure, // Use the determined secure value
+  user: process.env.EMAIL_USER,
+  pass: process.env.EMAIL_PASS ? '***' : undefined
+});
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT || '587', 10),
-  secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for 587 (STARTTLS)
+  port: emailPort, // Use the parsed port
+  secure: emailSecure, // Use the determined secure value
   auth: {
-    user: process.env.EMAIL_USER, // Your Gmail address from .env
-    pass: process.env.EMAIL_PASS, // Your Gmail App Password from .env
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
-  // Optional: Add TLS options if needed, e.g., for local testing issues
-  // tls: {
-  //   rejectUnauthorized: false 
-  // }
+  requireTLS: emailPort === 587, // Require TLS specifically for port 587 (STARTTLS)
+  tls: {
+    // Consider keeping rejectUnauthorized: false only for development/testing
+    // In production, you should ideally use valid certificates.
+    rejectUnauthorized: process.env.NODE_ENV !== 'production' // Example: false in dev, true in prod
+  }
+});
+
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('Error configuring email transporter:', error);
+  } else {
+    console.log('Email transporter configured successfully. Ready to send emails.');
+  }
+});
+
+app.post('/api/send-email', async (req, res) => {
+  const { to, subject, body } = req.body;
+  if (!to || !subject || !body) {
+    return res.status(400).json({ success: false, message: 'Missing required fields: to, subject, body' });
+  }
+  const mailOptions = {
+    from: `"ZippyTrip Admin" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: subject,
+    text: body,
+  };
+  try {
+    // Verify connection before sending (optional but good for debugging)
+    // await transporter.verify(); 
+    // console.log('Transporter verified successfully.');
+
+    let info = await transporter.sendMail(mailOptions);
+    console.log('Message sent: %s', info.messageId);
+    res.status(200).json({ success: true, message: 'Email sent successfully', messageId: info.messageId });
+  } catch (error) {
+    console.error('Error sending email:', error);
+    // Send back the actual error message from nodemailer for better debugging
+    res.status(500).json({ success: false, message: 'Failed to send email', error: error.message || JSON.stringify(error) });
+  }
+});
+
+// --- Start the Server ---
+app.listen(port, () => {
+  console.log(`Backend server listening at http://localhost:${port}`);
+});
+
+// --- DELETE ALL CODE FROM HERE DOWN TO THE END OF THE FILE ---
+// The following lines are duplicates and should be removed:
+/*
+// --- Nodemailer Transporter Setup ---
+// Use credentials from your .env file
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST, // Check this value in .env
+  port: parseInt(process.env.EMAIL_PORT || '587', 10), // Check this value in .env
+  secure: process.env.EMAIL_SECURE === 'true', // Check this value in .env (false for 587 with STARTTLS)
+  auth: {
+    user: process.env.EMAIL_USER, // Your email address from .env
+    pass: process.env.EMAIL_PASS, // Your email password or App Password from .env
+  },
+  // Explicitly configure TLS for STARTTLS on port 587
+  tls: {
+    ciphers:'SSLv3', // Try specifying cipher suite
+    rejectUnauthorized: false // Set to true in production after testing, but false can help bypass cert issues during dev
+  }
 });
 
 transporter.verify((error, success) => {
@@ -66,4 +135,14 @@ app.post('/api/send-email', async (req, res) => {
 // --- Start the Server ---
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
+});
+*/
+// Make sure to delete all lines below the initial app.listen call.
+dotenv.config(); // Load .env variables
+console.log('Loaded ENV:', {
+  EMAIL_HOST: process.env.EMAIL_HOST,
+  EMAIL_PORT: process.env.EMAIL_PORT,
+  EMAIL_SECURE: process.env.EMAIL_SECURE,
+  EMAIL_USER: process.env.EMAIL_USER,
+  EMAIL_PASS: process.env.EMAIL_PASS ? '***' : undefined
 });
