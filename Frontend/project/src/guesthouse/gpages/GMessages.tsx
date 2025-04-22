@@ -3,6 +3,7 @@ import { FaPlus, FaSearch } from 'react-icons/fa';
 
 function GMessages() {
   const [activeTab, setActiveTab] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const conversations = [
     { initials: 'JD', name: 'John Doe', message: 'Hi, I have a question about the Ocean View Suite.', time: '10:23 AM', status: 'unread' },
@@ -11,12 +12,17 @@ function GMessages() {
     { initials: 'SW', name: 'Sandra Williams', message: 'You: I\'ve sent over the booking confirmation.', time: '5 days ago', status: 'sent by you' },
   ];
 
-  // Filter conversations based on the active tab
   const filteredConversations = conversations.filter((conversation) => {
-    if (activeTab === 'All') return true;
-    if (activeTab === 'Unread') return conversation.status === 'unread';
-    if (activeTab === 'Sent by You') return conversation.status === 'sent by you';
-    return true;
+    const matchesTab =
+      activeTab === 'All' ||
+      (activeTab === 'Unread' && conversation.status === 'unread') ||
+      (activeTab === 'Sent by You' && conversation.status === 'sent by you');
+
+    const matchesSearch =
+      conversation.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      conversation.message.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return matchesTab && matchesSearch;
   });
 
   return (
@@ -34,6 +40,8 @@ function GMessages() {
         <input
           type="text"
           placeholder="Search messages..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full p-2 pl-10 rounded bg-gray-800 text-white placeholder-gray-400"
         />
       </div>
@@ -51,22 +59,26 @@ function GMessages() {
       </div>
 
       <div className="space-y-4">
-        {filteredConversations.map(({ initials, name, message, time, status }) => (
-          <div key={name} className="flex items-start justify-between p-4 bg-gray-800 rounded">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center font-bold">
-                {initials}
+        {filteredConversations.length > 0 ? (
+          filteredConversations.map(({ initials, name, message, time, status }) => (
+            <div key={name} className="flex items-start justify-between p-4 bg-gray-800 rounded">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center font-bold">
+                  {initials}
+                </div>
+                <div>
+                  <p className="font-semibold">{name}</p>
+                  <p className={`text-sm ${status === 'unread' ? 'font-bold text-white' : 'text-gray-400'}`}>
+                    {message}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold">{name}</p>
-                <p className={`text-sm ${status === 'unread' ? 'font-bold text-white' : 'text-gray-400'}`}>
-                  {message}
-                </p>
-              </div>
+              <span className="text-sm text-gray-400">{time}</span>
             </div>
-            <span className="text-sm text-gray-400">{time}</span>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p className="text-gray-400">No messages found.</p>
+        )}
       </div>
     </div>
   );
