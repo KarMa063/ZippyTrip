@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Table,
@@ -14,43 +14,41 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Loader2, Search, Calendar } from "lucide-react";
 import { formatNPR } from "@/utils/formatters";
-import { supabase } from "@/integrations/supabase/client";
+import axios from 'axios';
 
 const CancellationManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: cancellations, isLoading } = useQuery({
+  const { data: cancellations, isLoading, refetch } = useQuery({
     queryKey: ['cancelled-bookings'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          schedules (
-            *,
-            routes (
-              name,
-              origin,
-              destination
-            ),
-            buses (
-              registration_number
-            )
-          )
-        `)
-        .eq('status', 'cancelled')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    }
+      try {
+        const response = await axios.get('http://localhost:3001/api/cancellations');
+        return response.data;
+      } catch (error) {
+        console.error("API error:", error);
+        return []; // Return empty array if API fails
+      }
+    },
+    refetchInterval: 30000 // Refetch every 30 seconds to get new cancellations
   });
+
+  // Set up a polling mechanism to check for new cancellations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [refetch]);
 
   const filteredCancellations = cancellations?.filter(booking =>
     booking.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    booking.schedules?.routes?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    booking.schedules?.routes?.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    booking.schedules?.routes?.destination.toLowerCase().includes(searchTerm.toLowerCase())
+    (booking.schedules?.routes?.name && booking.schedules.routes.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (booking.schedules?.routes?.origin && booking.schedules.routes.origin.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (booking.schedules?.routes?.destination && booking.schedules.routes.destination.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (booking.from && booking.from.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (booking.to && booking.to.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const formatDate = (dateString: string) => {

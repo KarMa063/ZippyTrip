@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Bus, Calendar, Users, Search, MapPin, ArrowRight, Moon, Sun, CreditCard, Luggage, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft } from 'lucide-react';
-import { sendBusReminder } from './EmailController'
+import { Bus, Calendar, Users, Search, MapPin, ArrowRight, Moon, Sun, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft } from 'lucide-react';
+import { sendBusReminder } from './EmailController';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Seat {
   id: string;
@@ -136,6 +137,33 @@ function BusRentalPage() {
     
     if (selectedBus) {
       try {
+        // Generate a unique ID for the ticket
+        const ticketId = uuidv4();
+        
+        // Create ticket object
+        const newTicket = {
+          id: ticketId,
+          busId: selectedBus.id,
+          from: selectedBus.from,
+          to: selectedBus.to,
+          departure: selectedBus.departure,
+          arrival: selectedBus.arrival,
+          date: searchParams.date,
+          operator: selectedBus.operator,
+          price: selectedBus.price,
+          seats: selectedSeats,
+          passengerName: userName,
+          busType: selectedBus.type,
+          status: 'active',
+          bookingDate: new Date().toISOString()
+        };
+        
+        // Save to localStorage
+        const existingTickets = localStorage.getItem('busTickets');
+        const tickets = existingTickets ? JSON.parse(existingTickets) : [];
+        tickets.push(newTicket);
+        localStorage.setItem('busTickets', JSON.stringify(tickets));
+        
         // Send email confirmation
         const response = await sendBusReminder({
           email: userEmail,

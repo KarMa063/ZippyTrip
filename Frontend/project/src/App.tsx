@@ -7,6 +7,7 @@ import Preferences from './pages/Preferences';
 import GuestHouseBooking from './pages/GuestHouseBooking';
 import SettingsPage from './pages/SettingsPage';
 import BusRentalPage from './pages/BusRentalPage';
+import MyTickets from './pages/MyTickets';
 import PopularDestinations from './pages/PopularDestinations';
 
 import GLogin from './guesthouse/gpages/GLogin';
@@ -23,7 +24,7 @@ import { ThemeProvider } from './guesthouse/gcomponents/theme-provider';
 function App() {
   return (
     <Router>
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
@@ -32,9 +33,9 @@ function App() {
         <Route path="/preferences" element={<Preferences />} />
         <Route path="/setting" element={<SettingsPage />} />
         <Route path="/bus" element={<BusRentalPage />} />
+        <Route path="/my-tickets" element={<MyTickets />} />
         <Route path="/attractions" element={<PopularDestinations />} />
         <Route path="/guesthouses" element={<GuestHouseBooking />} />
-
 
         {/* Guesthouse Owner Routes*/}
         <Route path="/glogin" element={<GLogin />} />

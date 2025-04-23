@@ -23,6 +23,7 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.4",
     "@supabase/supabase-js": "^2.49.3",
+    "axios": "^1.8.4",
     "class-variance-authority": "^0.7.1",
     "emailjs": "^4.0.3",
     "lucide-react": "^0.344.0",
