@@ -146,3 +146,49 @@ console.log('Loaded ENV:', {
   EMAIL_USER: process.env.EMAIL_USER,
   EMAIL_PASS: process.env.EMAIL_PASS ? '***' : undefined
 });
+
+// Add this endpoint to receive cancellations from the backend
+app.post('/api/cancellations', async (req, res) => {
+  try {
+    const cancellationData = req.body;
+    console.log('Received cancellation:', cancellationData);
+    
+    // Store in memory (replace with your actual storage solution)
+    if (!app.locals.cancellations) {
+      app.locals.cancellations = [];
+    }
+    
+    app.locals.cancellations.push({
+      ...cancellationData,
+      received_at: new Date().toISOString()
+    });
+    
+    // Emit socket event for real-time updates
+    io.emit('new_cancellation', cancellationData);
+    
+    // Send email notification if needed
+    if (cancellationData.userEmail) {
+      try {
+        await sendRealEmail(
+          cancellationData.userEmail,
+          'Your Booking Cancellation Confirmation',
+          `Your booking has been cancelled successfully. Booking ID: ${cancellationData.bookingId}`
+        );
+      } catch (emailError) {
+        console.error('Error sending cancellation email:', emailError);
+        // Continue processing even if email fails
+      }
+    }
+    
+    res.status(200).json({ success: true, message: 'Cancellation received and processed' });
+  } catch (error) {
+    console.error('Error processing cancellation:', error);
+    res.status(500).json({ success: false, message: 'Error processing cancellation' });
+  }
+});
+
+// Add an endpoint to retrieve cancellations
+app.get('/api/cancellations', (req, res) => {
+  const cancellations = app.locals.cancellations || [];
+  res.json(cancellations);
+});

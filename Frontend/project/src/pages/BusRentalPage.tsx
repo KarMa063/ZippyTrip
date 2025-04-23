@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Bus, Calendar, Users, Search, MapPin, ArrowRight, Moon, Sun, CreditCard, Luggage, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bus, Calendar, Users, Search, MapPin, ArrowRight, Moon, Sun, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft } from 'lucide-react';
 import { sendBusReminder } from './EmailController';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Seat {
   id: string;
@@ -128,31 +129,33 @@ function BusRentalPage() {
     
     if (selectedBus) {
       try {
-        // First create the booking in the database
-        const bookingData = {
-          user_id: 'user_id', // You'll need to get this from your auth context
-          schedule_id: selectedBus.id,
-          seat_numbers: selectedSeats,
-          total_fare: selectedBus.price * selectedSeats.length,
-          status: 'pending',
-          payment_status: 'pending',
-          payment_method: null,
-          booking_date: new Date().toISOString()
+        // Generate a unique ID for the ticket
+        const ticketId = uuidv4();
+        
+        // Create ticket object
+        const newTicket = {
+          id: ticketId,
+          busId: selectedBus.id,
+          from: selectedBus.from,
+          to: selectedBus.to,
+          departure: selectedBus.departure,
+          arrival: selectedBus.arrival,
+          date: searchParams.date,
+          operator: selectedBus.operator,
+          price: selectedBus.price,
+          seats: selectedSeats,
+          passengerName: userName,
+          busType: selectedBus.type,
+          status: 'active',
+          bookingDate: new Date().toISOString()
         };
-
-        // Make API call to create booking
-        const response = await fetch('http://localhost:4000/bookings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(bookingData),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to create booking');
-        }
-
+        
+        // Save to localStorage
+        const existingTickets = localStorage.getItem('busTickets');
+        const tickets = existingTickets ? JSON.parse(existingTickets) : [];
+        tickets.push(newTicket);
+        localStorage.setItem('busTickets', JSON.stringify(tickets));
+        
         // Send email confirmation
         const emailResponse = await sendBusReminder({
           email: userEmail,
