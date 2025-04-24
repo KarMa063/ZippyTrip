@@ -8,7 +8,6 @@ import {
   Moon,
   Bell,
   User,
-  Ticket,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -49,10 +48,6 @@ const Navigation: React.FC = () => {
     setProfileMenuOpen(false);
   };
 
-  const handleMyTicketsClick = () => {
-    navigate('/my-tickets');
-    setProfileMenuOpen(false);
-  };
 
   const handleSignOut = async () => {
     try {
@@ -105,13 +100,7 @@ const Navigation: React.FC = () => {
 
               {profileMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-1 z-50">
-                  <button
-                    onClick={handleMyTicketsClick}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 flex items-center"
-                  >
-                    <Ticket className="h-4 w-4 mr-2" />
-                    My Tickets
-                  </button>
+                 
                   <button
                     onClick={handleSettingsClick}
                     className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 flex items-center"

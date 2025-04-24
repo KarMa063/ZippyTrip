@@ -7,7 +7,7 @@ import Preferences from './pages/Preferences';
 import GuestHouseBooking from './pages/GuestHouseBooking';
 import SettingsPage from './pages/SettingsPage';
 import BusRentalPage from './pages/BusRentalPage';
-//import MyTickets from './pages/MyTickets';
+
 import PopularDestinations from './pages/PopularDestinations';
 
 import GLogin from './guesthouse/gpages/GLogin';
@@ -33,7 +33,7 @@ function App() {
         <Route path="/preferences" element={<Preferences />} />
         <Route path="/setting" element={<SettingsPage />} />
         <Route path="/bus" element={<BusRentalPage />} />
-        {/*<Route path="/tickets" element={<MyTickets />} />*/}
+        
         <Route path="/attractions" element={<PopularDestinations />} />
         <Route path="/guesthouses" element={<GuestHouseBooking />} />
 
