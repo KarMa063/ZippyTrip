@@ -15,12 +15,8 @@
     "axios": "^1.8.4",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-<<<<<<< HEAD
     "express": "^5.1.0",
     "pg": "^8.15.5"
-=======
-    "express": "^5.1.0"
->>>>>>> 7ed48e8 (Basic Profile and backend for bus rental page)
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
