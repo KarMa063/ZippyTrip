@@ -95,6 +95,54 @@ export type Database = {
         }
         Relationships: []
       }
+      cancellation_notifications: {
+        Row: {
+          booking_id: string | null
+          created_at: string | null
+          id: string
+          notification_type: string
+          schedule_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string | null
+          id?: string
+          notification_type: string
+          schedule_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string | null
+          id?: string
+          notification_type?: string
+          schedule_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cancellation_notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cancellation_notifications_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routes: {
         Row: {
           created_at: string
@@ -136,11 +184,14 @@ export type Database = {
           arrival_time: string
           available_seats: number
           bus_id: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
           created_at: string
           departure_time: string
           fare: number
           id: string
           is_active: boolean | null
+          notification_sent: boolean | null
           route_id: string
           updated_at: string
         }
@@ -148,11 +199,14 @@ export type Database = {
           arrival_time: string
           available_seats: number
           bus_id: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
           departure_time: string
           fare: number
           id?: string
           is_active?: boolean | null
+          notification_sent?: boolean | null
           route_id: string
           updated_at?: string
         }
@@ -160,11 +214,14 @@ export type Database = {
           arrival_time?: string
           available_seats?: number
           bus_id?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
           departure_time?: string
           fare?: number
           id?: string
           is_active?: boolean | null
+          notification_sent?: boolean | null
           route_id?: string
           updated_at?: string
         }
@@ -215,15 +272,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          user_id: string
+          required_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -338,6 +425,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operator", "user"],
+    },
   },
 } as const

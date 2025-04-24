@@ -1,20 +1,22 @@
-// Backend/index.js
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// Routes
 app.get('/', (req, res) => {
-  res.send('Backend is working!');
+  res.send('ZippyTrip Backend API is running');
 });
 
 // Cancellation endpoint
-app.post('/api/cancellations', (req, res) => {
+app.post('/api/cancellations/cancel', (req, res) => {
   const cancellationData = req.body;
   
   // Forward the cancellation to the Bus Operator Admin
@@ -25,7 +27,12 @@ app.post('/api/cancellations', (req, res) => {
     },
     body: JSON.stringify(cancellationData),
   })
-  .then(response => response.json())
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+  })
   .then(data => {
     res.json({ success: true, message: 'Cancellation forwarded to operator', data });
   })
@@ -35,6 +42,7 @@ app.post('/api/cancellations', (req, res) => {
   });
 });
 
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
