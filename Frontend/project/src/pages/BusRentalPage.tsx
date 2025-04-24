@@ -1,7 +1,28 @@
-import React, { useState,useEffect } from 'react';
-import { Bus, Calendar, Users, Search, MapPin, ArrowRight, Moon, Sun, CreditCard, Luggage, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft } from 'lucide-react';
-import { sendBusReminder } from './EmailController'
+import React, { useState, useEffect } from 'react';
+import { Bus, Calendar, Users, Search, MapPin, ArrowRight, Moon, Sun, CreditCard, Luggage, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft, Check } from 'lucide-react';
+import { sendBusReminder } from './EmailController';
 
+interface Seat {
+  id: string;
+  number: string;
+  isBooked: boolean;
+  type: string;
+}
+
+interface BusRoute {
+  id: string;
+  from: string;
+  to: string;
+  departure: string;
+  arrival: string;
+  price: number;
+  operator: string;
+  duration: string;
+  amenities: string[];
+  seatsAvailable: number;
+  type: string;
+  seats: Seat[];
+}
 function BusRentalPage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchParams, setSearchParams] = useState({
@@ -35,10 +56,12 @@ function BusRentalPage() {
           throw new Error('Failed to fetch buses');
         }
         const data = await response.json();
-        console.log(data)
+        console.log("Data ya xa murkha",data)
+
+        const busesData = Array.isArray(data) ? data : [data];
         
-        // Transform the API data to match our BusRoute interface
-        const transformedBuses = data.map((bus: any) => ({
+        // Data is generated from backend but still is static will need data from bus operator to move further
+        const transformedBuses = busesData.map((bus: any) => ({
           id: bus.id,
           from: bus.departureLocation,
           to: bus.arrivalLocation,
@@ -53,7 +76,7 @@ function BusRentalPage() {
           seats: Array.from({ length: bus.totalSeats }, (_, i) => ({
             id: `seat-${i + 1}`,
             number: `${i + 1}`,
-            isBooked: Math.random() > 0.7, // You might want to get this from API
+            isBooked: Math.random() > 0.7,//random until I get data from bus operator side
             type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
           }))
         }));
@@ -105,8 +128,33 @@ function BusRentalPage() {
     
     if (selectedBus) {
       try {
+        // First create the booking in the database
+        const bookingData = {
+          user_id: 'user_id', // You'll need to get this from your auth context
+          schedule_id: selectedBus.id,
+          seat_numbers: selectedSeats,
+          total_fare: selectedBus.price * selectedSeats.length,
+          status: 'pending',
+          payment_status: 'pending',
+          payment_method: null,
+          booking_date: new Date().toISOString()
+        };
+
+        // Make API call to create booking
+        const response = await fetch('http://localhost:4000/bookings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(bookingData),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create booking');
+        }
+
         // Send email confirmation
-        const response = await sendBusReminder({
+        const emailResponse = await sendBusReminder({
           email: userEmail,
           from: selectedBus.from,
           to: selectedBus.to,
@@ -116,15 +164,15 @@ function BusRentalPage() {
           date: searchParams.date,
           passengerName: userName,
           seats: selectedSeats,
-          busType: selectedBus.type
+          busType: selectedBus.type,// Include booking ID in email
         });
 
-        console.log('Email response:', response);
+        console.log('Email response:', emailResponse);
         
-        // Show confirmation regardless of actual email status
+        // Show confirmation
         setShowConfirmation(true);
         
-        // Reset form after 3 seconds
+        // Reset form after successful booking
         setTimeout(() => {
           setShowConfirmation(false);
           setStep('search');
@@ -132,21 +180,15 @@ function BusRentalPage() {
           setSelectedSeats([]);
           setUserEmail('');
           setUserName('');
+          
+          // Navigate to bookings page
+          window.location.href = '/profile';
         }, 3000);
+
       } catch (error) {
-        console.error('Failed to send email confirmation:', error);
-        // Still show confirmation to user even if email fails
-        setShowConfirmation(true);
-        
-        // Reset form after 3 seconds
-        setTimeout(() => {
-          setShowConfirmation(false);
-          setStep('search');
-          setSelectedBus(null);
-          setSelectedSeats([]);
-          setUserEmail('');
-          setUserName('');
-        }, 3000);
+        console.error('Booking failed:', error);
+        // Show error message to user
+        alert('Failed to complete booking. Please try again.');
       }
     }
   };
