@@ -24,53 +24,60 @@ import {
   Trash,
   Plus 
 } from "lucide-react";
-import guesthouse1 from "../images/guesthouse1.jpg";
+import placeholderImage from "../images/placeholder.png";
 import room1 from "../images/room1.jpg";
 import room2 from "../images/room2.jpg";
-
-// Mock property data
-const initialProperties = [
-  {
-    id: "1",
-    name: "Himalayan Retreat",
-    address: "Lakeside, Pokhara, Kaski",
-    description: "A beautiful lakeside property with a mountain view.",
-    contact: "9800000001",
-    email: "himalayan@zippytrip.com",
-    images: [guesthouse1],
-    totalRooms: 4,
-    occupiedRooms: 3,
-    occupancyRate: 75,
-    averageRating: 4.7,
-    totalReviews: 12,
-    rooms: [
-      { id: "r1", name: "Master Suite", capacity: 2, available: false, image: room1 },
-      { id: "r2", name: "Guest Room 1", capacity: 2, available: true, image: room2 }
-    ],
-    bookings: [
-      { id: "b1", guestName: "John Doe", checkIn: "2025-04-12", checkOut: "2025-04-15", room: "Master Suite", status: "Confirmed" },
-      { id: "b2", guestName: "Jane Smith", checkIn: "2025-04-18", checkOut: "2025-04-25", room: "Guest Room 2", status: "Pending" },
-      { id: "b3", guestName: "Robert Johnson", checkIn: "2025-05-01", checkOut: "2025-05-05", room: "Family Room", status: "Confirmed" }
-    ],
-    reviews: [
-      { id: "rev1", guestName: "Sarah M.", rating: 5, date: "2025-03-15", comment: "Amazing view and excellent service!" },
-      { id: "rev2", guestName: "Thomas B.", rating: 4, date: "2025-03-10", comment: "Very comfortable stay, highly recommended." },
-      { id: "rev3", guestName: "Emily L.", rating: 5, date: "2025-02-22", comment: "Perfect location and beautiful property!" }
-    ]
-  },
-];
 
 const PropertyDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [property, setProperty] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("rooms");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const foundProperty = initialProperties.find(p => p.id === id);
-    if (foundProperty) {
-      setProperty(foundProperty);
-    }
+    const fetchProperty = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/gproperties/${id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch property');
+        }
+        const data = await response.json();
+        
+        if (data.success) {
+          // Map the fetched data to match your existing structure
+          const fetchedProperty = {
+            ...data.property,
+            images: data.property.images ? JSON.parse(data.property.images) : [placeholderImage],
+            totalRooms: data.property.rooms || 0,
+            // Dummy data for the rest
+            occupiedRooms: 3,
+            occupancyRate: 75,
+            averageRating: 4.7,
+            totalReviews: 12,
+            rooms: [
+              { id: "r1", name: "Master Suite", capacity: 2, available: false, image: room1 },
+              { id: "r2", name: "Guest Room 1", capacity: 2, available: true, image: room2 }
+            ],
+            bookings: [
+              { id: "b1", guestName: "John Doe", checkIn: "2025-04-12", checkOut: "2025-04-15", room: "Master Suite", status: "Confirmed" },
+              { id: "b2", guestName: "Jane Smith", checkIn: "2025-04-18", checkOut: "2025-04-25", room: "Guest Room 2", status: "Pending" }
+            ],
+            reviews: [
+              { id: "rev1", guestName: "Sarah M.", rating: 5, date: "2025-03-15", comment: "Amazing view and excellent service!" },
+              { id: "rev2", guestName: "Thomas B.", rating: 4, date: "2025-03-10", comment: "Very comfortable stay, highly recommended." }
+            ]
+          };
+          setProperty(fetchedProperty);
+        }
+      } catch (error) {
+        console.error('Error fetching property:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperty();
   }, [id]);
 
   const renderStars = (rating: number) => (
@@ -85,10 +92,18 @@ const PropertyDetails = () => {
     </div>
   );
 
-  if (!property) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <p>Loading property details...</p>
+      </div>
+    );
+  }
+
+  if (!property) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p>Property not found</p>
       </div>
     );
   }
@@ -179,7 +194,7 @@ const PropertyDetails = () => {
             {property.rooms.map((room: any) => (
               <Card key={room.id} className="overflow-hidden">
                 <img 
-                  src={room.image || guesthouse1} 
+                  src={room.image || placeholderImage} 
                   alt={room.name} 
                   className="h-40 w-full object-cover" 
                 />

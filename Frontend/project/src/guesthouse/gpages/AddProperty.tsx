@@ -6,6 +6,8 @@ import { Button } from "../gcomponents/button";
 import { UploadCloud } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import placeholderImage from "../images/placeholder.png";
 
 export default function AddProperty() {
   const form = useForm();
@@ -21,26 +23,32 @@ export default function AddProperty() {
     }
   });
 
-  const onSubmit = (data: any) => {
-    const stored = localStorage.getItem("properties");
-    const existing = stored ? JSON.parse(stored) : [];
-
-    const newProperty = {
-      id: Date.now().toString(),
+  const onSubmit = async (data: any) => {
+    const propertyData = {
       name: data.name,
       description: data.description,
-      address: `${data.streetAddress}, ${data.city}, ${data.district}`,
+      streetAddress: data.streetAddress,
+      city: data.city,
+      district: data.district,
       email: data.email,
-      contact: data.phoneNumber,
-      images: images.length > 0 ? images : ["/placeholder.svg"],
+      phoneNumber: data.phoneNumber,
+      images: images.length > 0 ? images : placeholderImage,  // Default image
       rooms: parseInt(data.rooms, 10) || 1,
     };
 
-    const updated = [...existing, newProperty];
-    localStorage.setItem("properties", JSON.stringify(updated));
-
-    alert("Property added successfully!");
-    navigate("/gproperties");
+    try {
+      const response = await axios.post("http://localhost:5000/api/gproperties/addproperty", propertyData);
+      
+      if (response.data.success) {
+        alert("Property added successfully!");
+        navigate("/gproperties");  // Navigate to properties listing page
+      } else {
+        alert("Failed to add property. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error adding property:", error);
+      alert("An error occurred. Please try again.");
+    }
   };
 
   return (
@@ -119,7 +127,7 @@ export default function AddProperty() {
           </div>
         ) : (
           <div className="text-center text-sm text-muted-foreground">
-            <img src="/placeholder.svg" className="mx-auto h-20 opacity-30" alt="No images" />
+            <img src="/placeholder.png" className="mx-auto h-20 opacity-30" alt="No images" />
             <p>No images uploaded</p>
           </div>
         )}

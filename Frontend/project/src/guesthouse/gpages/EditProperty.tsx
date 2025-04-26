@@ -1,53 +1,65 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Input } from "../gcomponents/input";
 import { Textarea } from "../gcomponents/textarea";
 import { Button } from "../gcomponents/button";
+import { Input } from "../gcomponents/input";
 import { UploadCloud } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { useNavigate, useParams } from "react-router-dom";
+import placeholderImage from "../images/placeholder.png";
+
+type FileWithPreview = File & { preview: string };
 
 export default function EditProperty() {
   const { id } = useParams();
   const navigate = useNavigate();
   const form = useForm();
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<(string | FileWithPreview)[]>([]);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("properties");
-    const all = stored ? JSON.parse(stored) : [];
-    const property = all.find((p: any) => p.id.toString() === id?.toString());
+    const fetchProperty = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/gproperties/${id}`);
+        const data = await response.json();
 
-    if (!property) {
-      setNotFound(true);
-      return;
-    }
+        if (data.success) {
+          const property = data.property;
+          form.setValue("name", property.name);
+          form.setValue("description", property.description);
+          form.setValue("rooms", property.rooms);
+          form.setValue("streetAddress", property.address.split(",")[0]?.trim());
+          form.setValue("city", property.address.split(",")[1]?.trim());
+          form.setValue("district", property.address.split(",")[2]?.trim());
+          form.setValue("email", property.email);
+          form.setValue("phoneNumber", property.contact);
+          setImages(property.images);
+        } else {
+          setNotFound(true);
+        }
+      } catch (error) {
+        console.error("Error fetching property:", error);
+        setNotFound(true);
+      }
+    };
 
-    form.setValue("name", property.name);
-    form.setValue("description", property.description);
-    form.setValue("rooms", property.rooms);
-    form.setValue("streetAddress", property.address.split(",")[0]?.trim());
-    form.setValue("city", property.address.split(",")[1]?.trim());
-    form.setValue("district", property.address.split(",")[2]?.trim());
-    form.setValue("email", property.email);
-    form.setValue("phoneNumber", property.contact);
-    setImages(property.images);
+    fetchProperty();
   }, [id, form]);
 
   const { getRootProps, getInputProps } = useDropzone({
-    accept: { 'image/*': [] },
+    accept: { "image/*": [] },
     maxFiles: 10,
     onDrop: (acceptedFiles) => {
-      const imagePreviews = acceptedFiles.map(file => URL.createObjectURL(file));
-      setImages(prev => [...prev, ...imagePreviews].slice(0, 10));
-    }
+      const filesWithPreview = acceptedFiles.map((file) =>
+        Object.assign(file, {
+          preview: URL.createObjectURL(file),
+        })
+      ) as FileWithPreview[];
+      setImages((prev) => [...prev, ...filesWithPreview].slice(0, 10));
+    },
   });
 
-  const onSubmit = (data: any) => {
-    const stored = localStorage.getItem("properties");
-    const all = stored ? JSON.parse(stored) : [];
-
+  const onSubmit = async (data: any) => {
     const updatedProperty = {
       id,
       name: data.name,
@@ -55,20 +67,45 @@ export default function EditProperty() {
       address: `${data.streetAddress}, ${data.city}, ${data.district}`,
       email: data.email,
       contact: data.phoneNumber,
-      images: images.length > 0 ? images : ["/placeholder.svg"],
       rooms: parseInt(data.rooms, 10) || 1,
     };
 
-    const updated = all.map((p: any) => (p.id === id ? updatedProperty : p));
-    localStorage.setItem("properties", JSON.stringify(updated));
+    const formData = new FormData();
+    formData.append("property", JSON.stringify(updatedProperty));
 
-    alert("Property updated successfully!");
-    navigate("/gproperties");
+    // images.forEach((image) => {
+    //   if (typeof image === "string") {
+    //     formData.append("existingImages", image); // for server to retain existing ones
+    //   } else {
+    //     formData.append("newImages", image); // new uploads
+    //   }
+    // });
+
+    try {
+      const url = `http://localhost:5000/api/gproperties/${id}`;
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedProperty),
+      });
+      
+    
+      const result = await response.json();
+    
+      if (response.ok && result.success) {
+        alert("Property updated successfully!");
+        navigate("/gproperties");
+      } else {
+        alert(`Error updating property: ${result.message || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Update error:", error);
+      alert("Error updating property");
+    }
+    
   };
-
-  if (notFound) {
-    return <div className="text-center py-10 text-red-500">Property not found.</div>;
-  }
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-4xl mx-auto p-6 space-y-8">
@@ -77,36 +114,77 @@ export default function EditProperty() {
         <p className="text-muted-foreground">Update your property listing</p>
       </div>
 
+      {notFound && <p className="text-red-500">Property not found or error fetching details.</p>}
+
       <section className="space-y-4 border rounded-lg p-4">
         <h2 className="text-xl font-semibold">Basic Information</h2>
         <div>
-          <label className="block text-sm font-medium mb-1">Guesthouse Name</label>
-          <Input placeholder="e.g. Ocean View Suite" {...form.register("name")} />
+          <label className="block text-sm font-medium mb-1" htmlFor="name">
+            Guesthouse Name
+          </label>
+          <Input
+            id="name"
+            {...form.register("name", { required: "Guesthouse name is required" })}
+            placeholder="e.g. Ocean View Suite"
+          />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <Textarea placeholder="Describe your property..." {...form.register("description")} />
+          <label className="block text-sm font-medium mb-1" htmlFor="description">
+            Description
+          </label>
+          <Textarea
+            placeholder="Describe your property..."
+            {...form.register("description", { required: "Description is required" })}
+          />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Number of Rooms</label>
-          <Input type="number" min="1" {...form.register("rooms")} />
+          <label className="block text-sm font-medium mb-1" htmlFor="rooms">
+            Number of Rooms
+          </label>
+          <Input
+            id="rooms"
+            type="number"
+            min="1"
+            {...form.register("rooms", { required: "Number of rooms is required" })}
+          />
         </div>
       </section>
 
       <section className="space-y-4 border rounded-lg p-4">
         <h2 className="text-xl font-semibold">Location</h2>
-        <Input placeholder="Street Address" {...form.register("streetAddress")} />
+        <Input
+          id="streetAddress"
+          placeholder="Street Address"
+          {...form.register("streetAddress", { required: "Street address is required" })}
+        />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input placeholder="City" {...form.register("city")} />
-          <Input placeholder="District" {...form.register("district")} />
+          <Input
+            id="city"
+            placeholder="City"
+            {...form.register("city", { required: "City is required" })}
+          />
+          <Input
+            id="district"
+            placeholder="District"
+            {...form.register("district", { required: "District is required" })}
+          />
         </div>
       </section>
 
       <section className="space-y-4 border rounded-lg p-4">
         <h2 className="text-xl font-semibold">Contact Information</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input type="email" placeholder="your@email.com" {...form.register("email")} />
-          <Input placeholder="+977 980XXXXXXX" {...form.register("phoneNumber")} />
+          <Input
+            id="email"
+            type="email"
+            placeholder="your@email.com"
+            {...form.register("email", { required: "Email is required" })}
+          />
+          <Input
+            id="phoneNumber"
+            placeholder="+977 980XXXXXXX"
+            {...form.register("phoneNumber", { required: "Phone number is required" })}
+          />
         </div>
       </section>
 
@@ -121,35 +199,23 @@ export default function EditProperty() {
           </div>
         </div>
 
-        {images.length > 0 ? (
+        {/* {images.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {images.map((src, i) => (
+            {images.map((img, i) => (
               <img
                 key={i}
-                src={src}
+                src={typeof img === "string" ? img : img.preview}
                 alt={`Uploaded ${i}`}
-                draggable
-                onDragStart={(e) => e.dataTransfer.setData("drag-index", i.toString())}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  const draggedFrom = parseInt(e.dataTransfer.getData("drag-index"));
-                  const draggedTo = i;
-                  if (draggedFrom === draggedTo) return;
-                  const updated = [...images];
-                  const [moved] = updated.splice(draggedFrom, 1);
-                  updated.splice(draggedTo, 0, moved);
-                  setImages(updated);
-                }}
-                className="rounded-lg h-28 object-cover w-full cursor-move border"
+                className="rounded-lg h-28 object-cover w-full"
               />
             ))}
           </div>
         ) : (
           <div className="text-center text-sm text-muted-foreground">
-            <img src="/placeholder.svg" className="mx-auto h-20 opacity-30" alt="No images" />
+            <img src={placeholderImage} className="mx-auto h-20 opacity-30" alt="No images" />
             <p>No images uploaded</p>
           </div>
-        )}
+        )} */}
       </section>
 
       <div className="text-right">
