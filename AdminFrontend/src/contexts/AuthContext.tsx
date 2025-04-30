@@ -1,8 +1,14 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { createClient } from '@supabase/supabase-js';
 import { toast } from "sonner";
+
+// Initialize Supabase client
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL || '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+);
 
 type User = {
   name: string;
