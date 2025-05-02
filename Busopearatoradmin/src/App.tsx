@@ -20,6 +20,7 @@ import { useAuth } from "./contexts/AuthContext";
 import EditRoute from "./pages/EditRoute";
 import CancellationManagement from "./pages/CancellationManagement";
 import TripReminders from "./pages/TripReminders";
+import BookingAlerts from "./pages/BookingAlerts";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const AppRoutes = () => {
         <Route path="settings" element={<Settings />} />
         <Route path="cancellations" element={<CancellationManagement />} />
         <Route path="trip-reminders" element={<TripReminders />} />
+        <Route path="booking-alerts" element={<BookingAlerts />} />
       </Route>
       
       <Route path="*" element={<NotFound />} />

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Filter, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/card";
 import { format } from "date-fns";
 import { fetchSchedules } from "@/services/api";
-import { useRealtime } from "@/hooks/useRealtime";
 import AddScheduleModal from "@/components/AddScheduleModal";
 import { ScheduleStats } from "@/components/schedule/ScheduleStats";
 import { ScheduleFilters } from "@/components/schedule/ScheduleFilters";
@@ -19,16 +18,28 @@ const Schedule = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [scheduleData, setScheduleData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const formattedDate = date ? format(date, "yyyy-MM-dd") : undefined;
-  const fetchSchedulesForDate = async () => {
-    const result = await fetchSchedules(formattedDate);
-    console.log("Fetched schedules:", result); // Debug
-    return result;
-  };
   
-  const { data: scheduleData, loading } = useRealtime('schedules', [], ['*'], fetchSchedulesForDate);
-  console.log("scheduleData:", scheduleData, "loading:", loading); // Debug
+  // Replace useRealtime with direct API call
+  useEffect(() => {
+    const getSchedules = async () => {
+      setLoading(true);
+      try {
+        const result = await fetchSchedules(formattedDate);
+        setScheduleData(result || []);
+      } catch (error) {
+        console.error("Error fetching schedules:", error);
+        setScheduleData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    getSchedules();
+  }, [formattedDate]);
 
   const schedules = scheduleData.map(schedule => {
     const departureTime = new Date(schedule.departure_time);
@@ -89,7 +100,7 @@ const Schedule = () => {
           <p className="text-muted-foreground mt-1">Manage your bus trips and schedules</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button /* variant="outline" */ className="bg-zippy-darkGray border-zippy-gray">
+          <Button className="bg-zippy-darkGray border-zippy-gray">
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
@@ -130,7 +141,21 @@ const Schedule = () => {
       <AddScheduleModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
-        onSuccess={() => {}} 
+        onSuccess={() => {
+          // Refresh schedules after adding a new one
+          const getSchedules = async () => {
+            setLoading(true);
+            try {
+              const result = await fetchSchedules(formattedDate);
+              setScheduleData(result || []);
+            } catch (error) {
+              console.error("Error fetching schedules:", error);
+            } finally {
+              setLoading(false);
+            }
+          };
+          getSchedules();
+        }} 
       />
     </div>
   );
