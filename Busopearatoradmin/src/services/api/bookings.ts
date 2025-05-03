@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Schedule } from "./schedules";
+import { ValidTableName, fromSafeTable } from "@/utils/tableTypes";
 
 // Define simpler types to avoid circular references
 export type BookingSchedule = {
@@ -85,7 +86,7 @@ export const fetchBookings = async () => {
 
 export const getUserBookings = async (userId: string) => {
   const { data, error } = await supabase
-    .from(asValidTableName('bookings'))
+    .from('bookings')
     .select(`
       *,
       schedules (
@@ -114,7 +115,7 @@ export const getUserBookings = async (userId: string) => {
 
 export const getBooking = async (id: string) => {
   const { data, error } = await supabase
-    .from(asValidTableName('bookings'))
+    .from('bookings')
     .select(`
       *,
       schedules (
@@ -165,7 +166,7 @@ export const processBooking = async (bookingData: {
 
 export const updateBooking = async (id: string, bookingData: BookingUpdate) => {
   const { data, error } = await supabase
-    .from(asValidTableName('bookings'))
+    .from('bookings')
     .update(bookingData)
     .eq('id', id)
     .select();
@@ -176,7 +177,7 @@ export const updateBooking = async (id: string, bookingData: BookingUpdate) => {
 
 export const deleteBooking = async (id: string) => {
   const { error } = await supabase
-    .from(asValidTableName('bookings'))
+    .from('bookings')
     .delete()
     .eq('id', id);
   

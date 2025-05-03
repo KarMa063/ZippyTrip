@@ -1,19 +1,19 @@
 import { Link } from "react-router-dom";
-import { 
-  BarChart, 
-  Bus, 
-  Edit, 
-  FileDown, 
-  Filter, 
-  GaugeCircle, 
-  Info, 
-  MoreHorizontal, 
-  Plus, 
-  Search, 
-  Settings, 
-  Trash2, 
-  User, 
-  Wrench 
+import {
+  BarChart,
+  Bus,
+  Edit,
+  FileDown,
+  Filter,
+  GaugeCircle,
+  Info,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Settings,
+  Trash2,
+  User,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,

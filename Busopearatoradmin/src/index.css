@@ -200,4 +200,65 @@
   .text-gradient {
     @apply bg-gradient-to-r from-zippy-purple to-zippy-lightPurple bg-clip-text text-transparent;
   }
+  
+  /* Golden text stroke and animate */
+  .gold-text {
+    color: #FFD700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+  }
+  
+  .gold-stroke {
+    text-shadow: 
+      -1px -1px 0 #FFD700,
+      1px -1px 0 #FFD700,
+      -1px 1px 0 #FFD700,
+      1px 1px 0 #FFD700,
+      0 0 8px rgba(255, 215, 0, 0.6);
+  }
+  
+  /* Dashboard animations */
+  .animate-enter {
+    animation: enter 0.6s ease-out forwards;
+  }
+  
+  @keyframes enter {
+    0% {
+      opacity: 0;
+      transform: scale(0.95) translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -41,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { fetchBookings } from "@/services/api";
 import { supabase } from "@/integrations/supabase/client";
+import { formatNPR } from "@/utils/formatters";
 
 const Bookings = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -58,7 +58,6 @@ const Bookings = () => {
     }
   }, [data]);
 
-  // Subscribe to real-time updates
   useEffect(() => {
     const channel = supabase
       .channel('bookings-changes')
@@ -70,7 +69,6 @@ const Bookings = () => {
           table: 'bookings',
         },
         async (payload) => {
-          // Refresh the bookings data
           const refreshedData = await fetchBookings();
           setBookings(refreshedData);
         }
@@ -315,7 +313,7 @@ const Bookings = () => {
                           {booking.seat_numbers.length} {booking.seat_numbers.length === 1 ? 'seat' : 'seats'}
                         </span>
                       </TableCell>
-                      <TableCell>NPR {booking.total_fare}</TableCell>
+                      <TableCell>{formatNPR(booking.total_fare)}</TableCell>
                       <TableCell>{getStatusBadge(booking.status)}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">

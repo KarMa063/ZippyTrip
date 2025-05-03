@@ -123,3 +123,17 @@ export const deleteSchedule = async (id: string) => {
   if (error) throw error;
   return true;
 };
+
+export const cancelSchedule = async (scheduleId: string, reason: string) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('cancel-schedule', {
+      body: { scheduleId, reason }
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error cancelling schedule:', error);
+    throw error;
+  }
+};
