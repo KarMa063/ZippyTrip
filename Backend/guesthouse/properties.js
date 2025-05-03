@@ -46,7 +46,7 @@ router.post("/addproperty", async (req, res) => {
     } = req.body;
 
     const address = `${streetAddress}, ${city}, ${district}`;
-    const imageUrls = images.length > 0 ? images : ["/placeholder.png"];
+    const imageUrls = images.length > 0 ;
     try {
         const result = await pool.query(
             `INSERT INTO properties 

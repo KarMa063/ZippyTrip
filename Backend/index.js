@@ -7,9 +7,11 @@ const PORT = process.env.PORT || 5000;
 
 // Ensure the table exists before starting the server
 const { router: propertyRoutes, propertyTableExists } = require('./guesthouse/properties');
-propertyTableExists();  // Ensure table creation before setting up routes
+const { router: roomsRoutes, createRoomsTable } = require('./guesthouse/rooms');
+propertyTableExists(); 
+createRoomsTable();
 
-app.use(cors());  // You can configure CORS if needed
+app.use(cors());
 app.use(express.json());
 
 // Routes
@@ -18,6 +20,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/gproperties', propertyRoutes);
+app.use('/api/gproperties', roomsRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

@@ -90,10 +90,7 @@ export default function EditProperty() {
         },
         body: JSON.stringify(updatedProperty),
       });
-      
-    
       const result = await response.json();
-    
       if (response.ok && result.success) {
         alert("Property updated successfully!");
         navigate("/gproperties");
@@ -104,7 +101,6 @@ export default function EditProperty() {
       console.error("Update error:", error);
       alert("Error updating property");
     }
-    
   };
 
   return (

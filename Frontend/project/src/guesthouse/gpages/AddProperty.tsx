@@ -32,7 +32,7 @@ export default function AddProperty() {
       district: data.district,
       email: data.email,
       phoneNumber: data.phoneNumber,
-      images: images.length > 0 ? images : placeholderImage,  // Default image
+      images: images,  // Default image
       rooms: parseInt(data.rooms, 10) || 1,
     };
 
@@ -102,7 +102,7 @@ export default function AddProperty() {
           </div>
         </div>
 
-        {images.length > 0 ? (
+        {/* {images.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {images.map((src, i) => (
               <img
@@ -130,7 +130,7 @@ export default function AddProperty() {
             <img src="/placeholder.png" className="mx-auto h-20 opacity-30" alt="No images" />
             <p>No images uploaded</p>
           </div>
-        )}
+        )} */}
       </section>
 
       <div className="text-right">

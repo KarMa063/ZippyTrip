@@ -109,9 +109,8 @@ const GProperties = () => {
               <Link to={`/gproperties/${property.id}`}>
                 <div className="aspect-video overflow-hidden">
                   <img
-                    src={property.images?.[0] || placeholderImage}
+                    src={property.images?.[0]}
                     alt={property.name}
-                    onError={(e) => (e.currentTarget.src = placeholderImage)}
                     className="object-cover w-full h-full group-hover:scale-105 transition-transform"
                   />
                 </div>
