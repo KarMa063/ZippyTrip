@@ -17,7 +17,9 @@ import PropertyDetails from './guesthouse/gpages/PropertyDetails';
 import AddProperty from './guesthouse/gpages/AddProperty';
 import EditProperty from "./guesthouse/gpages/EditProperty";
 import AddRoom from './guesthouse/gpages/AddRoom';
+import EditRooms from './guesthouse/gpages/EditRooms';
 import GBooking from './guesthouse/gpages/GBooking';
+import GMessages from './guesthouse/gpages/GMessages';
 import { Layout } from './guesthouse/gcomponents/layout';
 import { ThemeProvider } from './guesthouse/gcomponents/theme-provider';
 
@@ -47,10 +49,12 @@ function App() {
           <Route path="/gdashboard" element={<GDashboard />} />
           <Route path="/gproperties" element={<GProperties />} />
           <Route path="/gproperties/:id" element={<PropertyDetails />} />
-          <Route path="gproperties/:id/add-room" element={<AddRoom />}/>
+          <Route path="/gproperties/:id/add-room" element={<AddRoom />}/>
+          <Route path="/gproperties/:id/rooms/:roomId/edit" element={<EditRooms />} />
           <Route path="/gproperties/add" element={<AddProperty />} />
           <Route path="/gproperties/edit/:id" element={<EditProperty />} />
           <Route path="/gbookings" element={<GBooking />} />
+          <Route path="/gmessages" element={<GMessages />} />
         </Route>
       </Routes>
     </Router>
