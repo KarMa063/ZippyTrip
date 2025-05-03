@@ -111,6 +111,38 @@ const PropertyDetails = () => {
     };
     fetchPropertyAndRooms();
   }, [propertyId]);
+
+  const handleDeleteRoom = async (roomId: number) => {
+    if (!window.confirm("Are you sure you want to delete this room?")) return;
+  
+    try {
+      const response = await fetch(`http://localhost:5000/api/gproperties/${propertyId}/rooms/${roomId}`, {
+        method: 'DELETE',
+      });
+  
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || "Failed to delete room");
+      }
+  
+      // Update UI after successful deletion
+      setProperty((prev: any) => ({
+        ...prev,
+        rooms: prev.rooms.filter((room: any) => room.id !== roomId),
+        totalRooms: prev.totalRooms - 1,
+        occupiedRooms: prev.rooms.filter((room: any) => !room.available && room.id !== roomId).length,
+        occupancyRate: prev.totalRooms - 1 > 0
+          ? Math.round(
+              (prev.rooms.filter((room: any) => !room.available && room.id !== roomId).length /
+                (prev.totalRooms - 1)) * 100
+            )
+          : 0,
+      }));
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("Could not delete room.");
+    }
+  };  
   
   const renderStars = (rating: number) => (
     <div className="flex items-center">
@@ -285,6 +317,7 @@ const PropertyDetails = () => {
                       variant="destructive" 
                       size="sm" 
                       className="gap-1"
+                      onClick={() => handleDeleteRoom(room.id)}
                     >
                       <Trash className="h-4 w-4" />
                       Delete

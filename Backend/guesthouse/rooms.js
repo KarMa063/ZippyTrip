@@ -35,7 +35,7 @@ async function createRoomsTable() {
 // POST route to create a room
 router.post('/:propertyId/rooms', async (req, res) => {
   const { propertyId } = req.params;
-  const { name, capacity, price, available = true, amenities, images } = req.body;
+  const { name, capacity, price, available = true, amenities = [], images = [] } = req.body;
 
   try {
     // Check if the propertyId exists in the properties table
@@ -77,7 +77,6 @@ router.get('/:propertyId/rooms', async (req, res) => {
   const { propertyId } = req.params;
 
   try {
-    // Check if the property exists
     const propertyCheck = await pool.query(
       'SELECT id FROM properties WHERE id = $1',
       [propertyId]
@@ -87,7 +86,6 @@ router.get('/:propertyId/rooms', async (req, res) => {
       return res.status(404).json({ success: false, message: "Property not found" });
     }
 
-    // Fetch all rooms for the given propertyId
     const rooms = await pool.query(
       'SELECT * FROM rooms WHERE property_id = $1',
       [propertyId]
@@ -105,7 +103,6 @@ router.get('/:propertyId/rooms/:roomId', async (req, res) => {
   const { propertyId, roomId } = req.params;
 
   try {
-    // Check if the property exists
     const propertyCheck = await pool.query(
       'SELECT id FROM properties WHERE id = $1',
       [propertyId]
@@ -115,7 +112,6 @@ router.get('/:propertyId/rooms/:roomId', async (req, res) => {
       return res.status(404).json({ success: false, message: "Property not found" });
     }
 
-    // Fetch the specific room by propertyId and roomId
     const room = await pool.query(
       'SELECT * FROM rooms WHERE property_id = $1 AND id = $2',
       [propertyId, roomId]
@@ -135,19 +131,30 @@ router.get('/:propertyId/rooms/:roomId', async (req, res) => {
 // PUT route to edit a room
 router.put('/:propertyId/rooms/:roomId', async (req, res) => {
   const { propertyId, roomId } = req.params;
-  const { name, capacity, price, available, amenities, images } = req.body;
+  const { name, capacity, price, available, amenities = [], images = [] } = req.body;
+  
   try {
-    // Update room details
     const result = await pool.query(
       `UPDATE rooms
        SET name = $1, capacity = $2, price = $3, available = $4, amenities = $5, images = $6
        WHERE property_id = $7 AND id = $8
        RETURNING *`,
-      [name, capacity, price, available, amenities, JSON.stringify(images), propertyId, roomId]
+      [
+        name,
+        capacity,
+        price,
+        available,
+        amenities,
+        JSON.stringify(images),
+        propertyId,
+        roomId,
+      ]
     );
+
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Room not found" });
     }
+
     res.status(200).json({ success: true, room: result.rows[0] });
   } catch (error) {
     console.error("Error editing room:", error);
@@ -158,20 +165,23 @@ router.put('/:propertyId/rooms/:roomId', async (req, res) => {
 // DELETE route to remove a specific room
 router.delete('/:propertyId/rooms/:roomId', async (req, res) => {
   const { propertyId, roomId } = req.params;
+
   try {
     const result = await pool.query(
       'DELETE FROM rooms WHERE property_id = $1 AND id = $2 RETURNING *',
       [propertyId, roomId]
-    )
+    );
+
     if (result.rows.length === 0) {
-      return res.status(404).json({success: false, message: "Room not found"});
+      return res.status(404).json({ success: false, message: "Room not found" });
     }
-    res.status(200).json({success: true, message: "Room deleted successfully"});
-    } catch (error) {
-      console.error("Error deleting room:", error);
-      res.status(500).json({success: false, message: "Internal server error"});
-    }
-  });
+
+    res.status(200).json({ success: true, message: "Room deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting room:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
 
 // Export the router and table creation function
 module.exports = {

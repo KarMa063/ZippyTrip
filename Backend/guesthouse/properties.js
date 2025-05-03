@@ -31,6 +31,7 @@ async function propertyTableExists() {
         console.error("Error checking or creating the table:", error);
     }
 }
+
 // Add a new property
 router.post("/addproperty", async (req, res) => {
     const {
@@ -46,7 +47,6 @@ router.post("/addproperty", async (req, res) => {
     } = req.body;
 
     const address = `${streetAddress}, ${city}, ${district}`;
-    const imageUrls = images.length > 0 ;
     try {
         const result = await pool.query(
             `INSERT INTO properties 
@@ -59,7 +59,7 @@ router.post("/addproperty", async (req, res) => {
                 address,
                 email,
                 phoneNumber,
-                JSON.stringify(imageUrls),
+                JSON.stringify(images),
                 rooms,
             ]
         );
@@ -69,6 +69,7 @@ router.post("/addproperty", async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 });
+
 // Get all properties
 router.get('/', async (req, res) => {
     try {
@@ -90,6 +91,7 @@ router.get('/', async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 });
+
 // Get property by ID
 router.get('/:id', async (req, res) => {
     const { id } = req.params;
@@ -107,6 +109,7 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 });
+
 // Delete property by ID
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
@@ -121,32 +124,42 @@ router.delete('/:id', async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 });
+
 // Update property based on ID
 router.put('/:id', async (req, res) => {
-  const { id } = req.params;
-  const { name, description, address, email, contact, images, rooms } = req.body;
-  try {
-    const result = await pool.query(
-      `UPDATE properties SET 
-        name = $1, 
-        description = $2, 
-        address = $3, 
-        email = $4, 
-        contact = $5, 
-        images = $6, 
-        rooms = $7
-      WHERE id = $8
-      RETURNING *`,
-      [name, description, address, email, contact, JSON.stringify(images), rooms, id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Property not found" });
+    const { id } = req.params;
+    const { name, description, address, email, contact, images, rooms } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE properties SET 
+                name = $1, 
+                description = $2, 
+                address = $3, 
+                email = $4, 
+                contact = $5, 
+                images = $6, 
+                rooms = $7
+            WHERE id = $8
+            RETURNING *`,
+            [
+                name,
+                description,
+                address,
+                email,
+                contact,
+                JSON.stringify(images),
+                rooms,
+                id
+            ]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Property not found" });
+        }
+        res.status(200).json({ success: true, property: result.rows[0] });
+    } catch (error) {
+        console.error("Error updating property:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
-    res.status(200).json({ success: true, property: result.rows[0] });
-  } catch (error) {
-    console.error("Error updating property:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
 });
 
 module.exports = {
