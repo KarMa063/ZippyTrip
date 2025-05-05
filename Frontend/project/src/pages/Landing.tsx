@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plane } from 'lucide-react';
+import { Plane, Building2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const images = [
@@ -27,6 +27,10 @@ export default function Landing() {
     navigate('/auth?mode=signup');
   };
 
+  const handleStaysClick = () => {
+    navigate('/guesthouses');
+  };
+
   return (
     <div className="relative min-h-screen">
       <div
@@ -44,15 +48,24 @@ export default function Landing() {
               ZippyTrip
             </span>
           </div>
-          <button
-            onClick={() => navigate('/auth?mode=login')}
-            className="px-6 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition duration-200"
-          >
-            Sign In
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={handleStaysClick}
+              className="px-6 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition duration-200 flex items-center gap-2"
+            >
+              <Building2 className="h-5 w-5" />
+              Stays
+            </button>
+            <button
+              onClick={() => navigate('/auth?mode=login')}
+              className="px-6 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition duration-200"
+            >
+              Sign In
+            </button>
+          </div>
         </header>
 
-        <main className="flex-grow flex flex-col items-center justify-center px-4 space-y-8">
+        <main className="flex-grow flex items-center justify-center px-4">
           <div className="text-center">
             <h1 className="text-5xl font-bold text-white mb-6">
               Travel Smarter, Adventure Better
