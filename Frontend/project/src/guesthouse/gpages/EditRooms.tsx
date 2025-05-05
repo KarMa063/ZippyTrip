@@ -183,7 +183,7 @@ export default function EditRoom() {
           </div>
         </div>
         {/* Display uploaded images */}
-        {/* {images.length > 0 && (
+        {images.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
             {images.map((img, i) => (
               <img
@@ -200,7 +200,7 @@ export default function EditRoom() {
             <img src={placeholderImage} className="mx-auto h-20 opacity-30" alt="No images" />
             <p>No images uploaded</p>
           </div>
-        )} */}
+        )}
       </section>
 
       <div className="text-right">
