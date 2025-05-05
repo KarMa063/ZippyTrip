@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
 
 const backgrounds = [
   'https://images.unsplash.com/photo-1469474968028-56623f02e42e',
@@ -10,6 +11,7 @@ const backgrounds = [
 ].map((url) => `${url}?auto=format&fit=crop&w=2000&q=80`);
 
 const BackgroundCarousel: React.FC = () => {
+  const { isDarkMode } = useGlobalTheme(); // Use global theme
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -46,10 +48,20 @@ const BackgroundCarousel: React.FC = () => {
       ))}
 
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-white" />
+      <div
+        className={`absolute inset-0 bg-gradient-to-b ${
+          isDarkMode
+            ? 'from-black/50 via-black/30 to-gray-900'
+            : 'from-black/30 via-black/20 to-white'
+        }`}
+      />
 
       {/* Welcome text */}
-      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center text-white z-10">
+      <div
+        className={`absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-10 ${
+          isDarkMode ? 'text-white' : 'text-gray-800'
+        }`}
+      >
         <h1 className="text-5xl font-bold mb-4">
           Discover Your Next Adventure
         </h1>
@@ -61,13 +73,21 @@ const BackgroundCarousel: React.FC = () => {
       {/* Navigation arrows */}
       <button
         onClick={goToPrevious}
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/30 hover:bg-white/50 p-2 rounded-full text-white transition-all duration-300 opacity-0 group-hover:opacity-100"
+        className={`absolute left-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 ${
+          isDarkMode
+            ? 'bg-gray-800/50 hover:bg-gray-700/70 text-white'
+            : 'bg-white/30 hover:bg-white/50 text-gray-800'
+        }`}
       >
         <ChevronLeft className="h-6 w-6" />
       </button>
       <button
         onClick={goToNext}
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/30 hover:bg-white/50 p-2 rounded-full text-white transition-all duration-300 opacity-0 group-hover:opacity-100"
+        className={`absolute right-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 ${
+          isDarkMode
+            ? 'bg-gray-800/50 hover:bg-gray-700/70 text-white'
+            : 'bg-white/30 hover:bg-white/50 text-gray-800'
+        }`}
       >
         <ChevronRight className="h-6 w-6" />
       </button>
@@ -78,10 +98,14 @@ const BackgroundCarousel: React.FC = () => {
           <button
             key={index}
             onClick={() => setCurrentIndex(index)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+            className={`h-2 rounded-full transition-all duration-300 ${
               index === currentIndex
-                ? 'bg-white w-8'
-                : 'bg-white/50 hover:bg-white/80'
+                ? isDarkMode
+                  ? 'bg-white w-8'
+                  : 'bg-gray-800 w-8'
+                : isDarkMode
+                ? 'bg-white/50 hover:bg-white/80 w-2'
+                : 'bg-gray-500/50 hover:bg-gray-500/80 w-2'
             }`}
           />
         ))}

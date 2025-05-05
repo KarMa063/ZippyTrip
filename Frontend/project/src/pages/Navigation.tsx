@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Building2,
   Car,
   MapPin,
   Globe,
   Moon,
-  Sun,  // Add this
+  Sun,
   Bell,
   User,
-  Ticket,
   Settings,
   LogOut,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useGlobalTheme } from '../components/GlobalThemeContext';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -24,19 +24,19 @@ interface NavItemProps {
 
 const NavItem: React.FC<NavItemProps> = ({ icon, text, route, active = false }) => {
   const navigate = useNavigate();
-  const [isDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  const { isDarkMode } = useGlobalTheme();
 
   return (
     <button
       onClick={() => navigate(route)}
-      className={`nav-link inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
+      className={`nav-link inline-flex items-center px-2 py-2 text-sm font-medium transition-all duration-200 transform ${
         active
-          ? isDarkMode 
-            ? 'text-blue-400 border-b-2 border-blue-400'
-            : 'text-blue-600 border-b-2 border-blue-600'
+          ? isDarkMode
+            ? 'text-blue-400 border-b-4 border-blue-400 scale-105'
+            : 'text-blue-600 border-b-4 border-blue-600 scale-105'
           : isDarkMode
-            ? 'text-gray-300 hover:text-blue-400 hover:border-gray-600'
-            : 'text-gray-500 hover:text-blue-600 hover:border-gray-300'
+          ? 'text-gray-300 hover:text-blue-400 hover:bg-gray-800 hover:scale-100'
+          : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100 hover:scale-100'
       }`}
     >
       {icon}
@@ -47,9 +47,10 @@ const NavItem: React.FC<NavItemProps> = ({ icon, text, route, active = false }) 
 
 const Navigation: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isDarkMode, toggleTheme } = useGlobalTheme();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [serviceMenuOpen, setServiceMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const serviceMenuRef = useRef<HTMLDivElement>(null);
@@ -109,46 +110,58 @@ const Navigation: React.FC = () => {
     }
   };
 
-  // Add useEffect to handle dark mode
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.body.style.backgroundColor = '#1a1a1a';
-      document.body.style.color = '#ffffff';
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.style.backgroundColor = '';
-      document.body.style.color = '';
-    }
-  }, [isDarkMode]);
-
   return (
-    <nav className={`${isDarkMode ? 'bg-gray-900/90' : 'bg-white/90'} backdrop-blur-sm shadow-lg sticky top-0 z-50`}>
+    <nav
+      className={`${isDarkMode ? 'bg-gray-900/90' : 'bg-white/90'} backdrop-blur-sm shadow-lg sticky top-0 z-50`}
+    >
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <span
-                className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} text-2xl font-bold hover-text cursor-pointer`}
+                className={`${
+                  isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                } text-2xl font-bold hover-text cursor-pointer`}
                 onClick={() => navigate('/home')}
               >
                 ZippyTrip
               </span>
             </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <NavItem icon={<Building2 className={isDarkMode ? 'text-gray-300' : ''} />} text="Stays" route="/guesthouses"/>
-              <NavItem icon={<Car className={isDarkMode ? 'text-gray-300' : ''} />} text="Bus Rentals" route="/bus" />
-              <NavItem icon={<MapPin className={isDarkMode ? 'text-gray-300' : ''} />} text="Attractions" route="/attractions" />
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-8 items-center">
+              <NavItem
+                icon={<Building2 className={isDarkMode ? 'h-5 w-5 text-gray-300' : 'h-5 w-5'} />}
+                text="Stays"
+                route="/guesthouses"
+                active={location.pathname === '/guesthouses'}
+              />
+              <NavItem
+                icon={<Car className={isDarkMode ? 'h-5 w-5 text-gray-300' : 'h-5 w-5'} />}
+                text="Bus Rentals"
+                route="/bus"
+                active={location.pathname === '/bus'}
+              />
+              <NavItem
+                icon={<MapPin className={isDarkMode ? 'h-5 w-5 text-gray-300' : 'h-5 w-5'} />}
+                text="Attractions"
+                route="/attractions"
+                active={location.pathname === '/attractions'}
+              />
             </div>
           </div>
 
           <div className="relative flex items-center space-x-4">
-            <button className={`p-2 rounded-full ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}>
+            <button
+              className={`p-2 rounded-full ${
+                isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
+              } transition-colors`}
+            >
               <Globe className="h-5 w-5 hover-text" />
             </button>
-            <button 
-              className={`p-2 rounded-full ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
-              onClick={() => setIsDarkMode(!isDarkMode)}
+            <button
+              className={`p-2 rounded-full ${
+                isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+              } transition-colors`}
+              onClick={toggleTheme}
             >
               {isDarkMode ? (
                 <Sun className="h-5 w-5 text-yellow-500 hover-text" />
@@ -156,7 +169,11 @@ const Navigation: React.FC = () => {
                 <Moon className="h-5 w-5 text-gray-600 hover-text" />
               )}
             </button>
-            <button className={`p-2 rounded-full ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}>
+            <button
+              className={`p-2 rounded-full ${
+                isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
+              } transition-colors`}
+            >
               <Bell className="h-5 w-5 hover-text" />
             </button>
 
@@ -165,8 +182,8 @@ const Navigation: React.FC = () => {
                 ref={serviceButtonRef}
                 onClick={() => setServiceMenuOpen((prev) => !prev)}
                 className={`flex items-center space-x-2 border-2 ${
-                  isDarkMode 
-                    ? 'border-blue-400 text-blue-400 hover:bg-gray-800' 
+                  isDarkMode
+                    ? 'border-blue-400 text-blue-400 hover:bg-gray-800'
                     : 'border-blue-600 text-blue-600 hover:bg-blue-50'
                 } rounded-full px-4 py-1 transition-colors`}
               >
@@ -197,11 +214,11 @@ const Navigation: React.FC = () => {
 
             <div className="relative">
               <button
-                ref={profileButtonRef}  
+                ref={profileButtonRef}
                 onClick={() => setProfileMenuOpen((prev) => !prev)}
                 className={`flex items-center space-x-2 border-2 ${
-                  isDarkMode 
-                    ? 'border-blue-400 text-blue-400 hover:bg-gray-800' 
+                  isDarkMode
+                    ? 'border-blue-400 text-blue-400 hover:bg-gray-800'
                     : 'border-blue-600 text-blue-600 hover:bg-blue-50'
                 } rounded-full px-4 py-1 transition-colors`}
               >

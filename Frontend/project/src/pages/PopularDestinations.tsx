@@ -1,7 +1,18 @@
 import React from 'react';
 import { MapPin, Star } from 'lucide-react';
+import { useGlobalTheme } from '../components/GlobalThemeContext';
+import Navigation from './Navigation';
 
-const destinations = [
+interface Destination {
+  id: string;
+  name: string;
+  image: string;
+  description: string;
+  rating: number;
+  properties: number;
+}
+
+const destinations: Destination[] = [
   {
     id: '1',
     name: 'Kathmandu',
@@ -20,47 +31,68 @@ const destinations = [
   }
 ];
 
-const PopularDestinations = () => {
+const PopularDestinations: React.FC = () => {
+  const { isDarkMode } = useGlobalTheme();
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <h2 className="text-2xl font-bold mb-6">Popular Destinations</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {destinations.map((destination) => (
-          <div
-            key={destination.id}
-            className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-          >
-            <div className="relative h-48">
-              <img
-                src={destination.image}
-                alt={destination.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold hover:text-blue-500 transition-colors">
-                  {destination.name}
-                </h3>
-                <div className="flex items-center text-yellow-500">
-                  <Star className="h-4 w-4 fill-current" />
-                  <span className="ml-1">{destination.rating}</span>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      <Navigation />
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          Popular Destinations
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {destinations.map((destination) => (
+            <div
+              key={destination.id}
+              className={`rounded-lg shadow-md overflow-hidden transition-shadow ${
+                isDarkMode
+                  ? 'bg-gray-800 hover:shadow-xl'
+                  : 'bg-white hover:shadow-lg'
+              }`}
+            >
+              <div className="relative h-48">
+                <img
+                  src={destination.image}
+                  alt={destination.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className={`text-lg font-semibold transition-colors ${
+                    isDarkMode
+                      ? 'text-white hover:text-blue-400'
+                      : 'text-gray-900 hover:text-blue-500'
+                  }`}>
+                    {destination.name}
+                  </h3>
+                  <div className={`flex items-center ${isDarkMode ? 'text-yellow-400' : 'text-yellow-500'}`}>
+                    <Star className="h-4 w-4 fill-current" />
+                    <span className="ml-1">{destination.rating}</span>
+                  </div>
+                </div>
+                
+                <p className={`text-sm mb-3 transition-colors ${
+                  isDarkMode
+                    ? 'text-gray-300 hover:text-gray-100'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}>
+                  {destination.description}
+                </p>
+                
+                <div className={`flex items-center text-sm ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}>
+                  <MapPin className="h-4 w-4 mr-1" />
+                  <span>{destination.properties} properties</span>
                 </div>
               </div>
-              
-              <p className="text-gray-600 text-sm mb-3 hover:text-gray-800 transition-colors">
-                {destination.description}
-              </p>
-              
-              <div className="flex items-center text-sm text-gray-500">
-                <MapPin className="h-4 w-4 mr-1" />
-                <span>{destination.properties} properties</span>
-              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Bus, Calendar, Users, Search, MapPin, ArrowRight, Moon, Sun, CreditCard, Luggage, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft, Check } from 'lucide-react';
+import { Bus, Calendar, Users, Search, MapPin, ArrowRight, CreditCard, Luggage, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft, Check } from 'lucide-react';
 import { sendBusReminder } from './EmailController';
+import { useGlobalTheme } from '../components/GlobalThemeContext';
+import Navigation from './Navigation';
 
 interface Seat {
   id: string;
@@ -23,8 +25,9 @@ interface BusRoute {
   type: string;
   seats: Seat[];
 }
-function BusRentalPage() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+
+const BusRentalPage: React.FC = () => {
+  const { isDarkMode } = useGlobalTheme();
   const [searchParams, setSearchParams] = useState({
     from: '',
     to: '',
@@ -40,12 +43,10 @@ function BusRentalPage() {
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   
-  // Add loading and error states
   const [buses, setBuses] = useState<BusRoute[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch buses from API
   useEffect(() => {
     const fetchBuses = async () => {
       setIsLoading(true);
@@ -56,11 +57,9 @@ function BusRentalPage() {
           throw new Error('Failed to fetch buses');
         }
         const data = await response.json();
-        console.log("Data ya xa murkha",data)
 
         const busesData = Array.isArray(data) ? data : [data];
         
-        // Data is generated from backend but still is static will need data from bus operator to move further
         const transformedBuses = busesData.map((bus: any) => ({
           id: bus.id,
           from: bus.departureLocation,
@@ -76,7 +75,7 @@ function BusRentalPage() {
           seats: Array.from({ length: bus.totalSeats }, (_, i) => ({
             id: `seat-${i + 1}`,
             number: `${i + 1}`,
-            isBooked: Math.random() > 0.7,//random until I get data from bus operator side
+            isBooked: Math.random() > 0.7,
             type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
           }))
         }));
@@ -128,9 +127,8 @@ function BusRentalPage() {
     
     if (selectedBus) {
       try {
-        // First create the booking in the database
         const bookingData = {
-          user_id: 'user_id', // You'll need to get this from your auth context
+          user_id: 'user_id',
           schedule_id: selectedBus.id,
           seat_numbers: selectedSeats,
           total_fare: selectedBus.price * selectedSeats.length,
@@ -140,7 +138,6 @@ function BusRentalPage() {
           booking_date: new Date().toISOString()
         };
 
-        // Make API call to create booking
         const response = await fetch('http://localhost:4000/bookings', {
           method: 'POST',
           headers: {
@@ -153,7 +150,6 @@ function BusRentalPage() {
           throw new Error('Failed to create booking');
         }
 
-        // Send email confirmation
         const emailResponse = await sendBusReminder({
           email: userEmail,
           from: selectedBus.from,
@@ -164,15 +160,13 @@ function BusRentalPage() {
           date: searchParams.date,
           passengerName: userName,
           seats: selectedSeats,
-          busType: selectedBus.type,// Include booking ID in email
+          busType: selectedBus.type,
         });
 
         console.log('Email response:', emailResponse);
         
-        // Show confirmation
         setShowConfirmation(true);
         
-        // Reset form after successful booking
         setTimeout(() => {
           setShowConfirmation(false);
           setStep('search');
@@ -180,14 +174,11 @@ function BusRentalPage() {
           setSelectedSeats([]);
           setUserEmail('');
           setUserName('');
-          
-          // Navigate to bookings page
           window.location.href = '/profile';
         }, 3000);
 
       } catch (error) {
         console.error('Booking failed:', error);
-        // Show error message to user
         alert('Failed to complete booking. Please try again.');
       }
     }
@@ -209,26 +200,21 @@ function BusRentalPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gradient-to-b from-green-50 to-white'}`}>
+      {/* Navigation */}
+      <Navigation />
+
       {/* Header */}
       <header className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm relative`}>
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handleBackToHome}
-                className={`mr-4 p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
-              >
-                <ArrowLeft className="h-6 w-6" />
-              </button>
-              <Bus className={`h-8 w-8 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
-              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>ZippyBus</h1>
-            </div>
+          <div className="flex items-center">
             <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-100 text-gray-600'}`}
+              onClick={handleBackToHome}
+              className={`mr-4 p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
             >
-              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              <ArrowLeft className="h-6 w-6" />
             </button>
+            <Bus className={`h-8 w-8 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>ZippyBus</h1>
           </div>
         </div>
       </header>
@@ -309,109 +295,109 @@ function BusRentalPage() {
           </div>
         )}
 
-{step === 'results' && (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
-          Available Buses
-        </h2>
-        <button
-          onClick={() => setStep('search')}
-          className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-        >
-          <ArrowLeft className="h-6 w-6" />
-        </button>
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-        </div>
-      ) : error ? (
-        <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-red-900' : 'bg-red-100'} text-red-700`}>
-          <p>Error loading buses: {error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            Retry
-          </button>
-        </div>
-      ) : buses.length === 0 ? (
-        <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm text-center`}>
-          <p className="text-lg">No buses found for your search criteria.</p>
-        </div>
-      ) : (
-        <div className="grid gap-6">
-          {buses.map((bus) => (
-            <div
-              key={bus.id}
-              className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-4">
-                    <Bus className={`h-8 w-8 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
-                    <div>
-                      <p className="font-semibold">{bus.operator}</p>
-                      <p className="text-sm text-gray-500">{bus.type}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center space-x-4">
-                    <div>
-                      <p className="font-semibold">{bus.departure}</p>
-                      <p className="text-sm text-gray-500">{bus.from}</p>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="font-semibold">{bus.arrival}</p>
-                      <p className="text-sm text-gray-500">{bus.to}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center space-x-4">
-                    <div>
-                      <p className="font-semibold">{bus.duration}</p>
-                      <p className="text-sm text-gray-500">Duration</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {bus.amenities.map((amenity, index) => (
-                        <span key={index} className="text-gray-400">
-                          {getAmenityIcon(amenity)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-4">
-                  <div>
-                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
-                      Rs. {bus.price}
-                    </p>
-                    <p className="text-sm text-gray-500">{bus.seatsAvailable} seats left</p>
-                  </div>
-                  <button
-                    onClick={() => handleBusSelection(bus)}
-                    className={`px-6 py-3 rounded-lg ${
-                      isDarkMode ? 'bg-green-500 hover:bg-green-600' : 'bg-green-600 hover:bg-green-700'
-                    } text-white font-semibold`}
-                  >
-                    Select
-                  </button>
-                </div>
-              </div>
+        {step === 'results' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                Available Buses
+              </h2>
+              <button
+                onClick={() => setStep('search')}
+                className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </button>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )}
+
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+              </div>
+            ) : error ? (
+              <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-red-900' : 'bg-red-100'} text-red-700`}>
+                <p>Error loading buses: {error}</p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : buses.length === 0 ? (
+              <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm text-center`}>
+                <p className="text-lg">No buses found for your search criteria.</p>
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {buses.map((bus) => (
+                  <div
+                    key={bus.id}
+                    className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4">
+                          <Bus className={`h-8 w-8 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+                          <div>
+                            <p className="font-semibold">{bus.operator}</p>
+                            <p className="text-sm text-gray-500">{bus.type}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <p className="font-semibold">{bus.departure}</p>
+                            <p className="text-sm text-gray-500">{bus.from}</p>
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <p className="font-semibold">{bus.arrival}</p>
+                            <p className="text-sm text-gray-500">{bus.to}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <p className="font-semibold">{bus.duration}</p>
+                            <p className="text-sm text-gray-500">Duration</p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {bus.amenities.map((amenity, index) => (
+                              <span key={index} className="text-gray-400">
+                                {getAmenityIcon(amenity)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-4">
+                        <div>
+                          <p className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                            Rs. {bus.price}
+                          </p>
+                          <p className="text-sm text-gray-500">{bus.seatsAvailable} seats left</p>
+                        </div>
+                        <button
+                          onClick={() => handleBusSelection(bus)}
+                          className={`px-6 py-3 rounded-lg ${
+                            isDarkMode ? 'bg-green-500 hover:bg-green-600' : 'bg-green-600 hover:bg-green-700'
+                          } text-white font-semibold`}
+                        >
+                          Select
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {step === 'seats' && selectedBus && (
           <div className="space-y-8">
@@ -548,6 +534,6 @@ function BusRentalPage() {
       </main>
     </div>
   );
-}
+};
 
 export default BusRentalPage;

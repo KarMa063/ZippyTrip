@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Bus, Clock, X, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
-// Remove Supabase import
+import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
 
 interface Ticket {
   id: string;
@@ -23,8 +23,8 @@ interface Ticket {
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
+  const { isDarkMode } = useGlobalTheme(); // Use global theme
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const isDarkMode = false;
   const [showCancelConfirm, setShowCancelConfirm] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -63,7 +63,7 @@ const Profile: React.FC = () => {
       
       // Send to Express backend (Main Backend on port 5000)
       try {
-        await axios.post('http://localhost:5000/api/cancellations/cancel', { // <-- Changed port from 3001 to 5000
+        await axios.post('http://localhost:5000/api/cancellations/cancel', {
           ...ticketToCancel,
           status: 'cancelled',
           cancellation_date: new Date().toISOString()
@@ -96,7 +96,7 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <header className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center">
@@ -120,10 +120,16 @@ const Profile: React.FC = () => {
               </div>
             </div>
             <h2 className="text-xl font-semibold mb-2">No Tickets Found</h2>
-            <p className="text-gray-500 mb-4">You haven't booked any bus tickets yet.</p>
+            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
+              You haven't booked any bus tickets yet.
+            </p>
             <button
               onClick={() => navigate('/bus')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className={`px-4 py-2 rounded-lg transition duration-200 ${
+                isDarkMode
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
               Book a Bus Ticket
             </button>
@@ -140,7 +146,9 @@ const Profile: React.FC = () => {
                 }`}
               >
                 {ticket.status === 'cancelled' && (
-                  <div className="bg-red-500 text-white px-4 py-2 flex items-center">
+                  <div className={`px-4 py-2 flex items-center ${
+                    isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-500 text-white'
+                  }`}>
                     <AlertTriangle className="h-5 w-5 mr-2" />
                     <span>This ticket has been cancelled</span>
                   </div>
@@ -160,7 +168,7 @@ const Profile: React.FC = () => {
 
                   <div className="flex flex-col md:flex-row md:justify-between mb-6">
                     <div className="flex items-start space-x-3 mb-4 md:mb-0">
-                      <Calendar className="h-5 w-5 text-blue-500 mt-1" />
+                      <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
                       <div>
                         <p className="font-medium">Travel Date</p>
                         <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -169,7 +177,7 @@ const Profile: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-start space-x-3 mb-4 md:mb-0">
-                      <Clock className="h-5 w-5 text-blue-500 mt-1" />
+                      <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
                       <div>
                         <p className="font-medium">Departure Time</p>
                         <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -178,7 +186,7 @@ const Profile: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-start space-x-3">
-                      <Clock className="h-5 w-5 text-blue-500 mt-1" />
+                      <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
                       <div>
                         <p className="font-medium">Arrival Time</p>
                         <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -194,8 +202,8 @@ const Profile: React.FC = () => {
                       <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Origin</div>
                     </div>
                     <div className="flex-1 flex justify-center">
-                      <div className="w-20 h-0.5 bg-gray-300 relative">
-                        <Bus className="absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 text-blue-500" />
+                      <div className={`w-20 h-0.5 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} relative`}>
+                        <Bus className={`absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
                       </div>
                     </div>
                     <div className="flex-1 text-right">
@@ -204,7 +212,7 @@ const Profile: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-200 pt-4">
+                  <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pt-4`}>
                     <div className="flex flex-col md:flex-row md:justify-between">
                       <div className="mb-4 md:mb-0">
                         <p className="font-medium">Passenger</p>
@@ -231,7 +239,11 @@ const Profile: React.FC = () => {
                     <div className="mt-6 flex justify-end">
                       <button
                         onClick={() => handleCancelTicket(ticket.id)}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                        className={`px-4 py-2 rounded-lg transition duration-200 ${
+                          isDarkMode
+                            ? 'bg-red-700 text-white hover:bg-red-800'
+                            : 'bg-red-600 text-white hover:bg-red-700'
+                        }`}
                       >
                         Cancel Ticket
                       </button>
@@ -250,16 +262,23 @@ const Profile: React.FC = () => {
           <div className={`p-6 rounded-lg shadow-lg max-w-md w-full ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Cancel Ticket</h3>
-              <button onClick={() => setShowCancelConfirm(null)} className="text-gray-500 hover:text-gray-700">
+              <button
+                onClick={() => setShowCancelConfirm(null)}
+                className={`${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className="mb-6">Are you sure you want to cancel this ticket? This action cannot be undone.</p>
+            <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-6`}>
+              Are you sure you want to cancel this ticket? This action cannot be undone.
+            </p>
             <div className="flex justify-end space-x-4">
               <button
-                onClick={() => cancelConfirmation()} // Updated call site
-                className={`px-4 py-2 rounded-lg ${
-                  isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                onClick={() => cancelConfirmation()}
+                className={`px-4 py-2 rounded-lg transition duration-200 ${
+                  isDarkMode
+                    ? 'bg-gray-700 text-white hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                 }`}
                 disabled={isCancelling}
               >
@@ -267,7 +286,11 @@ const Profile: React.FC = () => {
               </button>
               <button
                 onClick={() => confirmCancelTicket(showCancelConfirm)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center"
+                className={`px-4 py-2 rounded-lg transition duration-200 flex items-center ${
+                  isDarkMode
+                    ? 'bg-red-700 text-white hover:bg-red-800'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+                }`}
                 disabled={isCancelling}
               >
                 {isCancelling ? (
