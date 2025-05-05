@@ -138,7 +138,7 @@ const Bookings = () => {
 
           </CardContent>
         </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>
