@@ -30,6 +30,7 @@ router.get('/:id', async (req, res) => {
 // Create new attraction
 router.post('/', async (req, res) => {
   try {
+    console.log('Received attraction data:', req.body);
     const newAttraction = await attractionsModel.createAttraction(req.body);
     res.status(201).json({ success: true, attraction: newAttraction });
   } catch (error) {

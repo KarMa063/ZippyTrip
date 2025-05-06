@@ -118,6 +118,14 @@ export default function Attractions() {
 
   const handleAddAttraction = async () => {
     try {
+      // Ensure all required fields are present
+      if (!formData.name || !formData.location) {
+        alert('Name and location are required fields');
+        return;
+      }
+      
+      console.log('Sending data:', formData);
+      
       const response = await fetch('http://localhost:5000/api/attractions', {
         method: 'POST',
         headers: {
@@ -127,7 +135,8 @@ export default function Attractions() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to add attraction');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to add attraction');
       }
       
       const data = await response.json();
@@ -136,6 +145,7 @@ export default function Attractions() {
         fetchAttractions();
         setIsAddDialogOpen(false);
         resetForm();
+        alert('Attraction added successfully!');
       } else {
         console.error('API returned unsuccessful response:', data);
         alert('Failed to add attraction: ' + (data.message || 'Unknown error'));

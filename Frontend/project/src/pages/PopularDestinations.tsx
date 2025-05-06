@@ -22,6 +22,7 @@ const PopularDestinations = () => {
     const fetchDestinations = async () => {
       try {
         setLoading(true);
+        console.log('Fetching attractions from API...');
         const response = await fetch('http://localhost:5000/api/attractions');
         
         if (!response.ok) {
@@ -29,6 +30,7 @@ const PopularDestinations = () => {
         }
         
         const data = await response.json();
+        console.log('API response:', data);
         
         if (data.success && data.attractions && data.attractions.length > 0) {
           // Convert numeric IDs to strings if needed and ensure all required fields exist
