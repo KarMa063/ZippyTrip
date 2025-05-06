@@ -32,10 +32,15 @@ const GuestHouseRooms: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [bookingDate, setBookingDate] = useState('');
+  const [checkInDate, setCheckInDate] = useState('');
+  const [checkOutDate, setCheckOutDate] = useState('');
+  const [bookingStatus, setBookingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [bookingError, setBookingError] = useState<string | null>(null);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [userName, setUserName] = useState('');
+  const [guestHouseReviews, setGuestHouseReviews] = useState<Review[]>([]);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -43,7 +48,6 @@ const GuestHouseRooms: React.FC = () => {
         const response = await fetch(`http://localhost:5000/api/gproperties/${id}/rooms`);
         const data = await response.json();
         if (data.success) {
-          // Ensure rooms have the correct isAvailable property
           const formattedRooms = data.rooms.map((room: Room) => ({
             ...room,
             isAvailable: room.isAvailable === undefined ? true : room.isAvailable,
@@ -67,108 +71,47 @@ const GuestHouseRooms: React.FC = () => {
     }
   }, [id]);
 
-  const handleBookRoom = async (roomId: number) => {
-    if (!bookingDate) {
-      alert('Please select a booking date');
-      return;
-    }
-
-    try {
-      const response = await fetch(`http://localhost:5000/api/gproperties/${id}/rooms/${roomId}/book`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          date: bookingDate,
-          userId: localStorage.getItem('userId')
-        }), // Remove isAvailable: false from request body
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        // Update local state to reflect the change
-        setRooms(rooms.map(room => 
-          room.id === roomId ? { ...room, isAvailable: false } : room
-        ));
-        
-        // Send message to guesthouse owner
-        const selectedRoom = rooms.find(room => room.id === roomId);
-        if (selectedRoom && guestHouse) {
-          try {
-            // Create a new message
-            const messageData = {
-              text: `Hello, I would like to book ${selectedRoom.name} for ${bookingDate}. The booking has been confirmed.`,
-              sender: 'user',
-              timestamp: new Date(),
-              guestHouseId: id,
-              ownerId: guestHouse.ownerId,
-              userId: localStorage.getItem('userId')
-            };
-            
-            // Send message to backend
-            await fetch(`http://localhost:5000/api/messages`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(messageData),
-            });
-            
-            console.log('Booking message sent to owner');
-          } catch (msgError) {
-            console.error('Error sending booking message:', msgError);
-            // Continue with booking process even if message fails
-          }
+  useEffect(() => {
+    const fetchGuestHouseReviews = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/gproperties/${id}/reviews`);
+        const data = await response.json();
+        if (data.success) {
+          setGuestHouseReviews(data.reviews || []);
         }
-        
-        alert('Room booked successfully!');
-        navigate('/profile'); // Redirect to profile/bookings page
-      } else {
-        // Handle specific error cases
-        if (data.error === 'ALREADY_BOOKED') {
-          alert('This room has already been booked for the selected date.');
-        } else {
-          alert(data.message || 'Failed to book room. Please try again.');
-        }
-        
-        // Refresh the rooms data to get the latest availability
-        const refreshResponse = await fetch(`http://localhost:5000/api/gproperties/${id}/rooms`);
-        const refreshData = await refreshResponse.json();
-        if (refreshData.success) {
-          setRooms(refreshData.rooms);
-        }
+      } catch (err) {
+        console.error('Error fetching guesthouse reviews:', err);
       }
-    } catch (err) {
-      console.error('Error booking room:', err);
-      alert('Failed to book room. Please try again.');
+    };
+
+    if (id) {
+      fetchGuestHouseReviews();
     }
-  };
+  }, [id]);
 
-  const handleRoomClick = (room: Room) => {
-    setSelectedRoom(room);
-  };
-
-  const closeRoomDetails = () => {
-    setSelectedRoom(null);
-  };
+  // Calculate average rating for the guesthouse
+  const averageGuestHouseRating = guestHouseReviews.length > 0 
+    ? (guestHouseReviews.reduce((sum, review) => sum + review.rating, 0) / guestHouseReviews.length).toFixed(1)
+    : 'No reviews';
 
   const submitReview = async () => {
-    if (!selectedRoom || !reviewText || !userName) {
-      alert('Please fill in all review fields');
+    if (!userName.trim() || !reviewText.trim()) {
+      alert('Please enter your name and review');
       return;
     }
+
+    setReviewSubmitting(true);
 
     try {
       const newReview = {
         userName,
         rating: reviewRating,
         comment: reviewText,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        guestHouseId: id
       };
 
-      const response = await fetch(`http://localhost:5000/api/gproperties/${id}/rooms/${selectedRoom.id}/reviews`, {
+      const response = await fetch(`http://localhost:5000/api/gproperties/${id}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,34 +120,87 @@ const GuestHouseRooms: React.FC = () => {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
-        // Update the room with the new review
-        setRooms(rooms.map(room => 
-          room.id === selectedRoom.id 
-            ? { 
-                ...room, 
-                reviews: [...(room.reviews || []), {...newReview, id: Date.now()}] 
-              } 
-            : room
-        ));
-        
-        // Update selected room
-        setSelectedRoom({
-          ...selectedRoom,
-          reviews: [...(selectedRoom.reviews || []), {...newReview, id: Date.now()}]
-        });
+        // Add the new review to the state
+        setGuestHouseReviews([...guestHouseReviews, newReview]);
         
         // Reset form
+        setUserName('');
         setReviewText('');
         setReviewRating(5);
-        alert('Review submitted successfully!');
+        
+        alert('Thank you for your review!');
       } else {
-        alert(data.message || 'Failed to submit review. Please try again.');
+        alert('Failed to submit review. Please try again.');
       }
     } catch (err) {
       console.error('Error submitting review:', err);
-      alert('Failed to submit review. Please try again.');
+      alert('An error occurred while submitting your review.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const handleBookRoom = async (roomId: number) => {
+    if (!checkInDate || !checkOutDate) {
+      alert('Please select both check-in and check-out dates');
+      return;
+    }
+    
+    // Validate dates
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
+    
+    if (checkIn >= checkOut) {
+      alert('Check-out date must be after check-in date');
+      return;
+    }
+    
+    setBookingStatus('loading');
+    setBookingError(null);
+    
+    try {
+      // Get user ID from localStorage or use a default for demo
+      const travellerId = localStorage.getItem('userId') || '1';
+      
+      const response = await fetch('http://localhost:5000/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          traveller_id: travellerId,
+          property_id: id,
+          room_id: roomId,
+          check_in: checkInDate,
+          check_out: checkOutDate
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setBookingStatus('success');
+        alert('Room booked successfully!');
+        
+        // Update the room's availability in the local state
+        setRooms(rooms.map(room => 
+          room.id === roomId ? { ...room, isAvailable: false } : room
+        ));
+        
+        // Close the modal
+        setSelectedRoom(null);
+      } else {
+        setBookingStatus('error');
+        setBookingError(data.message || 'Failed to book room');
+        alert(`Booking failed: ${data.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error booking room:', err);
+      setBookingStatus('error');
+      setBookingError('An error occurred while booking the room');
+      alert('An error occurred while booking the room. Please try again.');
     }
   };
 
@@ -216,6 +212,11 @@ const GuestHouseRooms: React.FC = () => {
       />
     ));
   };
+
+  const allReviews = rooms.flatMap(room => room.reviews || []);
+  const averageRating = allReviews.length > 0 
+    ? (allReviews.reduce((sum, review) => sum + review.rating, 0) / allReviews.length).toFixed(1)
+    : 'No reviews';
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50'}`}>
@@ -229,14 +230,7 @@ const GuestHouseRooms: React.FC = () => {
               >
                 <ArrowLeft className="h-6 w-6" />
               </button>
-              <div>
-                <h1 className="text-2xl font-bold">{guestHouse?.name || 'Available Rooms'}</h1>
-                {!isLoading && !error && (
-                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {rooms.length} {rooms.length === 1 ? 'Room' : 'Rooms'} Available
-                  </p>
-                )}
-              </div>
+              <h1 className="text-2xl font-bold">{guestHouse?.name || 'Available Rooms'}</h1>
             </div>
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
@@ -253,167 +247,245 @@ const GuestHouseRooms: React.FC = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Reviews Section */}
-        {!isLoading && !error && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">Guest Reviews</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {rooms.flatMap(room => room.reviews || []).slice(0, 6).map((review, index) => (
-                <div 
-                  key={index} 
-                  className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="font-medium">{review.userName}</div>
-                    <div className="flex items-center">
-                      {renderStars(review.rating)}
-                    </div>
-                  </div>
-                  <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {review.comment}
-                  </p>
-                  <div className={`text-xs mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {new Date(review.date).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
+        {/* Property Details Section - Based on the image */}
+        <div className={`mb-8 p-6 rounded-lg shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Property Image */}
+            <div className="md:w-1/3">
+              <div className="border border-gray-300 rounded-lg overflow-hidden">
+                <img
+                  src={guestHouse?.image || '/placeholder-property.jpg'}
+                  alt={guestHouse?.name}
+                  className="w-full h-64 object-cover"
+                />
+              </div>
             </div>
             
-            {/* Add Review Form */}
-            <div className="mt-8 max-w-2xl mx-auto">
-              <h3 className="text-xl font-semibold mb-4">Write a Review</h3>
-              <div className="space-y-4 p-6 rounded-lg shadow-md bg-opacity-50 backdrop-blur-sm border border-gray-200 dark:border-gray-700">
-                <div>
-                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Your Name
-                  </label>
-                  <input
-                    type="text"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className={`w-full p-2 rounded-lg ${
-                      isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
-                    }`}
-                    placeholder="Enter your name"
-                  />
+            {/* Property Details */}
+            <div className="md:w-2/3">
+              <h2 className="text-2xl font-bold mb-2">{guestHouse?.name}</h2>
+              
+              {guestHouse?.location && (
+                <div className="flex items-center mb-2">
+                  <MapPin className="h-5 w-5 mr-2" />
+                  <span>{guestHouse.location}</span>
                 </div>
-                <div>
-                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Rating
-                  </label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setReviewRating(star)}
-                        className="focus:outline-none"
-                      >
-                        <Star 
-                          className={`h-6 w-6 ${
-                            star <= reviewRating 
-                              ? 'text-yellow-400 fill-yellow-400' 
-                              : 'text-gray-300'
-                          }`} 
-                        />
-                      </button>
-                    ))}
+              )}
+              
+              {guestHouse?.description && (
+                <p className={`mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {guestHouse.description}
+                </p>
+              )}
+              
+              <div className="flex flex-wrap gap-4">
+                {guestHouse?.contact && (
+                  <div>
+                    <h3 className="font-semibold">Contact</h3>
+                    <p>{guestHouse.contact}</p>
                   </div>
+                )}
+                
+                {guestHouse?.email && (
+                  <div>
+                    <h3 className="font-semibold">Email</h3>
+                    <p>{guestHouse.email}</p>
+                  </div>
+                )}
+                
+                <div className="ml-auto">
+                  {guestHouse && (
+                    <button 
+                      className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                      onClick={() => setSelectedRoom(null)}
+                    >
+                      <MessageSquare className="h-4 w-4 inline mr-2" />
+                      Chat with Owner
+                    </button>
+                  )}
                 </div>
-                <div>
-                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Your Review
-                  </label>
-                  <textarea
-                    value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
-                    className={`w-full p-2 rounded-lg ${
-                      isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
-                    }`}
-                    rows={4}
-                    placeholder="Share your experience..."
-                  ></textarea>
-                </div>
-                <button
-                  onClick={submitReview}
-                  className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Submit Review
-                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
         
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${
-              isDarkMode ? 'border-white' : 'border-blue-600'
-            }`}></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Rooms Section */}
+          <div className="lg:col-span-2">
+            <h2 className="text-2xl font-bold mb-4">Rooms</h2>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${
+                  isDarkMode ? 'border-white' : 'border-blue-600'
+                }`}></div>
+              </div>
+            ) : error ? (
+              <div className="text-center text-red-600 p-4">{error}</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {rooms.map((room) => (
+                  <div
+                    key={room.id}
+                    className={`rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform hover:scale-105 ${
+                      isDarkMode ? 'bg-gray-800' : 'bg-white'
+                    }`}
+                    onClick={() => setSelectedRoom(room)}
+                  >
+                    <div className="h-40 relative">
+                      <img
+                        src={room.images[0] || '/placeholder-room.jpg'}
+                        alt={room.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className={`absolute bottom-0 left-0 right-0 py-1 px-2 text-sm ${
+                        room.isAvailable 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-red-500 text-white'
+                      }`}>
+                        {room.isAvailable ? 'Available' : 'Booked'}
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold">{room.name}</h3>
+                      <div className="flex items-center mt-1 mb-2">
+                        <Users className="h-4 w-4 mr-1" />
+                        <span className="text-sm">Up to {room.capacity} guests</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="text-lg font-bold text-blue-600">
+                          Rs. {room.price}/night
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ) : error ? (
-          <div className="text-center text-red-600 p-4">{error}</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {rooms.map((room) => (
-              <div
-                key={room.id}
-                className={`rounded-xl shadow-lg overflow-hidden cursor-pointer transition-transform hover:scale-105 ${
-                  isDarkMode ? 'bg-gray-800' : 'bg-white'
-                }`}
-                onClick={() => handleRoomClick(room)}
-              >
-                <div className="relative h-48">
-                  <img
-                    src={room.images[0] || '/placeholder-room.jpg'}
-                    alt={room.name}
-                    className="w-full h-full object-cover"
-                  />
-                  {room.reviews && room.reviews.length > 0 && (
-                    <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded-full flex items-center">
-                      <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 mr-1" />
-                      <span className="text-sm">
-                        {(room.reviews.reduce((acc, review) => acc + review.rating, 0) / room.reviews.length).toFixed(1)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-2">{room.name}</h3>
-                  <p className={`mb-4 text-sm line-clamp-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {room.description}
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <Users className="h-5 w-5 mr-2" />
-                      <span>Up to {room.capacity} guests</span>
-                    </div>
-                    <div className="text-xl font-bold text-blue-600">
-                      Rs. {room.price}/night
-                    </div>
+
+          {/* Reviews Section - Modified for Guesthouse Reviews */}
+          <div className="lg:col-span-1">
+            <div className={`p-6 rounded-lg shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <h2 className="text-2xl font-bold mb-4">Guesthouse Reviews</h2>
+              
+              <div className="mb-4">
+                <div className="flex items-center">
+                  <div className="flex mr-2">
+                    {averageGuestHouseRating !== 'No reviews' ? (
+                      renderStars(Math.round(parseFloat(averageGuestHouseRating as string)))
+                    ) : null}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {room.reviews?.length || 0} {room.reviews?.length === 1 ? 'review' : 'reviews'}
-                    </div>
-                    <div className={`text-sm ${room.isAvailable ? 'text-green-500' : 'text-red-500'}`}>
-                      {room.isAvailable ? 'Available' : 'Booked'}
-                    </div>
-                  </div>
+                  <span className="font-bold">{averageGuestHouseRating}</span>
+                  <span className="text-sm ml-1 text-gray-500">({guestHouseReviews.length} reviews)</span>
                 </div>
               </div>
-            ))}
+              
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {guestHouseReviews.length > 0 ? (
+                  guestHouseReviews.map((review, index) => (
+                    <div 
+                      key={index} 
+                      className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="font-medium">{review.userName}</div>
+                        <div className="flex items-center">
+                          {renderStars(review.rating)}
+                        </div>
+                      </div>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {review.comment}
+                      </p>
+                      <div className={`text-xs mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {new Date(review.date).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    No reviews yet. Be the first to review this guesthouse!
+                  </p>
+                )}
+              </div>
+              
+              {/* Write a Review Section */}
+              <div className="mt-6 pt-4 border-t border-gray-300">
+                <h3 className="text-lg font-semibold mb-3">Write a Review</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Your Name
+                    </label>
+                    <input
+                      type="text"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      className={`w-full p-2 rounded-lg ${
+                        isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Rating
+                    </label>
+                    <div className="flex items-center">
+                      {[1, 2, 3, 4, 5].map((rating) => (
+                        <button
+                          key={rating}
+                          type="button"
+                          onClick={() => setReviewRating(rating)}
+                          className="focus:outline-none"
+                        >
+                          <Star
+                            className={`h-6 w-6 ${
+                              rating <= reviewRating
+                                ? 'text-yellow-400 fill-yellow-400'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Your Review
+                    </label>
+                    <textarea
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      rows={3}
+                      className={`w-full p-2 rounded-lg ${
+                        isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
+                      }`}
+                    ></textarea>
+                  </div>
+                  <button
+                    onClick={submitReview}
+                    disabled={reviewSubmitting}
+                    className={`w-full py-2 rounded-lg ${
+                      isDarkMode
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                    } ${reviewSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
+                    {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </main>
-      
+
       {/* Room Details Modal */}
       {selectedRoom && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className={`max-w-4xl w-full rounded-xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'} max-h-[90vh] overflow-y-auto`}>
             <div className="relative">
               <button 
-                onClick={closeRoomDetails}
+                onClick={() => setSelectedRoom(null)}
                 className="absolute top-4 right-4 z-10 bg-black/50 text-white p-2 rounded-full"
               >
                 <X className="h-5 w-5" />
@@ -469,20 +541,53 @@ const GuestHouseRooms: React.FC = () => {
               {selectedRoom.isAvailable ? (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold mb-2">Book This Room</h3>
-                  <input
-                    type="date"
-                    className={`w-full p-2 rounded-lg mb-4 ${
-                      isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
-                    }`}
-                    onChange={(e) => setBookingDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                  <button
-                    onClick={() => handleBookRoom(selectedRoom.id)}
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Book Now
-                  </button>
+                  <div className="space-y-3">
+                    <div>
+                      <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Check-in Date
+                      </label>
+                      <input
+                        type="date"
+                        className={`w-full p-2 rounded-lg ${
+                          isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
+                        }`}
+                        onChange={(e) => setCheckInDate(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        value={checkInDate}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Check-out Date
+                      </label>
+                      <input
+                        type="date"
+                        className={`w-full p-2 rounded-lg ${
+                          isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
+                        }`}
+                        onChange={(e) => setCheckOutDate(e.target.value)}
+                        min={checkInDate || new Date().toISOString().split('T')[0]}
+                        value={checkOutDate}
+                      />
+                    </div>
+                    
+                    {bookingError && (
+                      <div className="text-red-500 text-sm p-2 bg-red-100 rounded-lg">
+                        {bookingError}
+                      </div>
+                    )}
+                    
+                    <button
+                      onClick={() => handleBookRoom(selectedRoom.id)}
+                      disabled={bookingStatus === 'loading' || !checkInDate || !checkOutDate}
+                      className={`w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors ${
+                        bookingStatus === 'loading' || !checkInDate || !checkOutDate ? 'opacity-70 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {bookingStatus === 'loading' ? 'Processing...' : 'Book Now'}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="mb-6">
@@ -494,14 +599,12 @@ const GuestHouseRooms: React.FC = () => {
                   </button>
                 </div>
               )}
-              
-              {/* Reviews Section */}
-              
             </div>
           </div>
         </div>
       )}
-      
+
+      {/* Chat Widget */}
       {guestHouse && (
         <ChatWidget 
           guestHouseId={id as string} 

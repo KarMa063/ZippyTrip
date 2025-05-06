@@ -57,18 +57,15 @@ const BackgroundCarousel: React.FC = () => {
       />
 
       {/* Welcome text */}
-      <div
-        className={`absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-10 ${
-          isDarkMode ? 'text-white' : 'text-gray-800'
-        }`}
-      >
-        <h1 className="text-5xl font-bold mb-4">
-          Discover Your Next Adventure
-        </h1>
-        <p className="text-xl">
-          Explore the world's most beautiful destinations
-        </p>
-      </div>
+      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-10 text-white">
+  <h1 className="text-5xl font-bold mb-4">
+    Discover Your Next Adventure
+  </h1>
+  <p className="text-xl">
+    Explore the world's most beautiful destinations
+  </p>
+</div>
+
 
       {/* Navigation arrows */}
       <button

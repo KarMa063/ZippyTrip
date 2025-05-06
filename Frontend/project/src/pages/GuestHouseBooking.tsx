@@ -163,7 +163,7 @@ const GuestHouseBooking: React.FC = () => {
                 <ChatWidget 
                     key={guestHouse.id}
                     guestHouseId={guestHouse.id.toString()} 
-                    // ownerId={guestHouse.ownerId} 
+                    ownerId={guestHouse.ownerId} 
                 />
             ))}
         </div>

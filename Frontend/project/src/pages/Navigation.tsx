@@ -4,7 +4,6 @@ import {
   Building2,
   Car,
   MapPin,
-  Globe,
   Moon,
   Sun,
   Bell,
@@ -155,7 +154,6 @@ const Navigation: React.FC = () => {
                 isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
               } transition-colors`}
             >
-              <Globe className="h-5 w-5 hover-text" />
             </button>
             <button
               className={`p-2 rounded-full ${

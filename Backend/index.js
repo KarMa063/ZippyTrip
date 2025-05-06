@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-// const { router: guestHouseRoomsRouter, createRoomsTable } = require('./guesthouse/rooms');
+const { router: guestHouseRoomsRouter, createRoomsTable } = require('./guesthouse/rooms');
+const { router: bookingsRoutes, bookingsTableExists } = require('./guesthouse/bookings');
 const { Pool } = require('pg');
 
 // Load environment variables
@@ -53,6 +54,7 @@ app.get('/api/gproperties/:id', async (req, res) => {
 
 // Mount the rooms router
 app.use('/api/gproperties', guestHouseRoomsRouter);
+app.use('/api/bookings', bookingsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -63,32 +65,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize database tables
-async function initializeTables() {
-  try {
-    // Create properties table if it doesn't exist
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS properties (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        location TEXT NOT NULL,
-        description TEXT,
-        owner_id TEXT NOT NULL,
-        images JSONB,d
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    
-    await createRoomsTable();
-    console.log('Database tables initialized successfully');
-  } catch (error) {
-    console.error('Error initializing database tables:', error);
-  }
-}
-
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  await initializeTables();
 });
