@@ -3,6 +3,7 @@ import { Search, MapPin, Calendar, Users, Star, Heart, MessageSquare, Moon, Sun 
 import { useNavigate } from 'react-router-dom';
 import { useGlobalTheme } from '../components/GlobalThemeContext'; 
 import Navigation from './Navigation';
+import ChatWidget from '../components/ChatWidget';
 
 interface Review {
     id: number;
@@ -157,6 +158,14 @@ const GuestHouseBooking: React.FC = () => {
                     )}
                 </div>
             </div>
+            {/* Add ChatWidget for each guesthouse */}
+            {guestHousesList.map((guestHouse) => (
+                <ChatWidget 
+                    key={guestHouse.id}
+                    guestHouseId={guestHouse.id.toString()} 
+                    // ownerId={guestHouse.ownerId} 
+                />
+            ))}
         </div>
     );
 };
