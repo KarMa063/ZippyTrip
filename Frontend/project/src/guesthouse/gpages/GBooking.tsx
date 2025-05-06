@@ -17,18 +17,18 @@ import {
   DialogTitle,
 } from "../gcomponents/dialog";
 import { toast } from "react-hot-toast";
-import { DayPicker } from "react-day-picker"; // Import DayPicker
-import 'react-day-picker/dist/style.css'; // Import styles for the calendar
+import { DayPicker } from "react-day-picker";
+import 'react-day-picker/dist/style.css';
 
 // Mock data for bookings
-const bookings = [
+const bookingsData = [
   {
     id: "1",
     propertyName: "Ocean View Suite",
     roomNumber: "101",
     guestName: "John Doe",
-    checkIn: "2025-04-10",
-    checkOut: "2025-04-15",
+    checkIn: "2025-05-06",
+    checkOut: "2025-05-15",
     status: "Confirmed",
     email: "john.doe@example.com",
     phone: "555-123-4567"
@@ -59,8 +59,10 @@ const bookings = [
 
 const Bookings = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [selectedBooking, setSelectedBooking] = useState<typeof bookings[0] | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<typeof bookingsData[0] | null>(null);
   const [actionDialog, setActionDialog] = useState<{ open: boolean, type: string }>({ open: false, type: '' });
+  const [bookings, setBookings] = useState(bookingsData);
+  const [statusFilter, setStatusFilter] = useState("all");
   
   const handleDateChange = (selectedDate: Date | undefined) => {
     setDate(selectedDate);
@@ -68,28 +70,46 @@ const Bookings = () => {
   
   const handleBookingAction = (action: string) => {
     let message = "";
+    let updatedBookings = [...bookings];
+    const bookingIndex = updatedBookings.findIndex(b => b.id === selectedBooking?.id);
     
-    switch (action) {
-      case "checkin":
-        message = `Check-in processed for ${selectedBooking?.guestName}`;
-        break;
-      case "checkout":
-        message = `Check-out processed for ${selectedBooking?.guestName}`;
-        break;
-      case "cancel":
-        message = `Booking for ${selectedBooking?.guestName} has been cancelled`;
-        break;
+    if (bookingIndex !== -1 && selectedBooking) {
+      switch (action) {
+        case "checkin":
+          message = `Check-in processed for ${selectedBooking.guestName}`;
+          break;
+        case "checkout":
+          message = `Check-out processed for ${selectedBooking.guestName}`;
+          break;
+        case "cancel":
+          updatedBookings[bookingIndex] = {
+            ...updatedBookings[bookingIndex],
+            status: "Cancelled"
+          };
+          message = `Booking for ${selectedBooking.guestName} has been cancelled`;
+          break;
+        case "approve":
+          updatedBookings[bookingIndex] = {
+            ...updatedBookings[bookingIndex],
+            status: "Confirmed"
+          };
+          message = `Booking for ${selectedBooking.guestName} has been approved`;
+          break;
+        case "decline":
+          updatedBookings[bookingIndex] = {
+            ...updatedBookings[bookingIndex],
+            status: "Declined"
+          };
+          message = `Booking for ${selectedBooking.guestName} has been declined`;
+          break;
+      }
+      
+      setBookings(updatedBookings);
+      toast.success(message);
     }
-    
-    toast.success(message);
     
     setActionDialog({ open: false, type: '' });
     setSelectedBooking(null);
-  };
-  
-  // Function to format the date as YYYY-MM-DD
-  const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0];
   };
   
   // Filter bookings for the selected date (if any)
@@ -108,6 +128,11 @@ const Bookings = () => {
       })
     : bookings;
 
+  // Filter by status for list view
+  const statusFilteredBookings = statusFilter === "all" 
+    ? bookings 
+    : bookings.filter(booking => booking.status.toLowerCase() === statusFilter.toLowerCase());
+
   return (
     <div className="space-y-6">
       <div>
@@ -124,20 +149,18 @@ const Bookings = () => {
         <TabsContent value="calendar" className="space-y-4">
           <div className="grid gap-6 md:grid-cols-[320px_1fr]">
             <Card>
-          <CardContent className="p-2">
-            {/* Custom DayPicker component */}
-            <DayPicker 
-              selected={date} 
-              onDayClick={handleDateChange}
-              className="custom-day-picker"
-              modifiersClassNames={{
-                selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                today: "bg-accent text-accent-foreground"
-              }}
-            />
-
-          </CardContent>
-        </Card>
+              <CardContent className="p-2">
+                <DayPicker 
+                  selected={date} 
+                  onDayClick={handleDateChange}
+                  className="custom-day-picker"
+                  modifiersClassNames={{
+                    selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                    today: "bg-accent text-accent-foreground"
+                  }}
+                />
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
@@ -166,7 +189,11 @@ const Bookings = () => {
                             className={`text-xs px-2 py-1 rounded-full ${
                               booking.status === 'Confirmed' 
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
-                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                                : booking.status === 'Pending'
+                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                                  : booking.status === 'Declined'
+                                    ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
                             }`}
                           >
                             {booking.status}
@@ -177,26 +204,54 @@ const Bookings = () => {
                           <span>Check-out: {booking.checkOut}</span>
                         </div>
                         <div className="mt-3 pt-3 border-t flex justify-end gap-2">
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setActionDialog({ open: true, type: 'checkin' });
-                            }}
-                          >
-                            Check-in
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setActionDialog({ open: true, type: 'checkout' });
-                            }}
-                          >
-                            Check-out
-                          </Button>
+                          {booking.status === 'Pending' && (
+                            <>
+                              <Button 
+                                variant="default"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setActionDialog({ open: true, type: 'approve' });
+                                }}
+                              >
+                                Approve
+                              </Button>
+                              <Button 
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setActionDialog({ open: true, type: 'decline' });
+                                }}
+                              >
+                                Decline
+                              </Button>
+                            </>
+                          )}
+                          {booking.status === 'Confirmed' && (
+                            <>
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setActionDialog({ open: true, type: 'checkin' });
+                                }}
+                              >
+                                Check-in
+                              </Button>
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setActionDialog({ open: true, type: 'checkout' });
+                                }}
+                              >
+                                Check-out
+                              </Button>
+                            </>
+                          )}
                           <Button 
                             variant="outline"
                             size="sm"
@@ -223,7 +278,10 @@ const Bookings = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>All Bookings</CardTitle>
-                <Select defaultValue="all">
+                <Select 
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value)}
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
@@ -231,6 +289,7 @@ const Bookings = () => {
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="confirmed">Confirmed</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="declined">Declined</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
@@ -250,7 +309,7 @@ const Bookings = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {bookings.map(booking => (
+                    {statusFilteredBookings.map(booking => (
                       <tr key={booking.id} className="border-b">
                         <td className="p-3">
                           <div className="font-medium">{booking.propertyName}</div>
@@ -266,33 +325,65 @@ const Bookings = () => {
                           <span className={`inline-block px-2 py-1 rounded-full text-xs ${
                             booking.status === 'Confirmed' 
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
-                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                              : booking.status === 'Pending'
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                                : booking.status === 'Declined'
+                                  ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
                           }`}>
                             {booking.status}
                           </span>
                         </td>
                         <td className="p-3">
                           <div className="flex gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setActionDialog({ open: true, type: 'checkin' });
-                              }}
-                            >
-                              Check-in
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setActionDialog({ open: true, type: 'checkout' });
-                              }}
-                            >
-                              Check-out
-                            </Button>
+                            {booking.status === 'Pending' && (
+                              <>
+                                <Button 
+                                  variant="default" 
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setActionDialog({ open: true, type: 'approve' });
+                                  }}
+                                >
+                                  Approve
+                                </Button>
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setActionDialog({ open: true, type: 'decline' });
+                                  }}
+                                >
+                                  Decline
+                                </Button>
+                              </>
+                            )}
+                            {booking.status === 'Confirmed' && (
+                              <>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setActionDialog({ open: true, type: 'checkin' });
+                                  }}
+                                >
+                                  Check-in
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setActionDialog({ open: true, type: 'checkout' });
+                                  }}
+                                >
+                                  Check-out
+                                </Button>
+                              </>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -316,13 +407,15 @@ const Bookings = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Check-in/Check-out/Cancel Dialog */}
+      {/* Action Dialog */}
       <Dialog open={actionDialog.open} onOpenChange={(open) => setActionDialog({ ...actionDialog, open })}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {actionDialog.type === 'checkin' ? 'Process Check-in' : 
                actionDialog.type === 'checkout' ? 'Process Check-out' : 
+               actionDialog.type === 'approve' ? 'Approve Booking' :
+               actionDialog.type === 'decline' ? 'Decline Booking' :
                'Cancel Booking'}
             </DialogTitle>
           </DialogHeader>
@@ -334,10 +427,11 @@ const Bookings = () => {
                 <p><span className="font-medium">Room:</span> {selectedBooking.roomNumber}</p>
                 <p><span className="font-medium">Check-in Date:</span> {selectedBooking.checkIn}</p>
                 <p><span className="font-medium">Check-out Date:</span> {selectedBooking.checkOut}</p>
+                <p><span className="font-medium">Current Status:</span> {selectedBooking.status}</p>
               </div>
-               {actionDialog.type === 'cancel' && (
+              {(actionDialog.type === 'cancel' || actionDialog.type === 'decline') && (
                 <div className="mt-4 p-3 bg-destructive/10 rounded-md text-destructive text-sm">
-                  <p>Warning: This will cancel the booking and update room availability. This action cannot be undone.</p>
+                  <p>Warning: This action cannot be undone.</p>
                 </div>
               )}
             </div>
@@ -348,10 +442,16 @@ const Bookings = () => {
             </Button>
             <Button 
               onClick={() => handleBookingAction(actionDialog.type)}
-              variant={actionDialog.type === 'cancel' ? 'destructive' : 'default'}
+              variant={
+                actionDialog.type === 'cancel' || actionDialog.type === 'decline' 
+                  ? 'destructive' 
+                  : 'default'
+              }
             >
               {actionDialog.type === 'checkin' ? 'Complete Check-in' : 
                actionDialog.type === 'checkout' ? 'Complete Check-out' : 
+               actionDialog.type === 'approve' ? 'Confirm Approval' :
+               actionDialog.type === 'decline' ? 'Confirm Decline' :
                'Cancel Booking'}
             </Button>
           </DialogFooter>
