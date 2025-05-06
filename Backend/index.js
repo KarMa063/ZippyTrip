@@ -9,9 +9,12 @@ const PORT = process.env.PORT || 5000;
 const { router: propertyRoutes, propertyTableExists } = require('./guesthouse/properties');
 const { router: roomsRoutes, createRoomsTable } = require('./guesthouse/rooms');
 const { router: bookingsRoutes, bookingsTableExists } = require('./guesthouse/bookings');
+const { router: preferencesRoutes, preferencesTableExists } = require('./routes/preferences');
+
 propertyTableExists(); 
 createRoomsTable();
 bookingsTableExists();
+preferencesTableExists();
 
 app.use(cors());
 app.use(express.json());
@@ -24,6 +27,7 @@ app.get('/', (req, res) => {
 app.use('/api/gproperties', propertyRoutes);
 app.use('/api/gproperties', roomsRoutes);
 app.use('/api/bookings', bookingsRoutes);
+app.use('/api/preferences', preferencesRoutes);
 
 // Cancellation endpoint
 app.post('/api/cancellations', (req, res) => {
