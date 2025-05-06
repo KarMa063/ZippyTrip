@@ -22,8 +22,8 @@ interface Attraction {
   location: string;
   description: string;
   image: string;
-  rating: number;
-  properties: number;
+  rating: number; // Already defined as number
+  properties: number; // Already defined as number
   featured: boolean;
 }
 
@@ -53,6 +53,7 @@ export default function Attractions() {
   const fetchAttractions = async () => {
     try {
       setLoading(true);
+      // Update the port if your backend is running on a different port
       const response = await fetch('http://localhost:5000/api/attractions');
       
       if (!response.ok) {
@@ -118,28 +119,36 @@ export default function Attractions() {
 
   const handleAddAttraction = async () => {
     try {
-      // Ensure all required fields are present
-      if (!formData.name || !formData.location) {
-        alert('Name and location are required fields');
-        return;
-      }
-      
-      console.log('Sending data:', formData);
+      // Log the data being sent
+      console.log('Sending attraction data:', formData);
       
       const response = await fetch('http://localhost:5000/api/attractions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          location: formData.location,
+          description: formData.description,
+          image: formData.image,
+          rating: formData.rating.toString(), // Convert to string for API
+          properties: formData.properties.toString(), // Convert to string for API
+          featured: formData.featured || false
+        }),
       });
       
+      // Log the response for debugging
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to add attraction');
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`Failed to add attraction: ${response.statusText}`);
       }
       
       const data = await response.json();
+      console.log('Response data:', data);
       
       if (data.success) {
         fetchAttractions();

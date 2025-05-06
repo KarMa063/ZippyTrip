@@ -29,38 +29,64 @@ createAttractionsTable();
 module.exports = {
   // Get all attractions
   getAllAttractions: async () => {
-    const result = await db.query('SELECT * FROM attractions ORDER BY created_at DESC');
-    return result.rows;
+    try {
+      const result = await db.query('SELECT * FROM attractions ORDER BY created_at DESC');
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting attractions:', error);
+      return [];
+    }
   },
   
   // Get attraction by ID
   getAttractionById: async (id) => {
-    const result = await db.query('SELECT * FROM attractions WHERE id = $1', [id]);
-    return result.rows[0];
+    try {
+      const result = await db.query('SELECT * FROM attractions WHERE id = $1', [id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error getting attraction by ID:', error);
+      return null;
+    }
   },
   
   // Create new attraction
   createAttraction: async (attraction) => {
-    const { name, location, description, image, rating, properties, featured } = attraction;
-    const result = await db.query(
-      'INSERT INTO attractions (name, location, description, image, rating, properties, featured) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [name, location, description, image, rating, properties, featured]
-    );
-    return result.rows[0];
+    try {
+      const { name, location, description, image, rating, properties, featured } = attraction;
+      const result = await db.query(
+        'INSERT INTO attractions (name, location, description, image, rating, properties, featured) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [name, location, description, image, rating, properties, featured]
+      );
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating attraction:', error);
+      throw error;
+    }
   },
   
   // Update attraction
   updateAttraction: async (id, attraction) => {
-    const { name, location, description, image, rating, properties, featured } = attraction;
-    const result = await db.query(
-      'UPDATE attractions SET name = $1, location = $2, description = $3, image = $4, rating = $5, properties = $6, featured = $7, updated_at = NOW() WHERE id = $8 RETURNING *',
-      [name, location, description, image, rating, properties, featured, id]
-    );
-    return result.rows[0];
+    try {
+      const { name, location, description, image, rating, properties, featured } = attraction;
+      const result = await db.query(
+        'UPDATE attractions SET name = $1, location = $2, description = $3, image = $4, rating = $5, properties = $6, featured = $7, updated_at = NOW() WHERE id = $8 RETURNING *',
+        [name, location, description, image, rating, properties, featured, id]
+      );
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating attraction:', error);
+      return null;
+    }
   },
   
   // Delete attraction
   deleteAttraction: async (id) => {
-    await db.query('DELETE FROM attractions WHERE id = $1', [id]);
+    try {
+      await db.query('DELETE FROM attractions WHERE id = $1', [id]);
+      return true;
+    } catch (error) {
+      console.error('Error deleting attraction:', error);
+      return false;
+    }
   }
 };

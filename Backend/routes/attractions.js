@@ -56,7 +56,10 @@ router.put('/:id', async (req, res) => {
 // Delete attraction
 router.delete('/:id', async (req, res) => {
   try {
-    await attractionsModel.deleteAttraction(req.params.id);
+    const success = await attractionsModel.deleteAttraction(req.params.id);
+    if (!success) {
+      return res.status(404).json({ success: false, message: 'Attraction not found' });
+    }
     res.json({ success: true, message: 'Attraction deleted successfully' });
   } catch (error) {
     console.error('Error deleting attraction:', error);
