@@ -3,13 +3,14 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 interface Destination {
-  id: string | number; // Updated to accept both string and number
+  id: string | number;
   name: string;
   image: string;
   description: string;
   rating: number;
   properties: number;
   location?: string;
+  featured?: boolean;
 }
 
 const PopularDestinations = () => {
@@ -29,14 +30,23 @@ const PopularDestinations = () => {
         
         const data = await response.json();
         
-        if (data.success && data.attractions) {
-          // Convert numeric IDs to strings if needed
+        if (data.success && data.attractions && data.attractions.length > 0) {
+          // Convert numeric IDs to strings if needed and ensure all required fields exist
           const formattedAttractions = data.attractions.map((attraction: any) => ({
-            ...attraction,
-            id: attraction.id.toString() // Ensure ID is a string
+            id: attraction.id?.toString() || Math.random().toString(36).substr(2, 9),
+            name: attraction.name || 'Unknown Destination',
+            image: attraction.image || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
+            description: attraction.description || 'No description available',
+            rating: parseFloat(attraction.rating) || 4.0,
+            properties: parseInt(attraction.properties) || 0,
+            location: attraction.location || '',
+            featured: attraction.featured || false
           }));
+          
+          console.log('Formatted attractions:', formattedAttractions);
           setDestinations(formattedAttractions);
         } else {
+          console.warn('No attractions found or invalid data format:', data);
           // Fallback to default destinations if API returns empty
           setDestinations([
             {
@@ -88,6 +98,7 @@ const PopularDestinations = () => {
     fetchDestinations();
   }, []);
 
+  // Enhance the destination card to show more details
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h2 className="text-2xl font-bold mb-6">Popular Destinations</h2>
@@ -110,6 +121,10 @@ const PopularDestinations = () => {
                   src={destination.image} 
                   alt={destination.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback image if the provided URL fails to load
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80';
+                  }}
                 />
               </div>
               
@@ -140,6 +155,12 @@ const PopularDestinations = () => {
                     Explore
                   </Link>
                 </div>
+                
+                {destination.featured && (
+                  <div className="mt-2">
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Featured</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
