@@ -66,13 +66,40 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     const { name, location, description, image, rating, properties, featured } = req.body;
     
+    // Validation
+    if (!name || !location) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "Name and location are required fields" 
+        });
+    }
+    
+    // Validate rating is a number between 0 and 5
+    if (rating !== undefined && (isNaN(parseFloat(rating)) || parseFloat(rating) < 0 || parseFloat(rating) > 5)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "Rating must be a number between 0 and 5" 
+        });
+    }
+    
+    // Validate properties is a positive number
+    if (properties !== undefined && (isNaN(parseInt(properties)) || parseInt(properties) < 0)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "Properties must be a positive number" 
+        });
+    }
+    
     try {
         const result = await pool.query(
             `INSERT INTO attractions 
             (name, location, description, image, rating, properties, featured)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *`,
-            [name, location, description, image, rating, properties, featured || false]
+            [name, location, description, image, 
+             rating !== undefined ? parseFloat(rating) : null, 
+             properties !== undefined ? parseInt(properties) : null, 
+             featured || false]
         );
         res.status(201).json({ success: true, attraction: result.rows[0] });
     } catch (error) {

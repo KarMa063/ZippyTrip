@@ -132,8 +132,8 @@ export default function Attractions() {
           location: formData.location,
           description: formData.description,
           image: formData.image,
-          rating: formData.rating.toString(), // Convert to string for API
-          properties: formData.properties.toString(), // Convert to string for API
+          rating: formData.rating, // Send as number
+          properties: formData.properties, // Send as number
           featured: formData.featured || false
         }),
       });
