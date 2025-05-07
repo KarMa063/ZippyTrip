@@ -16,8 +16,6 @@ import {
 } from "../gcomponents/alert-dialog";
 import { Search, Plus, Edit, Trash2 } from "lucide-react";
 import placeholderImage from "../images/placeholder.png";
-import guesthouse1 from "../images/guesthouse1.jpg";
-import guesthouse2 from "../images/guesthouse2.jpg";
 
 type Property = {
   id: string;
@@ -36,51 +34,36 @@ const GProperties = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("properties");
-      if (stored && JSON.parse(stored).length > 0) {
-        setProperties(JSON.parse(stored));
-      } else {
-        const dummy: Property[] = [
-          {
-            id: "1",
-            name: "Himalayan Retreat",
-            address: "Lakeside, Pokhara, Kaski",
-            description: "A beautiful lakeside property with a mountain view.",
-            contact: "9800000001",
-            email: "himalayan@zippytrip.com",
-            images: [guesthouse1],
-            rooms: 5,
-          },
-          {
-            id: "2",
-            name: "Everest Base Stay",
-            address: "Namche Bazaar, Solukhumbu",
-            description: "Experience the Everest base camp trail from this cozy stay.",
-            contact: "9800000002",
-            email: "everest@zippytrip.com",
-            images: [guesthouse2],
-            rooms: 3,
-          },
-        ];
-
-        localStorage.setItem("properties", JSON.stringify(dummy));
-        setProperties(dummy);
+    // Fetch properties from the backend
+    const fetchProperties = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/gproperties");
+        const data = await response.json();
+        setProperties(data.properties);
+      } catch (error) {
+        console.error("Error fetching properties:", error);
       }
-    } catch (error) {
-      console.error("Failed to load properties:", error);
-    }
+    };
+
+    fetchProperties();
   }, []);
 
-  const saveToStorage = (updated: Property[]) => {
-    localStorage.setItem("properties", JSON.stringify(updated));
-    setProperties(updated);
-  };
-
-  const handleDeleteProperty = (id: string) => {
-    const updated = properties.filter((p) => p.id !== id);
-    saveToStorage(updated);
-    alert("Property deleted successfully.");
+  const handleDeleteProperty = async (id: string) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/gproperties/${id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (data.success) {
+        setProperties((prev) => prev.filter((property) => property.id !== id));
+        alert("Property deleted successfully.");
+      } else {
+        alert("Failed to delete property.");
+      }
+    } catch (error) {
+      console.error("Error deleting property:", error);
+      alert("Failed to delete property.");
+    }
   };
 
   const filteredProperties = properties.filter((property) =>
@@ -126,9 +109,8 @@ const GProperties = () => {
               <Link to={`/gproperties/${property.id}`}>
                 <div className="aspect-video overflow-hidden">
                   <img
-                    src={property.images?.[0] || placeholderImage}
+                    src={property.images?.[0]}
                     alt={property.name}
-                    onError={(e) => (e.currentTarget.src = placeholderImage)}
                     className="object-cover w-full h-full group-hover:scale-105 transition-transform"
                   />
                 </div>
