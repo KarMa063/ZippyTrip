@@ -38,7 +38,8 @@ export default function AuthForm() {
         });
         if (error) throw error;
         toast.success('Welcome back to ZippyTrip!');
-        navigate('/home'); //Most probably for going to home after login can only be sure after after home is assembled
+        console.log(supabase.userid)
+        navigate('/home');
       } else {
         // Signup Flow
         const { error } = await supabase.auth.signUp({
@@ -56,14 +57,9 @@ export default function AuthForm() {
         } else if (error) {
           throw error;
         } else {
-          if(1==1){
-          toast.success('Welcome to ZippyTrip! Your account has been created.');//If no id is found in db goto preferences as the user is new
-          navigate('/Preferences'); // After this go to preferences page(PASA   DONOT REMOVE BEFORE REDIRECTING)
+          toast.success('Welcome to ZippyTrip! Your account has been created.');
+          navigate('/Preferences');
         }
-      else{
-        toast.success('Welcome to ZippyTrip! Your account has been created.');//Treat as login and goto home if user already exists
-        navigate('/Preferences'); // After this go to home page(PASA   DONOT REMOVE THIS COMMENT BEFORE REDIRECTING)
-      }}
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -109,7 +105,7 @@ export default function AuthForm() {
     if (error) {
       toast.error('Google login failed: ' + error.message);
     } else {
-      navigate('/home'); //After this go to homepagedashboard(AHBL    This is done only need to redirect)
+      navigate('/home');
     }
     setLoading(false);
   };

@@ -190,3 +190,20 @@ export const getUserTickets = async (userId: string) => {
   if (error) throw error;
   return data;
 };
+
+export const getCurrentUserId = async () => {
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error('Error fetching user:', error);
+    return null;
+  }
+
+  if (user) {
+    console.log('Current User ID:', user.id);
+    return user.id;
+  } else {
+    console.log('No user is signed in.');
+    return null;
+  }
+};

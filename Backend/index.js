@@ -3,6 +3,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { router: guestHouseRoomsRouter, createRoomsTable } = require('./guesthouse/rooms');
 const { router: bookingsRoutes, bookingsTableExists } = require('./guesthouse/bookings');
+const { router: busRoutesRouter, createRoutesTable } = require('./routes/busRoutes');
+const { router: busBookingsRouter, createBookingsTable } = require('./routes/bookingRoutes');
 const { Pool } = require('pg');
 
 // Load environment variables
@@ -52,9 +54,11 @@ app.get('/api/gproperties/:id', async (req, res) => {
   }
 });
 
-// Mount the rooms router
+// Mount the routers
 app.use('/api/gproperties', guestHouseRoomsRouter);
 app.use('/api/bookings', bookingsRoutes);
+app.use('/api/routes', busRoutesRouter);
+app.use('/api/bus-bookings', busBookingsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -69,4 +73,8 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Initialize tables
+  await createRoutesTable();
+  await createBookingsTable();
 });
