@@ -1,6 +1,6 @@
 
 import { NavLink } from "react-router-dom";
-import { BarChart, Route, Calendar, Bus, Settings, Bell, MapPin, Users } from "lucide-react";
+import { BarChart, Route, Calendar, Bus, Settings, Bell, MapPin, Users, AlertTriangle } from "lucide-react";
 import { 
   Sidebar as SidebarWrapper, 
   SidebarContent, 
@@ -50,8 +50,14 @@ const Sidebar = () => {
     label: "Cancellations",
     icon: <Calendar size={20} />,
     path: "/cancellations"
+  },
+     {
+    id: 9,
+    label: "Booking Alerts",
+    icon: <AlertTriangle size={20} />,
+    path: "/booking-alerts"
   }, {
-    id: 8,
+    id: 10,
     label: "Settings",
     icon: <Settings size={20} />,
     path: "/settings"

@@ -1,26 +1,20 @@
-
-import { Calendar, DollarSign, Filter, Search, TrendingUp, Users, MapPin, Route, Bus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useEffect } from 'react';
+import { 
+  Bus, Calendar, BarChart, Filter, Download, 
+  TrendingUp, Users, MapPin, DollarSign 
+} from 'lucide-react';
+import { 
+  Card, CardContent, CardDescription, CardHeader, CardTitle 
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -28,58 +22,154 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend,
-  BarChart as RechartsBarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell
-} from "recharts";
+  fetchDashboardStats, 
+  fetchRevenueData, 
+  fetchRoutePerformance, 
+  fetchBusTypeDistribution,
+  generateReport
+} from '@/services/analytics';
+import { 
+  LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, 
+  Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
 
-// Mock data for analytics
-const revenueData = [
-  { month: "Jan", revenue: 42000, passengers: 4200 },
-  { month: "Feb", revenue: 38000, passengers: 3800 },
-  { month: "Mar", revenue: 45000, passengers: 4500 },
-  { month: "Apr", revenue: 48500, passengers: 4850 },
-  { month: "May", revenue: 53000, passengers: 5300 },
-  { month: "Jun", revenue: 59000, passengers: 5900 },
-  { month: "Jul", revenue: 65000, passengers: 6500 },
-  { month: "Aug", revenue: 67000, passengers: 6700 },
-  { month: "Sep", revenue: 63000, passengers: 6300 },
-  { month: "Oct", revenue: 57000, passengers: 5700 },
-  { month: "Nov", revenue: 52000, passengers: 5200 },
-  { month: "Dec", revenue: 48000, passengers: 4800 },
-];
-
-const routePerformance = [
-  { name: "Delhi-Mumbai", revenue: 185000, passengers: 7200, efficiency: 92 },
-  { name: "Bangalore-Chennai", revenue: 124000, passengers: 6500, efficiency: 88 },
-  { name: "Kolkata-Hyderabad", revenue: 96000, passengers: 4800, efficiency: 81 },
-  { name: "Pune-Goa", revenue: 108000, passengers: 5400, efficiency: 85 },
-  { name: "Jaipur-Delhi", revenue: 72000, passengers: 4200, efficiency: 76 },
-];
-
-const busTypePieData = [
-  { name: "Luxury", value: 40 },
-  { name: "Standard", value: 25 },
-  { name: "Sleeper", value: 20 },
-  { name: "Deluxe", value: 10 },
-  { name: "AC Sleeper", value: 5 },
-];
-
-const COLORS = ["#8B5CF6", "#6D48D6", "#9B87F5", "#B4A0FF", "#D4CAFF"];
+// Colors for charts
+const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#3B82F6', '#F59E0B'];
 
 const Analytics = () => {
+  const [timeRange, setTimeRange] = useState('year');
+  const [dashboardStats, setDashboardStats] = useState({
+    total_revenue: 0,
+    total_passengers: 0,
+    active_routes: 0,
+    fleet_size: 0,
+    revenue_growth: 0,
+    passenger_growth: 0,
+    route_growth: 0,
+    fleet_growth: 0
+  });
+  const [revenueData, setRevenueData] = useState([]);
+  const [routePerformance, setRoutePerformance] = useState([]);
+  const [busTypeData, setBusTypeData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchAnalyticsData(timeRange);
+  }, [timeRange]);
+
+  const fetchAnalyticsData = async (period) => {
+    setIsLoading(true);
+    try {
+      // Prepare date range based on selected period
+      const now = new Date();
+      let startDate, endDate;
+      
+      switch(period) {
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = now;
+          break;
+        case 'quarter':
+          startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+          endDate = now;
+          break;
+        case 'year':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          endDate = now;
+          break;
+        default:
+          startDate = new Date(now.getFullYear(), 0, 1);
+          endDate = now;
+      }
+      
+      const params = {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        period
+      };
+      
+      // Fetch all required data
+      const stats = await fetchDashboardStats(params);
+      const revenue = await fetchRevenueData(params);
+      const routes = await fetchRoutePerformance(params);
+      const busTypes = await fetchBusTypeDistribution(params);
+      
+      setDashboardStats(stats);
+      setRevenueData(revenue);
+      setRoutePerformance(routes);
+      
+      // Transform bus type data for pie chart
+      const busTypeChartData = busTypes.map(item => ({
+        name: item.bus_type,
+        value: parseFloat(((item.booking_count / stats.total_passengers) * 100).toFixed(1))
+      }));
+      
+      setBusTypeData(busTypeChartData);
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch analytics data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleExportReport = async (reportType) => {
+    try {
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), 0, 1).toISOString();
+      const endDate = now.toISOString();
+      
+      const params = {
+        reportType,
+        startDate,
+        endDate,
+        format: 'csv'
+      };
+      
+      const fileUrl = await generateReport(params);
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.setAttribute('download', `${reportType}-report-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Revoke the URL to free up memory
+      setTimeout(() => URL.revokeObjectURL(fileUrl), 100);
+      
+      toast({
+        title: "Report Generated",
+        description: `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} report has been downloaded`,
+      });
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate report",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-NP', {
+      style: 'currency',
+      currency: 'NPR',
+      maximumFractionDigits: 0
+    }).format(value);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -88,7 +178,7 @@ const Analytics = () => {
           <p className="text-muted-foreground mt-1">Performance metrics and business insights</p>
         </div>
         <div className="mt-4 sm:mt-0 flex items-center space-x-2">
-          <Select defaultValue="year">
+          <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-[180px] bg-zippy-darkGray border-zippy-gray">
               <SelectValue placeholder="Select time period" />
             </SelectTrigger>
@@ -96,15 +186,18 @@ const Analytics = () => {
               <SelectItem value="month">This Month</SelectItem>
               <SelectItem value="quarter">This Quarter</SelectItem>
               <SelectItem value="year">This Year</SelectItem>
-              <SelectItem value="custom">Custom Range</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" className="bg-zippy-darkGray border-zippy-gray">
             <Filter className="mr-2 h-4 w-4" />
             Filters
           </Button>
-          <Button variant="outline" className="bg-zippy-darkGray border-zippy-gray">
-            <Calendar className="mr-2 h-4 w-4" />
+          <Button 
+            variant="outline" 
+            className="bg-zippy-darkGray border-zippy-gray"
+            onClick={() => handleExportReport('dashboard')}
+          >
+            <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
         </div>
@@ -121,10 +214,10 @@ const Analytics = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$587,500</div>
+            <div className="text-2xl font-bold">NPR {dashboardStats.total_revenue.toLocaleString()}</div>
             <div className="flex items-center mt-1 text-green-500 text-sm">
               <TrendingUp className="h-4 w-4 mr-1" />
-              <span>+12.5% from last year</span>
+              <span>+{dashboardStats.revenue_growth}% from last year</span>
             </div>
           </CardContent>
         </Card>
@@ -139,10 +232,10 @@ const Analytics = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">63,750</div>
+            <div className="text-2xl font-bold">{dashboardStats.total_passengers.toLocaleString()}</div>
             <div className="flex items-center mt-1 text-green-500 text-sm">
               <TrendingUp className="h-4 w-4 mr-1" />
-              <span>+8.3% from last year</span>
+              <span>+{dashboardStats.passenger_growth}% from last year</span>
             </div>
           </CardContent>
         </Card>
@@ -157,10 +250,10 @@ const Analytics = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{dashboardStats.active_routes}</div>
             <div className="flex items-center mt-1 text-green-500 text-sm">
               <TrendingUp className="h-4 w-4 mr-1" />
-              <span>+4 from last year</span>
+              <span>+{dashboardStats.route_growth} from last year</span>
             </div>
           </CardContent>
         </Card>
@@ -175,10 +268,10 @@ const Analytics = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">18</div>
+            <div className="text-2xl font-bold">{dashboardStats.fleet_size}</div>
             <div className="flex items-center mt-1 text-green-500 text-sm">
               <TrendingUp className="h-4 w-4 mr-1" />
-              <span>+3 from last year</span>
+              <span>+{dashboardStats.fleet_growth} from last year</span>
             </div>
           </CardContent>
         </Card>
@@ -192,12 +285,23 @@ const Analytics = () => {
           <TabsTrigger value="financial">Financial</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-7">
             <Card className="bg-zippy-darkGray border-zippy-gray md:col-span-4">
-              <CardHeader>
-                <CardTitle>Revenue Trends</CardTitle>
-                <CardDescription>Monthly revenue for the current year</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Revenue Trends</CardTitle>
+                  <CardDescription>Monthly revenue for the current year</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-zippy-darkGray border-zippy-gray"
+                  onClick={() => handleExportReport('revenue')}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
               </CardHeader>
               <CardContent className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
@@ -211,11 +315,11 @@ const Analytics = () => {
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="month" stroke="#666" />
+                    <XAxis dataKey="time_period" stroke="#666" />
                     <YAxis stroke="#666" />
                     <Tooltip 
                       contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#333" }} 
-                      formatter={(value) => [`$${value}`, "Revenue"]}
+                      formatter={(value) => [formatCurrency(value), "Revenue"]}
                     />
                     <Legend />
                     <Line
@@ -224,6 +328,8 @@ const Analytics = () => {
                       stroke="#8B5CF6"
                       strokeWidth={2}
                       activeDot={{ r: 8 }}
+                      animationDuration={1500}
+                      animationEasing="ease-in-out"
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -231,30 +337,43 @@ const Analytics = () => {
             </Card>
             
             <Card className="bg-zippy-darkGray border-zippy-gray md:col-span-3">
-              <CardHeader>
-                <CardTitle>Bus Type Distribution</CardTitle>
-                <CardDescription>Breakdown by vehicle type</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Bus Type Distribution</CardTitle>
+                  <CardDescription>Breakdown by vehicle type</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-zippy-darkGray border-zippy-gray"
+                  onClick={() => handleExportReport('buses')}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
               </CardHeader>
               <CardContent className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={busTypePieData}
+                      data={busTypeData}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, value }) => `${name} ${value}%`}
+                      animationDuration={1500}
+                      animationEasing="ease-in-out"
                     >
-                      {busTypePieData.map((entry, index) => (
+                      {busTypeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip 
                       contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#333" }} 
-                      formatter={(value, name) => [`${value}%`, name]}
+                      formatter={(value) => [`${value}%`, "Percentage"]}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -262,246 +381,139 @@ const Analytics = () => {
             </Card>
           </div>
           
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
-            <Card className="bg-zippy-darkGray border-zippy-gray md:col-span-2">
-              <CardHeader>
+          <Card className="bg-zippy-darkGray border-zippy-gray">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
                 <CardTitle>Top Performing Routes</CardTitle>
                 <CardDescription>Routes by revenue and efficiency</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-zippy-gray">
-                      <TableRow>
-                        <TableHead>Route Name</TableHead>
-                        <TableHead>Revenue</TableHead>
-                        <TableHead>Passengers</TableHead>
-                        <TableHead>Efficiency</TableHead>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-zippy-darkGray border-zippy-gray"
+                onClick={() => handleExportReport('routes')}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Export
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-zippy-gray">
+                    <TableRow>
+                      <TableHead>Route Name</TableHead>
+                      <TableHead>Origin - Destination</TableHead>
+                      <TableHead>Revenue</TableHead>
+                      <TableHead>Passengers</TableHead>
+                      <TableHead>Occupancy Rate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {routePerformance.slice(0, 5).map((route, index) => (
+                      <TableRow key={route.id || index} className="border-b border-zippy-gray">
+                        <TableCell className="font-medium">{route.name}</TableCell>
+                        <TableCell>{route.origin} → {route.destination}</TableCell>
+                        <TableCell>{formatCurrency(route.total_revenue)}</TableCell>
+                        <TableCell>{route.total_bookings}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline" 
+                            className={`
+                              ${route.occupancy_rate >= 80 ? 'border-green-500 text-green-500' : 
+                                route.occupancy_rate >= 60 ? 'border-blue-500 text-blue-500' : 
+                                'border-amber-500 text-amber-500'}
+                            `}
+                          >
+                            {Math.round(route.occupancy_rate)}%
+                          </Badge>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {routePerformance.map((route, i) => (
-                        <TableRow key={i} className="border-b border-zippy-gray">
-                          <TableCell className="font-medium">{route.name}</TableCell>
-                          <TableCell>${route.revenue.toLocaleString()}</TableCell>
-                          <TableCell>{route.passengers.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <div 
-                                className="w-16 bg-zippy-gray rounded-full h-2 mr-2 overflow-hidden"
-                              >
-                                <div 
-                                  className={`h-full ${
-                                    route.efficiency >= 85 
-                                      ? "bg-green-500" 
-                                      : route.efficiency >= 70 
-                                      ? "bg-amber-500" 
-                                      : "bg-red-500"
-                                  }`}
-                                  style={{ width: `${route.efficiency}%` }}
-                                />
-                              </div>
-                              <span>{route.efficiency}%</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Key Insights</CardTitle>
-                <CardDescription>
-                  Important trends and observations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium mb-2 text-zippy-purple">Revenue Growth</h3>
-                    <p className="text-sm">Revenue increased by 12.5% compared to the previous year, with the Delhi-Mumbai route being the top performer.</p>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium mb-2 text-zippy-purple">Passenger Trends</h3>
-                    <p className="text-sm">Weekend occupancy rates have increased by 15%, suggesting potential for additional weekend services.</p>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium mb-2 text-zippy-purple">Fleet Utilization</h3>
-                    <p className="text-sm">Luxury buses show 92% utilization rate, highest among all bus types, indicating strong demand for premium services.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="routes">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Route Revenue Comparison</CardTitle>
-                <CardDescription>Top 5 routes by revenue</CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart
-                    data={routePerformance}
-                    margin={{
-                      top: 5,
-                      right: 30,
-                      left: 20,
-                      bottom: 30,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="name" stroke="#666" angle={-45} textAnchor="end" />
-                    <YAxis stroke="#666" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#333" }} 
-                      formatter={(value) => [`$${value.toLocaleString()}`, "Revenue"]}
-                    />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="#8B5CF6" name="Revenue" radius={[4, 4, 0, 0]} />
-                  </RechartsBarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Route Passenger Volume</CardTitle>
-                <CardDescription>Top 5 routes by passenger count</CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart
-                    data={routePerformance}
-                    margin={{
-                      top: 5,
-                      right: 30,
-                      left: 20,
-                      bottom: 30,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="name" stroke="#666" angle={-45} textAnchor="end" />
-                    <YAxis stroke="#666" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#333" }} 
-                      formatter={(value) => [`${value.toLocaleString()}`, "Passengers"]}
-                    />
-                    <Legend />
-                    <Bar dataKey="passengers" fill="#6D48D6" name="Passengers" radius={[4, 4, 0, 0]} />
-                  </RechartsBarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3 mt-6">
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Route Efficiency</CardTitle>
-                <CardDescription>
-                  Efficiency metrics for top routes
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {routePerformance.map((route, i) => (
-                    <div key={i} className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{route.name}</span>
-                        <span className={`text-sm ${
-                          route.efficiency >= 85 
-                            ? "text-green-500" 
-                            : route.efficiency >= 70 
-                            ? "text-amber-500" 
-                            : "text-red-500"
-                        }`}>
-                          {route.efficiency}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-zippy-gray rounded-full h-2 overflow-hidden">
-                        <div 
-                          className={`h-full ${
-                            route.efficiency >= 85 
-                              ? "bg-green-500" 
-                              : route.efficiency >= 70 
-                              ? "bg-amber-500" 
-                              : "bg-red-500"
-                          }`}
-                          style={{ width: `${route.efficiency}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Route Growth</CardTitle>
-                <CardDescription>
-                  Year-over-year growth by route
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {routePerformance.map((route, i) => (
-                    <div key={i} className="flex justify-between items-center p-3 bg-zippy-gray rounded-md">
-                      <span className="font-medium">{route.name}</span>
-                      <span className="text-green-500">
-                        +{Math.floor(Math.random() * 15) + 5}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Route Recommendations</CardTitle>
-                <CardDescription>
-                  AI-powered suggestions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-3 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium text-zippy-purple">New Route Potential</h3>
-                    <p className="text-sm mt-1">Consider adding a direct Mumbai to Jaipur route based on passenger search data.</p>
-                  </div>
-                  
-                  <div className="p-3 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium text-zippy-purple">Schedule Optimization</h3>
-                    <p className="text-sm mt-1">Adding an early morning departure on Delhi-Mumbai route could increase ridership by 8%.</p>
-                  </div>
-                  
-                  <div className="p-3 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium text-zippy-purple">Pricing Strategy</h3>
-                    <p className="text-sm mt-1">Dynamic pricing model for Bangalore-Chennai could increase revenue by 12%.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="bg-zippy-darkGray border-zippy-gray">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Route Performance Analysis</CardTitle>
+                <CardDescription>Detailed metrics for all routes</CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                className="bg-zippy-darkGray border-zippy-gray"
+                onClick={() => handleExportReport('routes-detailed')}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export Report
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-zippy-gray">
+                    <TableRow>
+                      <TableHead>Route Name</TableHead>
+                      <TableHead>Origin - Destination</TableHead>
+                      <TableHead>Revenue</TableHead>
+                      <TableHead>Bookings</TableHead>
+                      <TableHead>Occupancy Rate</TableHead>
+                      <TableHead>Avg. Fare</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {routePerformance.map((route, index) => (
+                      <TableRow key={route.id || index} className="border-b border-zippy-gray">
+                        <TableCell className="font-medium">{route.name}</TableCell>
+                        <TableCell>{route.origin} → {route.destination}</TableCell>
+                        <TableCell>{formatCurrency(route.total_revenue)}</TableCell>
+                        <TableCell>{route.total_bookings}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline" 
+                            className={`
+                              ${route.occupancy_rate >= 80 ? 'border-green-500 text-green-500' : 
+                                route.occupancy_rate >= 60 ? 'border-blue-500 text-blue-500' : 
+                                'border-amber-500 text-amber-500'}
+                            `}
+                          >
+                            {Math.round(route.occupancy_rate)}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(route.total_revenue / route.total_bookings)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="passengers">
-          <div className="grid gap-6 md:grid-cols-7">
-            <Card className="bg-zippy-darkGray border-zippy-gray md:col-span-4">
-              <CardHeader>
-                <CardTitle>Passenger Trends</CardTitle>
-                <CardDescription>Monthly passenger counts</CardDescription>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="bg-zippy-darkGray border-zippy-gray">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Passenger Growth</CardTitle>
+                  <CardDescription>Monthly passenger counts</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-zippy-darkGray border-zippy-gray"
+                  onClick={() => handleExportReport('passengers')}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
               </CardHeader>
               <CardContent className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
@@ -515,7 +527,7 @@ const Analytics = () => {
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="month" stroke="#666" />
+                    <XAxis dataKey="time_period" stroke="#666" />
                     <YAxis stroke="#666" />
                     <Tooltip 
                       contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#333" }} 
@@ -524,110 +536,165 @@ const Analytics = () => {
                     <Line
                       type="monotone"
                       dataKey="passengers"
-                      stroke="#9B87F5"
+                      stroke="#EC4899"
                       strokeWidth={2}
                       activeDot={{ r: 8 }}
+                      animationDuration={1500}
+                      animationEasing="ease-in-out"
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
             
-            <Card className="bg-zippy-darkGray border-zippy-gray md:col-span-3">
-              <CardHeader>
-                <CardTitle>Passenger Demographics</CardTitle>
-                <CardDescription>Breakdown by age and type</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <h3 className="font-medium">Age Distribution</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">18-24</span>
-                      <span className="text-sm">22%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "22%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">25-34</span>
-                      <span className="text-sm">35%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "35%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">35-44</span>
-                      <span className="text-sm">25%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "25%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">45-64</span>
-                      <span className="text-sm">15%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "15%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">65+</span>
-                      <span className="text-sm">3%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "3%" }} />
-                    </div>
-                  </div>
+            <Card className="bg-zippy-darkGray border-zippy-gray">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Booking Distribution</CardTitle>
+                  <CardDescription>By time of day</CardDescription>
                 </div>
-                
-                <div className="mt-6 space-y-4">
-                  <h3 className="font-medium">Passenger Type</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-zippy-gray rounded-md text-center">
-                      <div className="text-xl font-bold">62%</div>
-                      <div className="text-sm text-muted-foreground">Business</div>
-                    </div>
-                    
-                    <div className="p-3 bg-zippy-gray rounded-md text-center">
-                      <div className="text-xl font-bold">38%</div>
-                      <div className="text-sm text-muted-foreground">Leisure</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3 mt-6">
-            <Card className="bg-zippy-darkGray border-zippy-gray md:col-span-2">
-              <CardHeader>
-                <CardTitle>Booking Patterns</CardTitle>
-                <CardDescription>
-                  How and when passengers book tickets
-                </CardDescription>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-zippy-darkGray border-zippy-gray"
+                  onClick={() => handleExportReport('bookings-time')}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
               </CardHeader>
-              <CardContent className="h-64">
+              <CardContent className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart
                     data={[
-                      { name: "Same Day", value: 15 },
-                      { name: "1-3 Days", value: 25 },
-                      { name: "4-7 Days", value: 35 },
-                      { name: "8-14 Days", value: 15 },
-                      { name: "15+ Days", value: 10 },
+                      { time: 'Morning', bookings: 120 },
+                      { time: 'Afternoon', bookings: 98 },
+                      { time: 'Evening', bookings: 165 },
+                      { time: 'Night', bookings: 75 },
                     ]}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                    <XAxis dataKey="time" stroke="#666" />
+                    <YAxis stroke="#666" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#333" }} 
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="bookings" 
+                      fill="#3B82F6" 
+                      animationDuration={1500}
+                      animationEasing="ease-in-out"
+                    />
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="financial">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="bg-zippy-darkGray border-zippy-gray">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Revenue vs Expenses</CardTitle>
+                  <CardDescription>Monthly financial comparison</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-zippy-darkGray border-zippy-gray"
+                  onClick={() => handleExportReport('financial')}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
+              </CardHeader>
+              <CardContent className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={[
+                      { month: 'Jan', revenue: 40000, expenses: 25000 },
+                      { month: 'Feb', revenue: 38000, expenses: 24000 },
+                      { month: 'Mar', revenue: 45000, expenses: 26000 },
+                      { month: 'Apr', revenue: 48000, expenses: 27000 },
+                      { month: 'May', revenue: 52000, expenses: 28000 },
+                      { month: 'Jun', revenue: 58000, expenses: 30000 },
+                      { month: 'Jul', revenue: 62000, expenses: 31000 },
+                      { month: 'Aug', revenue: 65000, expenses: 32000 },
+                      { month: 'Sep', revenue: 61000, expenses: 31000 },
+                      { month: 'Oct', revenue: 58000, expenses: 30000 },
+                      { month: 'Nov', revenue: 55000, expenses: 29000 },
+                      { month: 'Dec', revenue: 48000, expenses: 27000 },
+                    ]}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                    <XAxis dataKey="month" stroke="#666" />
+                    <YAxis stroke="#666" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#333" }} 
+                      formatter={(value) => [formatCurrency(value), ""]}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#10B981"
+                      strokeWidth={2}
+                      activeDot={{ r: 8 }}
+                      animationDuration={1500}
+                      animationEasing="ease-in-out"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="expenses"
+                      stroke="#F43F5E"
+                      strokeWidth={2}
+                      activeDot={{ r: 8 }}
+                      animationDuration={1500}
+                      animationEasing="ease-in-out"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-zippy-darkGray border-zippy-gray">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Revenue by Bus Type</CardTitle>
+                  <CardDescription>Contribution by vehicle category</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-zippy-darkGray border-zippy-gray"
+                  onClick={() => handleExportReport('revenue-by-bus')}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
+              </CardHeader>
+              <CardContent className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsBarChart
+                    data={busTypeData.map(type => ({
+                      name: type.name,
+                      revenue: type.value * dashboardStats.total_revenue / 100
+                    }))}
                     margin={{
                       top: 5,
                       right: 30,
@@ -640,285 +707,17 @@ const Analytics = () => {
                     <YAxis stroke="#666" />
                     <Tooltip 
                       contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#333" }} 
-                      formatter={(value) => [`${value}%`, "Bookings"]}
+                      formatter={(value) => [formatCurrency(value), "Revenue"]}
                     />
                     <Legend />
-                    <Bar dataKey="value" fill="#6D48D6" name="Percentage" radius={[4, 4, 0, 0]} />
-                  </RechartsBarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Booking Channels</CardTitle>
-                <CardDescription>
-                  Ticket sales by platform
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Mobile App</span>
-                      <span className="text-sm">42%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "42%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Website</span>
-                      <span className="text-sm">35%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "35%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Travel Agents</span>
-                      <span className="text-sm">15%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "15%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Call Center</span>
-                      <span className="text-sm">5%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "5%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Bus Station</span>
-                      <span className="text-sm">3%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-zippy-purple h-full rounded-full" style={{ width: "3%" }} />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="financial">
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card className="bg-zippy-darkGray border-zippy-gray md:col-span-2">
-              <CardHeader>
-                <CardTitle>Revenue vs. Expenses</CardTitle>
-                <CardDescription>Monthly financial overview</CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart
-                    data={[
-                      { month: "Jan", revenue: 42000, expenses: 32000 },
-                      { month: "Feb", revenue: 38000, expenses: 30000 },
-                      { month: "Mar", revenue: 45000, expenses: 33000 },
-                      { month: "Apr", revenue: 48500, expenses: 35000 },
-                      { month: "May", revenue: 53000, expenses: 36000 },
-                      { month: "Jun", revenue: 59000, expenses: 39000 },
-                    ]}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="month" stroke="#666" />
-                    <YAxis stroke="#666" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#333" }} 
-                      formatter={(value) => [`$${value.toLocaleString()}`, ""]}
+                    <Bar 
+                      dataKey="revenue" 
+                      fill="#F59E0B" 
+                      animationDuration={1500}
+                      animationEasing="ease-in-out"
                     />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="#8B5CF6" name="Revenue" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="expenses" fill="#6D48D6" name="Expenses" radius={[4, 4, 0, 0]} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Expense Breakdown</CardTitle>
-                <CardDescription>
-                  Major expense categories
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Fuel</span>
-                      <span className="text-sm">35%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-red-500 h-full rounded-full" style={{ width: "35%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Staff Salaries</span>
-                      <span className="text-sm">28%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-amber-500 h-full rounded-full" style={{ width: "28%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Maintenance</span>
-                      <span className="text-sm">18%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-blue-500 h-full rounded-full" style={{ width: "18%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Insurance</span>
-                      <span className="text-sm">10%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-green-500 h-full rounded-full" style={{ width: "10%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Taxes & Permits</span>
-                      <span className="text-sm">5%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-purple-500 h-full rounded-full" style={{ width: "5%" }} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Other</span>
-                      <span className="text-sm">4%</span>
-                    </div>
-                    <div className="w-full bg-zippy-gray rounded-full h-2">
-                      <div className="bg-pink-500 h-full rounded-full" style={{ width: "4%" }} />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3 mt-6">
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Profitability Metrics</CardTitle>
-                <CardDescription>
-                  Key financial indicators
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <div className="text-sm text-muted-foreground mb-1">Gross Margin</div>
-                    <div className="text-2xl font-bold">38.5%</div>
-                    <div className="text-xs text-green-500">+2.3% from last year</div>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <div className="text-sm text-muted-foreground mb-1">Operating Margin</div>
-                    <div className="text-2xl font-bold">22.7%</div>
-                    <div className="text-xs text-green-500">+1.5% from last year</div>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <div className="text-sm text-muted-foreground mb-1">Net Profit Margin</div>
-                    <div className="text-2xl font-bold">18.2%</div>
-                    <div className="text-xs text-green-500">+1.8% from last year</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Revenue per Bus</CardTitle>
-                <CardDescription>
-                  Average monthly revenue by bus type
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <div className="text-sm text-muted-foreground mb-1">Luxury</div>
-                    <div className="text-2xl font-bold">$12,850</div>
-                    <div className="text-xs text-green-500">Highest earning</div>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <div className="text-sm text-muted-foreground mb-1">AC Sleeper</div>
-                    <div className="text-2xl font-bold">$10,200</div>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <div className="text-sm text-muted-foreground mb-1">Deluxe</div>
-                    <div className="text-2xl font-bold">$8,500</div>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <div className="text-sm text-muted-foreground mb-1">Standard</div>
-                    <div className="text-2xl font-bold">$7,200</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-zippy-darkGray border-zippy-gray">
-              <CardHeader>
-                <CardTitle>Financial Insights</CardTitle>
-                <CardDescription>
-                  Key observations and trends
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium text-zippy-purple mb-1">Fuel Efficiency</h3>
-                    <p className="text-sm">Fuel costs have decreased by 5% due to route optimization and newer buses.</p>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium text-zippy-purple mb-1">Premium Services</h3>
-                    <p className="text-sm">Luxury and AC Sleeper buses deliver 40% higher profit margins than standard buses.</p>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium text-zippy-purple mb-1">Seasonal Trends</h3>
-                    <p className="text-sm">Holiday season (Oct-Dec) shows 22% higher revenue compared to other quarters.</p>
-                  </div>
-                  
-                  <div className="p-4 bg-zippy-gray rounded-md">
-                    <h3 className="font-medium text-zippy-purple mb-1">Cost Optimization</h3>
-                    <p className="text-sm">Maintenance cost reduced by 8% through preventive maintenance scheduling.</p>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>

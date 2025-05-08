@@ -1,134 +1,90 @@
-import { supabase } from "@/integrations/supabase/client";
-import { ValidTableName, asValidTableName, fromSafeTable } from "@/utils/tableTypes";
+import { query } from '@/integrations/neon/client';
 
-// Type definitions
-export type Route = {
-  id: string;
+// Type for route insertion
+export interface RouteInsert {
   name: string;
   origin: string;
   destination: string;
   distance: number | null;
   duration: number | null;
-  is_active: boolean | null;
-  created_at: string;
-  updated_at: string;
-};
+  is_active: boolean;
+}
 
-// Make is_active optional in RouteInsert to match database schema default value
-export type RouteInsert = Omit<
-  Route, 
-  'id' | 'created_at' | 'updated_at' | 'is_active' | 'distance' | 'duration'
-> & {
-  is_active?: boolean | null;
-  distance?: number | null;
-  duration?: number | null;
-};
-
-export type RouteUpdate = Partial<Omit<Route, 'id' | 'created_at' | 'updated_at'>>;
-
-export const fetchRoutes = async () => {
-  console.log("Fetching routes...");
+// Fetch all routes
+export async function fetchRoutes() {
   try {
-    const { data, error } = await supabase
-      .from('routes')
-      .select('*')
-      .order('name');
-    
-    if (error) {
-      console.error("Error fetching routes:", error);
-      throw error;
-    }
-    
-    console.log("Routes fetched successfully:", data);
-    return data as Route[];
-  } catch (err) {
-    console.error("Error in fetchRoutes:", err);
-    throw err;
+    const result = await query('SELECT * FROM routes ORDER BY created_at DESC');
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching routes:', error);
+    throw error;
   }
-};
+}
 
-export const getRoute = async (id: string) => {
-  console.log("Fetching route with ID:", id);
+// Get a single route by ID
+export async function getRoute(id: string) {
   try {
-    const { data, error } = await supabase
-      .from('routes')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
-      console.error("Error fetching route:", error);
-      throw error;
-    }
-    
-    console.log("Route fetched successfully:", data);
-    return data as Route;
-  } catch (err) {
-    console.error("Error in getRoute:", err);
-    throw err;
+    const result = await query('SELECT * FROM routes WHERE id = $1', [id]);
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Error fetching route:', error);
+    throw error;
   }
-};
+}
 
-export const createRoute = async (routeData: RouteInsert) => {
-  console.log("Creating route with data:", routeData);
+// Create a new route
+export async function createRoute(routeData: RouteInsert) {
   try {
-    const { data, error } = await supabase
-      .from('routes')
-      .insert(routeData)
-      .select();
+    const { name, origin, destination, distance, duration, is_active } = routeData;
     
-    if (error) {
-      console.error("Error creating route:", error);
-      throw error;
-    }
+    const result = await query(
+      `INSERT INTO routes (name, origin, destination, distance, duration, is_active) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING *`,
+      [name, origin, destination, distance, duration, is_active]
+    );
     
-    console.log("Route created successfully:", data);
-    return data;
-  } catch (err) {
-    console.error("Error in createRoute:", err);
-    throw err;
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error creating route:', error);
+    throw error;
   }
-};
+}
 
-export const updateRoute = async (id: string, routeData: RouteUpdate) => {
-  console.log("Updating route with ID:", id, "Data:", routeData);
+// Update an existing route
+export async function updateRoute(id: string, routeData: Partial<RouteInsert>) {
   try {
-    const { data, error } = await supabase
-      .from('routes')
-      .update(routeData)
-      .eq('id', id)
-      .select();
+    // Build the SET part of the query dynamically based on provided fields
+    const updates = Object.entries(routeData)
+      .filter(([_, value]) => value !== undefined)
+      .map(([key], index) => `${key} = $${index + 2}`);
     
-    if (error) {
-      console.error("Error updating route:", error);
-      throw error;
-    }
+    const values = Object.values(routeData).filter(value => value !== undefined);
     
-    console.log("Route updated successfully:", data);
-    return data;
-  } catch (err) {
-    console.error("Error in updateRoute:", err);
-    throw err;
+    if (updates.length === 0) return null; // No updates to make
+    
+    const sqlQuery = `
+      UPDATE routes 
+      SET ${updates.join(', ')}, updated_at = NOW() 
+      WHERE id = $1 
+      RETURNING *
+    `;
+    
+    const result = await query(sqlQuery, [id, ...values]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error updating route:', error);
+    throw error;
   }
-};
+}
 
-export const deleteRoute = async (id: string) => {
-  console.log("Deleting route with ID:", id);
+// Delete a route
+export async function deleteRoute(id: string) {
   try {
-    const { error } = await supabase
-      .from('routes')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error("Error deleting route:", error);
-      throw error;
-    }
-    
-    console.log("Route deleted successfully");
+    await query('DELETE FROM routes WHERE id = $1', [id]);
     return true;
-  } catch (err) {
-    console.error("Error in deleteRoute:", err);
-    throw err;
+  } catch (error) {
+    console.error('Error deleting route:', error);
+    throw error;
   }
-};
+}
