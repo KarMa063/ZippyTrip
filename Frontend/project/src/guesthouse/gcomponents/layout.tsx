@@ -82,21 +82,22 @@ export function Layout() {
                   <Bell className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-96 max-h-120">
+              <DropdownMenuContent align="end" className="w-80">
                 <DropdownMenuLabel>Notifications</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <div className="py-2 px-4 text-sm">
-                  <p className="font-medium">New booking request</p>
-                  <p className="text-muted-foreground">Ocean View Suite - May 15-18</p>
-                </div>
-                <DropdownMenuSeparator />
-                <div className="py-2 px-4 text-sm">
-                  <p className="font-medium">Message from guest</p>
-                  <p className="text-muted-foreground">John D. sent you a message about their stay</p>
+                <div className="max-h-96 overflow-auto">
+                  <div className="py-2 px-4 text-sm">
+                    <p className="font-medium">New booking request</p>
+                    <p className="text-muted-foreground">Ocean View Suite - May 15-18</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <div className="py-2 px-4 text-sm">
+                    <p className="font-medium">Message from guest</p>
+                    <p className="text-muted-foreground">John D. sent you a message about their stay</p>
+                  </div>
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
-
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

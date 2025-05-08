@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import axios from 'axios';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -49,48 +48,145 @@ export const signInWithGoogle = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    },
+      redirectTo: `${window.location.origin}/auth/callback`
+    }
   });
-
+  
   return { data, error };
 };
 
-export const getCurrentUser = async () => {
+export const generateBookingNumber = () => {
+  return `BK${Date.now().toString(36).toUpperCase()}`;
+};
+
+export const createHotelBooking = async (
+  userId: string,
+  hotelId: string,
+  roomType: string,
+  checkIn: string,
+  checkOut: string,
+  totalPrice: number,
+  paymentMethod: 'card' | 'cash'
+) => {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    // First create the hotel booking
+    const { data: bookingData, error: bookingError } = await supabase
+      .from('hotel_bookings')
+      .insert([
+        {
+          user_id: userId,
+          hotel_id: hotelId,
+          room_type: roomType,
+          check_in_date: checkIn,
+          check_out_date: checkOut,
+          total_price: totalPrice,
+          payment_method: paymentMethod,
+          status: paymentMethod === 'card' ? 'confirmed' : 'pending'
+        }
+      ])
+      .select()
+      .single();
 
-    if (error) {
-      console.error('Error fetching user:', error);
-      throw new Error('Error fetching user');
-    }
+    if (bookingError) throw bookingError;
 
-    if (user) {
-      console.log('Current user:', user);
-      return {
-        user_id: user.id,
-        user_email: user.email,
-      };
-    } else {
-      throw new Error('No user found');
-    }
+    // Then create the ticket
+    const bookingNumber = generateBookingNumber();
+    const qrCode = `hotel-${bookingData.id}-${bookingNumber}`;
+
+    const { data: ticketData, error: ticketError } = await supabase
+      .from('tickets')
+      .insert([
+        {
+          user_id: userId,
+          booking_type: 'hotel',
+          booking_id: bookingData.id,
+          booking_number: bookingNumber,
+          qr_code: qrCode,
+          status: 'active'
+        }
+      ])
+      .select()
+      .single();
+
+    if (ticketError) throw ticketError;
+
+    return {
+      booking: bookingData,
+      ticket: ticketData
+    };
   } catch (error) {
-    console.error('Error getting current user:', error);
+    console.error('Error creating booking:', error);
     throw error;
   }
 };
 
-export const sendUserToBackend = async () => {
-  try {
-    const { user_id, user_email } = await getCurrentUser();
+export const getHotelBookings = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('hotel_bookings')
+    .select(`
+      *,
+      hotels (
+        name,
+        location,
+        image_url
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
 
-    const response = await axios.post('http://localhost:5000/api/users', {
-      user_id,
-      user_email,
-    });
+  if (error) throw error;
+  return data;
+};
 
-    console.log('User saved to backend:', response.data);
-  } catch (error) {
-    console.error('Error sending user to backend:', error);
-  }
+export const getHotels = async (location: string) => {
+  const { data, error } = await supabase
+    .from('hotels')
+    .select('*')
+    .eq('location', location)
+    .order('rating', { ascending: false });
+
+  if (error) throw error;
+  return data;
+};
+
+export const saveTicket = async (userId: string, bookingType: 'flight' | 'bus' | 'hotel', bookingId: string) => {
+  const bookingNumber = generateBookingNumber();
+  const qrCode = `${bookingType}-${bookingId}-${bookingNumber}`;
+
+  const { data, error } = await supabase
+    .from('tickets')
+    .insert([
+      {
+        user_id: userId,
+        booking_type: bookingType,
+        booking_id: bookingId,
+        booking_number: bookingNumber,
+        qr_code: qrCode,
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const getUserTickets = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('tickets')
+    .select(`
+      *,
+      hotel_bookings (
+        *,
+        hotels (
+          name,
+          location
+        )
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
 };

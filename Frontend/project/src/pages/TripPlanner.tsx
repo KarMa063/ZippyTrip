@@ -1,14 +1,6 @@
-import React from 'react';
 import { Compass, Map, Heart, Calendar, Clock, Sun } from 'lucide-react';
-import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
 
-interface Category {
-  icon: JSX.Element;
-  title: string;
-  description: string;
-}
-
-const categories: Category[] = [
+const categories = [
   {
     icon: <Compass className="h-6 w-6" />,
     title: 'Adventure',
@@ -26,18 +18,12 @@ const categories: Category[] = [
   }
 ];
 
-const TripPlanner: React.FC = () => {
-  const { isDarkMode } = useGlobalTheme(); // Use global theme
-
+const TripPlanner = () => {
   return (
-    <div className={`max-w-7xl mx-auto px-4 py-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
-      <div className={`rounded-lg shadow-xl p-6 ${
-        isDarkMode ? 'bg-gray-800/90' : 'bg-white/90 backdrop-blur-sm'
-      }`}>
-        <h2 className={`text-2xl font-bold mb-6 flex items-center ${
-          isDarkMode ? 'text-white' : 'text-gray-900'
-        }`}>
-          <Calendar className={`h-6 w-6 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'} mr-2`} />
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-xl p-6">
+        <h2 className="text-2xl font-bold mb-6 flex items-center">
+          <Calendar className="h-6 w-6 text-blue-600 mr-2" />
           Trip Planner
         </h2>
 
@@ -45,49 +31,29 @@ const TripPlanner: React.FC = () => {
           {categories.map((category, index) => (
             <div
               key={index}
-              className={`rounded-lg p-6 shadow-md transition-shadow ${
-                isDarkMode
-                  ? 'bg-gray-800 hover:shadow-xl'
-                  : 'bg-white hover:shadow-lg'
-              }`}
+              className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow"
             >
               <div className="flex items-center mb-4">
-                <div className={`p-2 rounded-full ${
-                  isDarkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-600'
-                }`}>
-                  {React.cloneElement(category.icon, {
-                    className: `h-6 w-6 ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`
-                  })}
+                <div className="p-2 bg-blue-100 rounded-full text-blue-600">
+                  {category.icon}
                 </div>
-                <h3 className={`ml-3 text-lg font-semibold ${
-                  isDarkMode ? 'text-white' : 'text-gray-900'
-                }`}>{category.title}</h3>
+                <h3 className="ml-3 text-lg font-semibold">{category.title}</h3>
               </div>
-              <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                {category.description}
-              </p>
+              <p className="text-gray-600">{category.description}</p>
             </div>
           ))}
         </div>
 
-        <div className={`rounded-lg p-6 ${
-          isDarkMode ? 'bg-blue-900/50' : 'bg-blue-50'
-        }`}>
+        <div className="bg-blue-50 rounded-lg p-6">
           <div className="flex items-center mb-4">
-            <Clock className={`h-6 w-6 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'} mr-2`} />
-            <h3 className={`text-lg font-semibold ${
-              isDarkMode ? 'text-white' : 'text-gray-900'
-            }`}>Best Time to Visit</h3>
+            <Clock className="h-6 w-6 text-blue-600 mr-2" />
+            <h3 className="text-lg font-semibold">Best Time to Visit</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {['Spring', 'Summer', 'Autumn', 'Winter'].map((season) => (
-              <div key={season} className={`flex items-center space-x-2 p-3 rounded-lg ${
-                isDarkMode ? 'bg-gray-800' : 'bg-white'
-              }`}>
-                <Sun className={`h-5 w-5 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-500'}`} />
-                <span className={`${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                  {season}
-                </span>
+              <div key={season} className="flex items-center space-x-2 bg-white p-3 rounded-lg">
+                <Sun className="h-5 w-5 text-yellow-500" />
+                <span>{season}</span>
               </div>
             ))}
           </div>
