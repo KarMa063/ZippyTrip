@@ -56,16 +56,16 @@ const Dashboard = () => {
   });
 
   // Function to fetch upcoming schedules
+  // Function to fetch upcoming schedules
   const fetchUpcomingSchedules = async () => {
     try {
       // Fetch schedules with related data using Neon
       const result = await query(`
         SELECT 
-          s.id, 
-          s.date, 
+          s.id,
           s.departure_time, 
           s.arrival_time, 
-          s.status, 
+          s.is_active,
           s.available_seats,
           r.name as route_name, 
           r.origin, 
@@ -82,28 +82,28 @@ const Dashboard = () => {
         LEFT JOIN 
           drivers d ON s.driver_id = d.id
         WHERE 
-          s.date >= CURRENT_DATE
+          s.departure_time >= CURRENT_DATE
         ORDER BY 
-          s.date ASC, s.departure_time ASC
+          s.departure_time ASC
         LIMIT 50
       `);
       
       // Transform database results into ScheduleItem format
       const schedulesWithDetails: ScheduleItem[] = result.rows.map(row => {
-        // Create a date object from the schedule date
-        const scheduleDate = new Date(row.date);
+        // Create a date object from the schedule departure_time
+        const scheduleDate = new Date(row.departure_time);
         
         return {
           id: row.id,
           routeName: row.route_name || 'Unknown Route',
           origin: row.origin || 'Unknown',
           destination: row.destination || 'Unknown',
-          departureTime: row.departure_time || '',
-          arrivalTime: row.arrival_time || '',
+          departureTime: row.departure_time ? new Date(row.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          arrivalTime: row.arrival_time ? new Date(row.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
           date: scheduleDate,
           busNumber: row.bus_number || 'Not Assigned',
           driverName: row.driver_name || 'Not Assigned',
-          status: row.status || 'scheduled',
+          status: status,
           seatsAvailable: row.available_seats || 0,
           totalSeats: row.total_seats || 40
         };
@@ -257,7 +257,7 @@ const Dashboard = () => {
   // Filter schedules for the selected day
   const getSchedulesForSelectedDay = () => {
     return upcomingSchedules.filter(schedule => 
-      isSameDay(schedule.date, selectedDay)
+      schedule.date && isSameDay(new Date(schedule.date), selectedDay)
     );
   };
 
@@ -413,9 +413,9 @@ const Dashboard = () => {
                 
                 {/* Date Selection - Improved UI */}
                 <div className="flex bg-zippy-darkGray/50 p-2 overflow-x-auto no-scrollbar border-b border-zippy-gray/20">
-                  {getNextSevenDays().map((day, index) => (
+                  {getNextSevenDays().map((day) => (
                     <Button
-                      key={index}
+                      key={format(day, 'yyyy-MM-dd')} // Use formatted date as key instead of index
                       variant="ghost"
                       className={`${
                         isSameDay(day, selectedDay) 
@@ -443,7 +443,7 @@ const Dashboard = () => {
                     <div className="space-y-3">
                       {getSchedulesForSelectedDay().map((schedule) => (
                         <div 
-                          key={schedule.id}
+                          key={schedule.id} // Ensure schedule.id is defined and unique
                           className="bg-zippy-darkGray/70 rounded-lg cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 overflow-hidden flex backdrop-blur-sm border border-zippy-gray/20 shadow-md"
                           onClick={() => navigate(`/schedule?id=${schedule.id}`)}
                         >
