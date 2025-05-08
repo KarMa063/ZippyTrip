@@ -55,6 +55,7 @@ export const fetchSchedules = async (date?: string) => {
     const params: any[] = [];
     
     if (date) {
+      // Use DATE() function to extract just the date part for comparison
       sqlQuery += ` WHERE DATE(s.departure_time) = $1`;
       params.push(date);
     }
@@ -65,6 +66,7 @@ export const fetchSchedules = async (date?: string) => {
     
     // Transform the data to include related information
     const schedules = result.rows.map(row => {
+      const departureDate = new Date(row.departure_time);
       return {
         id: row.id,
         routeId: row.route_id,
@@ -76,13 +78,15 @@ export const fetchSchedules = async (date?: string) => {
         driverId: row.driver_id,
         driver: row.driver_name,
         driverPhone: row.driver_phone,
-        date: new Date(row.departure_time).toISOString().split('T')[0],
-        departureTime: new Date(row.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: departureDate.toISOString().split('T')[0],
+        departureTime: departureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         arrivalTime: new Date(row.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         fare: row.fare,
         availableSeats: row.available_seats,
         status: row.is_active ? 'scheduled' : 'cancelled',
-        capacity: row.capacity || 0
+        capacity: row.capacity || 0,
+        bookedSeats: row.capacity ? (row.capacity - row.available_seats) : 0,
+        totalSeats: row.capacity || 0
       };
     });
     
