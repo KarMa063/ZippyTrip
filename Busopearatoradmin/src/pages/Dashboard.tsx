@@ -382,37 +382,37 @@ const Dashboard = () => {
           {/* Left Column - 2/3 width */}
           <div className="lg:col-span-2 space-y-6">
             {/* Quick Access Section */}
-            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp`} style={{
+            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp backdrop-blur-sm bg-opacity-80 shadow-lg`} style={{
             animationDelay: '400ms'
           }}>
               <CardContent className="p-6">
-                <h2 className="text-2xl font-bold mb-4 gold-stroke">Quick Actions</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {quickActions.map((action, index) => <Button key={index} variant="outline" className="bg-zippy-gray border-zippy-lightGray h-auto py-4 flex flex-col items-center justify-center card-hover" onClick={() => navigate(action.path)}>
-                      <div className="bg-zippy-purple text-white rounded-full p-2 mb-2">
+                <h2 className="text-2xl font-bold mb-6 gold-stroke">Quick Actions</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {quickActions.map((action, index) => <Button key={index} variant="outline" className="bg-zippy-darkGray/70 border-zippy-gray/20 h-auto py-4 flex flex-col items-center justify-center hover:bg-zippy-gray/30 transition-all duration-300 shadow-md" onClick={() => navigate(action.path)}>
+                      <div className="bg-zippy-purple text-white rounded-full p-2 mb-2 shadow-md">
                         {action.icon}
                       </div>
-                      <span>{action.title}</span>
+                      <span className="text-white">{action.title}</span>
                     </Button>)}
                 </div>
               </CardContent>
             </Card>
 
             {/* Upcoming Schedules Section */}
-            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp overflow-hidden`} style={{
+            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp overflow-hidden backdrop-blur-sm bg-opacity-80 shadow-lg`} style={{
             animationDelay: '500ms'
           }}>
               <CardContent className="p-0">
-                <div className="flex justify-between items-center p-6 border-b border-zippy-gray">
+                <div className="flex justify-between items-center p-6 border-b border-zippy-gray/30">
                   <h2 className="text-2xl font-bold gold-stroke">Upcoming Schedules</h2>
-                  <Button variant="outline" className="bg-zippy-purple/20 border-zippy-purple/50 hover:bg-zippy-purple/30 transition-all duration-300" onClick={() => navigate('/schedule')}>
+                  <Button variant="outline" className="bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white" onClick={() => navigate('/schedule')}>
                     <span>View All</span>
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
                 
                 {/* Date Selection - Improved UI */}
-                <div className="flex bg-zippy-gray/30 p-2 overflow-x-auto no-scrollbar">
+                <div className="flex bg-zippy-darkGray/50 p-2 overflow-x-auto no-scrollbar border-b border-zippy-gray/20">
                   {getNextSevenDays().map((day, index) => (
                     <Button
                       key={index}
@@ -420,8 +420,8 @@ const Dashboard = () => {
                       className={`${
                         isSameDay(day, selectedDay) 
                           ? 'bg-zippy-purple text-white' 
-                          : 'hover:bg-zippy-gray/50 text-gray-300'
-                      } flex-shrink-0 rounded-full transition-all duration-200 mx-1 px-4`}
+                          : 'hover:bg-zippy-gray/30 text-gray-300'
+                      } flex-shrink-0 rounded-md transition-all duration-200 mx-1 px-4 h-[70px] w-[60px]`}
                       onClick={() => setSelectedDay(day)}
                     >
                       <div className="flex flex-col items-center py-1">
@@ -434,7 +434,7 @@ const Dashboard = () => {
                 </div>
                 
                 {/* Schedules for Selected Day - Improved UI */}
-                <div className="p-4">
+                <div className="p-6 bg-gradient-to-b from-zippy-darkGray/70 to-zippy-darkGray/90">
                   {isLoading ? (
                     <div className="flex justify-center p-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zippy-purple"></div>
@@ -444,7 +444,7 @@ const Dashboard = () => {
                       {getSchedulesForSelectedDay().map((schedule) => (
                         <div 
                           key={schedule.id}
-                          className="bg-zippy-gray/30 rounded-lg cursor-pointer hover:bg-zippy-gray/50 transition-all duration-200 overflow-hidden flex"
+                          className="bg-zippy-darkGray/70 rounded-lg cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 overflow-hidden flex backdrop-blur-sm border border-zippy-gray/20 shadow-md"
                           onClick={() => navigate(`/schedule?id=${schedule.id}`)}
                         >
                           {/* Status indicator */}
@@ -453,7 +453,7 @@ const Dashboard = () => {
                           <div className="p-3 flex-1">
                             <div className="flex justify-between items-center">
                               <div className="flex items-center space-x-3">
-                                <div className={`${getStatusColor(schedule.status)} rounded-full p-2 shadow-sm`}>
+                                <div className={`${getStatusColor(schedule.status)} rounded-full p-2 shadow-md`}>
                                   <Bus className="h-4 w-4 text-white" />
                                 </div>
                                 <div>
@@ -464,7 +464,7 @@ const Dashboard = () => {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold flex items-center justify-end">
+                                <p className="text-lg font-bold flex items-center justify-end text-white">
                                   <Clock className="h-4 w-4 mr-1 text-zippy-purple" />
                                   {schedule.departureTime}
                                 </p>
@@ -473,7 +473,7 @@ const Dashboard = () => {
                             </div>
                             <div className="mt-2 flex justify-between items-center text-sm">
                               <span className="text-gray-400">Bus: {schedule.busNumber}</span>
-                              <Badge className={`${getStatusColor(schedule.status)} text-white px-2 py-0.5 text-xs rounded-full`}>
+                              <Badge className={`${getStatusColor(schedule.status)} text-white px-2 py-0.5 text-xs rounded-md`}>
                                 {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
                               </Badge>
                             </div>
@@ -482,9 +482,10 @@ const Dashboard = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 px-4">
-                      <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-500 opacity-50" />
-                      <p className="text-lg font-medium text-gray-300">No schedules found for {format(selectedDay, 'dd MMM yyyy')}</p>
+                    <div className="text-center py-16 px-4 bg-zippy-darkGray/40 rounded-lg border border-zippy-gray/20 backdrop-blur-sm">
+                      <Calendar className="h-16 w-16 mx-auto mb-4 text-zippy-purple opacity-40" />
+                      <p className="text-lg font-medium text-white">No schedules found for {format(selectedDay, 'dd MMM yyyy')}</p>
+                      <p className="text-sm mt-2 text-gray-400">The world is a book and those who do not travel read only one page.</p>
                     </div>
                   )}
                 </div>
@@ -495,7 +496,7 @@ const Dashboard = () => {
           {/* Right Column - 1/3 width - REPLACED RECENT ACTIVITY WITH SCHEDULE */}
           <div className="space-y-6">
             {/* Schedule Section - Replacing Recent Activity */}
-            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp h-full`} style={{
+            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp h-full backdrop-blur-sm bg-opacity-80 shadow-lg`} style={{
             animationDelay: '600ms'
           }}>
               <CardContent className="p-6">
@@ -509,33 +510,36 @@ const Dashboard = () => {
                     routes.map(route => (
                       <div 
                         key={route.id} 
-                        className="p-3 bg-zippy-gray rounded-lg border border-zippy-lightGray hover:bg-zippy-lightGray transition-colors duration-200 cursor-pointer card-hover"
+                        className="p-3 bg-zippy-darkGray/70 rounded-lg border border-zippy-gray/20 hover:bg-zippy-gray/30 transition-all duration-300 cursor-pointer backdrop-blur-sm shadow-md"
                         onClick={() => navigate(`/routes/${route.id}`)}
                       >
                         <div className="flex items-center space-x-3">
-                          <div className="bg-zippy-purple rounded-full p-2">
+                          <div className="bg-zippy-purple rounded-full p-2 shadow-md">
                             <RouteIcon className="h-4 w-4 text-white" />
                           </div>
                           <div>
-                            <h3 className="font-medium">{route.name}</h3>
-                            <p className="text-sm text-muted-foreground">{route.origin} to {route.destination}</p>
+                            <h3 className="font-medium text-white">{route.name}</h3>
+                            <p className="text-sm text-gray-400 flex items-center">
+                              <MapPin className="h-3 w-3 mr-1 inline" /> {route.origin} to {route.destination}
+                            </p>
                           </div>
                         </div>
                         <div className="mt-2 flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm text-gray-400">
                             {route.distance ? `${route.distance} km` : 'Distance not set'}
-                          </span>
-                      
+                           </span>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center p-8 text-muted-foreground">
-                      No routes found.
+                    <div className="text-center p-12 text-gray-400 bg-zippy-darkGray/40 rounded-lg border border-zippy-gray/20 backdrop-blur-sm">
+                      <RouteIcon className="h-16 w-16 mx-auto mb-4 text-zippy-purple opacity-40" />
+                      <p className="text-lg font-medium text-white">No routes found.</p>
+                      <p className="text-sm mt-2 text-gray-400">Discover comfortable and unique accommodations around the world.</p>
                     </div>
                   )}
                 </div>
-                <Button variant="outline" className="w-full mt-4 bg-zippy-gray border-zippy-lightGray" onClick={() => navigate('/routes')}>
+                <Button variant="outline" className="w-full mt-6 bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white" onClick={() => navigate('/routes')}>
                   View All Routes
                 </Button>
               </CardContent>
