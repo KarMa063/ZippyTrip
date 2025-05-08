@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronRight, DollarSign, MapPin, Route, Users, Bus, ArrowUp, Calendar, Clock } from 'lucide-react';
+import { ChevronRight, DollarSign, MapPin, Route, Users, Bus, ArrowUp, Calendar, Clock, UserPlus } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loaded, setLoaded] = useState(false);
@@ -64,6 +65,14 @@ const Dashboard = () => {
     title: 'View Bookings',
     path: '/bookings',
     icon: <DollarSign className="h-5 w-5" />
+  }, {
+    title: 'Add Bus',
+    path: '/buses/add',
+    icon: <Bus className="h-5 w-5" />
+  }, {
+    title: 'Add Driver',
+    path: '/drivers/add',
+    icon: <UserPlus className="h-5 w-5" />
   }, {
     title: 'Schedule',
     path: '/schedule',
