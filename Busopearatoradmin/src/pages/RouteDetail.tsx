@@ -93,7 +93,7 @@ const RouteDetail = () => {
     popularStop: "Ahmedabad Junction",
   };
 
-  const mockAmenities = ["Wi-Fi", "AC", "USB Charging", "Snacks", "Water Bottle", "TV"];
+  const mockAmenities = ["Wi-Fi", "AC", "USB Charging", "Water Bottle", "TV"];
 
   // Fetch the route data
   useEffect(() => {

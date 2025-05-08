@@ -21,8 +21,8 @@ export const dummyTripReminders: TripReminder[] = [
     routeDetails: "Delhi to Mumbai Express",
     travelDate: "2024-02-25",
     passengerInfo: {
-      name: "Prekshya Panta khatri",
-      email: "pantaprekshya9@gmail.com",
+      name: "John Doe",
+      email: "avishekkadel45@gmail.com",
       phone: "+91 98765 43210"
     },
     status: "pending",
@@ -92,8 +92,7 @@ To: ${destination}
 Departure: ${new Date(reminder.travelDate).toLocaleString()}
 
 Please arrive at least 30 minutes before departure.
-Do contact us if you need to reschedule or cancel your trip.
-We hope you'll enjoy your journey.
+
 Safe travels!
 ZippyTrip Team
       `

@@ -20,6 +20,12 @@ import { useAuth } from "./contexts/AuthContext";
 import EditRoute from "./pages/EditRoute";
 import CancellationManagement from "./pages/CancellationManagement";
 import TripReminders from "./pages/TripReminders";
+import BookingAlerts from "./pages/BookingAlerts";
+
+import AddBus from './pages/AddBus';
+import AddDriver from './pages/AddDriver';
+import Buses from './pages/Buses';
+import Drivers from './pages/Drivers';
 
 const queryClient = new QueryClient();
 
@@ -60,6 +66,13 @@ const AppRoutes = () => {
         <Route path="settings" element={<Settings />} />
         <Route path="cancellations" element={<CancellationManagement />} />
         <Route path="trip-reminders" element={<TripReminders />} />
+        <Route path="booking-alerts" element={<BookingAlerts />} />
+        
+        // Add these routes to your router configuration
+        <Route path="/buses" element={<Buses />} />
+        <Route path="/buses/add" element={<AddBus />} />
+        <Route path="/drivers" element={<Drivers />} />
+        <Route path="/drivers/add" element={<AddDriver />} />
       </Route>
       
       <Route path="*" element={<NotFound />} />
