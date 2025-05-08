@@ -3,7 +3,7 @@ import { Bus, Calendar, Users, Search, MapPin, ArrowRight, CreditCard, Luggage, 
 import { sendBusReminder } from './EmailController';
 import { useGlobalTheme } from '../components/GlobalThemeContext';
 import Navigation from './Navigation';
-import { getCurrentUserId } from '../lib/supabase';
+import { getCurrentUser } from '../lib/supabase';
 
 interface Seat {
   id: string;
@@ -178,7 +178,7 @@ const BusRentalPage: React.FC = () => {
     if (selectedBus) {
       try {
         // Get the current user ID
-        const userId = await getCurrentUserId();
+        const userId = await getCurrentUser();
         
         if (!userId) {
           alert('You must be logged in to book a bus. Please sign in and try again.');

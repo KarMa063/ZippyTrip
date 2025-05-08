@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Plane, Lock, Mail, Phone, Loader2, ArrowLeft } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, sendUserToBackend } from '../lib/supabase';
 
 export default function AuthForm() {
   const navigate = useNavigate();
@@ -37,6 +37,7 @@ export default function AuthForm() {
           options: { persistSession: rememberMe }, // Persist session if "Remember Me" is checked
         });
         if (error) throw error;
+        await sendUserToBackend();
         toast.success('Welcome back to ZippyTrip!');
         console.log(supabase.userid)
         navigate('/home');
@@ -57,6 +58,7 @@ export default function AuthForm() {
         } else if (error) {
           throw error;
         } else {
+          await sendUserToBackend();         
           toast.success('Welcome to ZippyTrip! Your account has been created.');
           navigate('/Preferences');
         }
@@ -237,4 +239,5 @@ export default function AuthForm() {
       </div>
     </div>
   );
+}
 }

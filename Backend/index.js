@@ -12,11 +12,24 @@ dotenv.config();
 
 const app = express();
 
+
 // Configure PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
 });
+
+const { router: propertyRoutes, propertyTableExists } = require('./guesthouse/properties');
+const { router: roomsRoutes, createRoomsTable } = require('./guesthouse/rooms');
+const { router: gbookingsRoutes, gbookingsTableExists } = require('./guesthouse/gbookings');
+const { router: preferencesRoutes, preferencesTableExists } = require('./routes/preferences');
+const { router: usersRoutes, usersTableExists } = require('./routes/users');
+
+propertyTableExists(); 
+createRoomsTable();
+gbookingsTableExists();
+preferencesTableExists();
+usersTableExists();
 
 // Middleware
 app.use(cors());
@@ -26,6 +39,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
+
 
 // Properties routes
 app.get('/api/gproperties', async (req, res) => {
@@ -37,6 +51,12 @@ app.get('/api/gproperties', async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch properties' });
   }
 });
+
+// app.use('/api/gproperties', propertyRoutes);
+// app.use('/api/gproperties', roomsRoutes);
+// app.use('/api/gbookings', gbookingsRoutes);
+// app.use('/api/preferences', preferencesRoutes);
+// app.use('/api/users', usersRoutes);
 
 app.get('/api/gproperties/:id', async (req, res) => {
   try {

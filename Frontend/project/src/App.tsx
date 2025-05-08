@@ -23,6 +23,7 @@ import AddRoom from './guesthouse/gpages/AddRoom';
 import EditRooms from './guesthouse/gpages/EditRooms';
 import GBooking from './guesthouse/gpages/GBooking';
 import GMessages from './guesthouse/gpages/GMessages';
+import GSettings from './guesthouse/gpages/GSetting';
 import { Layout } from './guesthouse/gcomponents/layout';
 import { ThemeProvider } from './guesthouse/gcomponents/theme-provider';
 
@@ -61,6 +62,7 @@ function App() {
             <Route path="/gproperties/edit/:id" element={<EditProperty />} />
             <Route path="/gbookings" element={<GBooking />} />
             <Route path="/gmessages" element={<GMessages />} />
+            <Route path="/gsettings" element={<GSettings />} />
           </Route>
         </Routes>
       </Router>
