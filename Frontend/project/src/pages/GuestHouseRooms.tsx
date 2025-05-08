@@ -63,7 +63,20 @@ const GuestHouseRooms: React.FC = () => {
           }));
           setRooms(formattedRooms);
           setDateFilteredRooms(formattedRooms); // Initialize with all rooms
-          setGuestHouse(data.guestHouse);
+          
+          // Fetch the full guesthouse details to get description and address
+          const guestHouseResponse = await fetch(`http://localhost:5000/api/gproperties/${id}`);
+          const guestHouseData = await guestHouseResponse.json();
+          
+          if (guestHouseData.success) {
+            setGuestHouse({
+              ...guestHouseData.property,
+              name: data.guestHouse.name || guestHouseData.property.name,
+              location: guestHouseData.property.address // Map address to location for UI
+            });
+          } else {
+            setGuestHouse(data.guestHouse);
+          }
         } else {
           setError('Failed to fetch rooms');
         }
@@ -78,7 +91,7 @@ const GuestHouseRooms: React.FC = () => {
     if (id) {
       fetchRooms();
     }
-  }, [id, checkInDate, checkOutDate]); // Add dependencies to re-fetch when dates change
+  }, [id, checkInDate, checkOutDate]);
 
   // Date Selection Component
   const DateSelectionComponent = () => {
@@ -314,7 +327,7 @@ const GuestHouseRooms: React.FC = () => {
             <div className="md:w-1/3">
               <div className="border border-gray-300 rounded-lg overflow-hidden">
                 <img
-                  src={guestHouse?.image || '/placeholder-property.jpg'}
+                  src={guestHouse?.images?.[0] || '/placeholder-property.jpg'}
                   alt={guestHouse?.name}
                   className="w-full h-64 object-cover"
                 />
