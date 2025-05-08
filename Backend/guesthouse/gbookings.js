@@ -12,10 +12,10 @@ const pool = new Pool({
 });
 
 // Ensure the bookings table exists
-async function bookingsTableExists() {
+async function gbookingsTableExists() {
     try {
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS bookings(
+            CREATE TABLE IF NOT EXISTS gbookings(
                 id SERIAL PRIMARY KEY,
                 traveller_id INTEGER NOT NULL,
                 property_id INTEGER NOT NULL,
@@ -25,7 +25,7 @@ async function bookingsTableExists() {
                 status TEXT DEFAULT 'pending'
             );
         `);
-        console.log("Bookings table checked/created successfully.");
+        console.log("Guesthouse Bookings table checked/created successfully.");
     } catch (error) {
         console.error("Error checking or creating the bookings table:", error);
     }
@@ -35,7 +35,7 @@ router.post('/', async (req, res) => {
     const { traveller_id, property_id, room_id, check_in, check_out } = req.body;
     try {
         const result = await pool.query(
-            `INSERT INTO bookings (traveller_id, property_id, room_id, check_in, check_out)
+            `INSERT INTO gbookings (traveller_id, property_id, room_id, check_in, check_out)
              VALUES ($1, $2, $3, $4, $5) RETURNING *`,
             [traveller_id, property_id, room_id, check_in, check_out]
         );
@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
 
 router.get('/', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM bookings ORDER BY id DESC');
+        const result = await pool.query('SELECT * FROM gbookings ORDER BY id DESC');
         res.json({ success: true, bookings: result.rows });
     } catch (error) {
         console.error('Error fetching bookings:', error);
@@ -60,7 +60,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     const bookingId = req.params.id;
     try {
-        const result = await pool.query('SELECT * FROM bookings WHERE id = $1', [bookingId]);
+        const result = await pool.query('SELECT * FROM gbookings WHERE id = $1', [bookingId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -75,5 +75,5 @@ router.get('/:id', async (req, res) => {
 
 module.exports = {
     router,
-    bookingsTableExists,
+    gbookingsTableExists,
 };
