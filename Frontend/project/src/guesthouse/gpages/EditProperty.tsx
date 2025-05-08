@@ -195,13 +195,13 @@ export default function EditProperty() {
           </div>
         </div>
 
-        {images.length > 0 ? (
+        {/* {images.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {images.map((img, i) => (
               <img
                 key={i}
                 src={typeof img === "string" ? img : img.preview}
-                alt={`Uploaded image ${i}`}
+                alt={`Uploaded ${i}`}
                 className="rounded-lg h-28 object-cover w-full"
               />
             ))}
@@ -211,7 +211,7 @@ export default function EditProperty() {
             <img src={placeholderImage} className="mx-auto h-20 opacity-30" alt="No images" />
             <p>No images uploaded</p>
           </div>
-        )}
+        )} */}
       </section>
 
       <div className="text-right">

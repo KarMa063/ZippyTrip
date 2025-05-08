@@ -1,526 +1,294 @@
 
-import { useState, useEffect } from 'react';
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from "@/components/ui/table";
-import { 
-  Card, CardContent, CardHeader, CardTitle 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Ticket, Search, MapPin, Edit, Trash2, Eye } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose 
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Star, Pencil, Trash2, Plus, Search } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { toast } from "sonner";
 
-interface Attraction {
+interface AttractionData {
   id: number;
   name: string;
   location: string;
-  description: string;
+  category: string;
+  price: number;
+  rating: number;
   image: string;
-  rating: number; // Already defined as number
-  properties: number; // Already defined as number
-  featured: boolean;
+  status: "open" | "closed" | "limited";
 }
 
+const attractionData: AttractionData[] = [
+  {
+    id: 1,
+    name: "Grand Museum",
+    location: "Downtown, New York",
+    category: "Museum",
+    price: 25,
+    rating: 4.7,
+    image: "/placeholder.svg",
+    status: "open"
+  },
+  {
+    id: 2,
+    name: "Adventure Theme Park",
+    location: "Orlando, Florida",
+    category: "Theme Park",
+    price: 89,
+    rating: 4.9,
+    image: "/placeholder.svg",
+    status: "open"
+  },
+  {
+    id: 3,
+    name: "Historic Castle Tour",
+    location: "Edinburgh, Scotland",
+    category: "Historic Site",
+    price: 35,
+    rating: 4.5,
+    image: "/placeholder.svg",
+    status: "limited"
+  }
+];
+
 export default function Attractions() {
-  const [attractions, setAttractions] = useState<Attraction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [currentAttraction, setCurrentAttraction] = useState<Attraction | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    location: '',
-    description: '',
-    image: '',
-    rating: 0,
-    properties: 0,
-    featured: false
-  });
-
-  useEffect(() => {
-    fetchAttractions();
-  }, []);
-
-  const fetchAttractions = async () => {
-    try {
-      setLoading(true);
-      // Update the port if your backend is running on a different port
-      const response = await fetch('http://localhost:5000/api/attractions');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch attractions');
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setAttractions(data.attractions);
-      } else {
-        console.error('API returned unsuccessful response:', data);
-        setAttractions([]);
-      }
-    } catch (error) {
-      console.error('Error fetching attractions:', error);
-      setAttractions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: name === 'rating' || name === 'properties' ? parseFloat(value) : value
-    });
-  };
-
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData({
-      ...formData,
-      featured: checked
-    });
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      location: '',
-      description: '',
-      image: '',
-      rating: 0,
-      properties: 0,
-      featured: false
-    });
-  };
-
-  const openEditDialog = (attraction: Attraction) => {
-    setCurrentAttraction(attraction);
-    setFormData({
-      name: attraction.name,
-      location: attraction.location,
-      description: attraction.description,
-      image: attraction.image,
-      rating: attraction.rating,
-      properties: attraction.properties,
-      featured: attraction.featured
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const handleAddAttraction = async () => {
-    try {
-      // Log the data being sent
-      console.log('Sending attraction data:', formData);
-      
-      const response = await fetch('http://localhost:5000/api/attractions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          location: formData.location,
-          description: formData.description,
-          image: formData.image,
-          rating: formData.rating, // Send as number
-          properties: formData.properties, // Send as number
-          featured: formData.featured || false
-        }),
-      });
-      
-      // Log the response for debugging
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`Failed to add attraction: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Response data:', data);
-      
-      if (data.success) {
-        fetchAttractions();
-        setIsAddDialogOpen(false);
-        resetForm();
-        alert('Attraction added successfully!');
-      } else {
-        console.error('API returned unsuccessful response:', data);
-        alert('Failed to add attraction: ' + (data.message || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error adding attraction:', error);
-      alert('Error adding attraction: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  };
-
-  const handleUpdateAttraction = async () => {
-    if (!currentAttraction) return;
-    
-    try {
-      const response = await fetch(`http://localhost:5000/api/attractions/${currentAttraction.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update attraction');
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        fetchAttractions();
-        setIsEditDialogOpen(false);
-        setCurrentAttraction(null);
-        resetForm();
-      } else {
-        console.error('API returned unsuccessful response:', data);
-        alert('Failed to update attraction: ' + (data.message || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error updating attraction:', error);
-      alert('Error updating attraction: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  };
-
-  const handleDeleteAttraction = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this attraction?')) return;
-    
-    try {
-      const response = await fetch(`http://localhost:5000/api/attractions/${id}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete attraction');
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        fetchAttractions();
-      } else {
-        console.error('API returned unsuccessful response:', data);
-        alert('Failed to delete attraction: ' + (data.message || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error deleting attraction:', error);
-      alert('Error deleting attraction: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  };
-
-  const filteredAttractions = attractions.filter(attraction => 
-    attraction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    attraction.location.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAttractions = attractionData.filter(attraction => 
+    attraction.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    attraction.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    attraction.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center">
-        {[...Array(5)].map((_, i) => (
-          <Star 
-            key={i} 
-            size={16} 
-            className={i < Math.floor(rating) ? "text-yellow-400 fill-yellow-400" : "text-gray-300"} 
-          />
-        ))}
-        <span className="ml-1 text-sm">{rating.toFixed(1)}</span>
-      </div>
-    );
+  const handleDeleteAttraction = (id: number) => {
+    toast.success(`Attraction ID #${id} deleted successfully`);
+    // In a real app, this would delete the attraction from the database
+  };
+
+  const handleEditAttraction = (id: number) => {
+    toast.info(`Editing attraction ID #${id}`);
+    // In a real app, this would open an edit form
+  };
+
+  const handleViewAttraction = (id: number) => {
+    toast.info(`Viewing details for attraction ID #${id}`);
+    // In a real app, this would show detailed information
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'open':
+        return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'limited':
+        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      case 'closed':
+        return 'bg-red-500/10 text-red-500 border-red-500/20';
+      default:
+        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+    }
   };
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Attractions Management</h1>
-        
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search attractions..."
-              className="pl-8 w-[250px]"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Attraction
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Add New Attraction</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="location" className="text-right">Location</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="description" className="text-right">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="image" className="text-right">Image URL</Label>
-                  <Input
-                    id="image"
-                    name="image"
-                    value={formData.image}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="rating" className="text-right">Rating</Label>
-                  <Input
-                    id="rating"
-                    name="rating"
-                    type="number"
-                    min="0"
-                    max="5"
-                    step="0.1"
-                    value={formData.rating}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="properties" className="text-right">Properties</Label>
-                  <Input
-                    id="properties"
-                    name="properties"
-                    type="number"
-                    min="0"
-                    value={formData.properties}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="featured" className="text-right">Featured</Label>
-                  <div className="col-span-3">
-                    <Switch
-                      id="featured"
-                      checked={formData.featured}
-                      onCheckedChange={handleSwitchChange}
-                    />
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button onClick={handleAddAttraction}>Add Attraction</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Ticket className="text-zippy-blue" />
+          Manage Attractions
+        </h1>
+        <div className="flex gap-2">
+          <Button 
+            variant={viewMode === "table" ? "default" : "outline"} 
+            onClick={() => setViewMode("table")}
+            size="sm"
+          >
+            Table View
+          </Button>
+          <Button 
+            variant={viewMode === "grid" ? "default" : "outline"} 
+            onClick={() => setViewMode("grid")}
+            size="sm"
+          >
+            Grid View
+          </Button>
+          <Button className="bg-zippy-blue hover:bg-zippy-blue/90">
+            Add New Attraction
+          </Button>
         </div>
       </div>
-
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex justify-center items-center h-40">
-              <p>Loading attractions...</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Image</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Properties</TableHead>
-                  <TableHead>Featured</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAttractions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6">
-                      No attractions found
-                    </TableCell>
+      
+      <div className="flex flex-col sm:flex-row gap-4 p-4 bg-zippy-darker rounded-lg">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <Input 
+            placeholder="Search attractions by name, location, or category..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-zippy-dark focus:border-zippy-blue text-white"
+          />
+        </div>
+        <Button className="bg-zippy-blue hover:bg-zippy-blue/90">
+          Search
+        </Button>
+      </div>
+      
+      {filteredAttractions.length > 0 ? (
+        viewMode === "table" ? (
+          <Card className="bg-zippy-darker border-white/[0.03] text-white">
+            <CardHeader className="pb-0">
+              <h3 className="text-lg font-medium">Attraction Listings</h3>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/[0.03]">
+                    <TableHead>Name</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Rating</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  filteredAttractions.map((attraction) => (
-                    <TableRow key={attraction.id}>
-                      <TableCell>
-                        <img 
-                          src={attraction.image} 
-                          alt={attraction.name} 
-                          className="w-16 h-12 object-cover rounded"
-                        />
-                      </TableCell>
+                </TableHeader>
+                <TableBody>
+                  {filteredAttractions.map(attraction => (
+                    <TableRow key={attraction.id} className="border-white/[0.03]">
                       <TableCell className="font-medium">{attraction.name}</TableCell>
                       <TableCell>{attraction.location}</TableCell>
-                      <TableCell>{renderStars(attraction.rating)}</TableCell>
-                      <TableCell>{attraction.properties}</TableCell>
-                      <TableCell>{attraction.featured ? "Yes" : "No"}</TableCell>
+                      <TableCell>{attraction.category}</TableCell>
+                      <TableCell>${attraction.price}</TableCell>
+                      <TableCell>{attraction.rating}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={getStatusColor(attraction.status)}>
+                          {attraction.status.charAt(0).toUpperCase() + attraction.status.slice(1)}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button 
                             variant="ghost" 
-                            size="icon"
-                            onClick={() => openEditDialog(attraction)}
+                            size="icon" 
+                            onClick={() => handleViewAttraction(attraction.id)}
+                            className="h-8 w-8 text-gray-400 hover:text-white"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Eye size={16} />
                           </Button>
                           <Button 
                             variant="ghost" 
-                            size="icon"
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() => handleDeleteAttraction(attraction.id)}
+                            size="icon" 
+                            onClick={() => handleEditAttraction(attraction.id)}
+                            className="h-8 w-8 text-gray-400 hover:text-white"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Edit size={16} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDeleteAttraction(attraction.id)}
+                            className="h-8 w-8 text-gray-400 hover:text-white hover:text-red-500"
+                          >
+                            <Trash2 size={16} />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Attraction</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-name" className="text-right">Name</Label>
-              <Input
-                id="edit-name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-location" className="text-right">Location</Label>
-              <Input
-                id="edit-location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-description" className="text-right">Description</Label>
-              <Textarea
-                id="edit-description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-image" className="text-right">Image URL</Label>
-              <Input
-                id="edit-image"
-                name="image"
-                value={formData.image}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-rating" className="text-right">Rating</Label>
-              <Input
-                id="edit-rating"
-                name="rating"
-                type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                value={formData.rating}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-properties" className="text-right">Properties</Label>
-              <Input
-                id="edit-properties"
-                name="properties"
-                type="number"
-                min="0"
-                value={formData.properties}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-featured" className="text-right">Featured</Label>
-              <div className="col-span-3">
-                <Switch
-                  id="edit-featured"
-                  checked={formData.featured}
-                  onCheckedChange={handleSwitchChange}
-                />
-              </div>
-            </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAttractions.map(attraction => (
+              <Card key={attraction.id} className="bg-zippy-darker border-white/[0.03] text-white overflow-hidden">
+                <div className="h-48 overflow-hidden relative">
+                  <img 
+                    src={attraction.image} 
+                    alt={attraction.name} 
+                    className="w-full h-full object-cover"
+                  />
+                  <Badge 
+                    variant="outline" 
+                    className={`absolute top-3 right-3 ${getStatusColor(attraction.status)}`}
+                  >
+                    {attraction.status.charAt(0).toUpperCase() + attraction.status.slice(1)}
+                  </Badge>
+                </div>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-xl font-semibold">{attraction.name}</h3>
+                    <span>${attraction.price}</span>
+                  </div>
+                  <div className="flex items-center text-gray-400 gap-1 text-sm">
+                    <MapPin size={16} />
+                    <span>{attraction.location}</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <div className="flex justify-between mb-4">
+                    <span className="text-sm text-gray-400">{attraction.category}</span>
+                    <div className="flex">
+                      <span className="text-yellow-400">★</span>
+                      <span className="ml-1">{attraction.rating}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleViewAttraction(attraction.id)}
+                        className="h-8 w-8 text-gray-400 hover:text-white"
+                      >
+                        <Eye size={16} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleEditAttraction(attraction.id)}
+                        className="h-8 w-8 text-gray-400 hover:text-white"
+                      >
+                        <Edit size={16} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleDeleteAttraction(attraction.id)}
+                        className="h-8 w-8 text-gray-400 hover:text-white hover:text-red-500"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handleUpdateAttraction}>Update Attraction</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )
+      ) : (
+        <div className="glass-card rounded-xl p-12 flex flex-col items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-zippy-blue/10 flex items-center justify-center text-zippy-blue mb-4">
+            <Ticket size={32} />
+          </div>
+          <h2 className="text-xl font-medium mb-2">No Attractions Found</h2>
+          <p className="text-gray-400 text-center max-w-md">
+            We couldn't find any attractions matching your search criteria. 
+            Try adjusting your search or add a new attraction.
+          </p>
+          <Button className="mt-4 bg-zippy-blue hover:bg-zippy-blue/90">
+            Add New Attraction
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

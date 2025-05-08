@@ -1,15 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Get environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xafiddtuadioiitvshqg.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhZmlkZHR1YWRpb2lpdHZzaHFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3ODAxNDQsImV4cCI6MjA1ODM1NjE0NH0.gn_I43pYa5CMboBL0Wwu5qnuC749HD1g0KSlj6cEQUk';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Create a single Supabase client instance to be used throughout the app
+// Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // The admin email - in a real application, this should be in environment variables
 export const ADMIN_EMAIL = 'admin@zippytrip.com'; // Consider moving to .env
 export const RESET_EMAIL = 'animeshbaral10@gmail.com'; // Consider moving to .env
+
 
 // Auth functions
 export const signIn = async (email: string, password: string) => {

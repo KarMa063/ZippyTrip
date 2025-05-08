@@ -190,25 +190,3 @@ export const getUserTickets = async (userId: string) => {
   if (error) throw error;
   return data;
 };
-
-export const getFeaturedAttractions = async () => {
-  const { data, error } = await supabase
-    .from('attractions')
-    .select('*')
-    .eq('featured', true)
-    .order('rating', { ascending: false });
-
-  if (error) throw error;
-  return data;
-};
-
-export const getAttractionsByLocation = async (location: string) => {
-  const { data, error } = await supabase
-    .from('attractions')
-    .select('*')
-    .eq('location', location)
-    .order('rating', { ascending: false });
-
-  if (error) throw error;
-  return data;
-};
