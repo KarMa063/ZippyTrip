@@ -8,8 +8,15 @@ const PORT = process.env.PORT || 5000;
 // Ensure the table exists before starting the server
 const { router: propertyRoutes, propertyTableExists } = require('./guesthouse/properties');
 const { router: roomsRoutes, createRoomsTable } = require('./guesthouse/rooms');
+const { router: gbookingsRoutes, gbookingsTableExists } = require('./guesthouse/gbookings');
+const { router: preferencesRoutes, preferencesTableExists } = require('./routes/preferences');
+const { router: usersRoutes, usersTableExists } = require('./routes/users');
+
 propertyTableExists(); 
 createRoomsTable();
+gbookingsTableExists();
+preferencesTableExists();
+usersTableExists();
 
 app.use(cors());
 app.use(express.json());
@@ -21,6 +28,9 @@ app.get('/', (req, res) => {
 
 app.use('/api/gproperties', propertyRoutes);
 app.use('/api/gproperties', roomsRoutes);
+app.use('/api/gbookings', gbookingsRoutes);
+app.use('/api/preferences', preferencesRoutes);
+app.use('/api/users', usersRoutes);
 
 // Cancellation endpoint
 app.post('/api/cancellations', (req, res) => {
