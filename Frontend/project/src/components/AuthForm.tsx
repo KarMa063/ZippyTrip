@@ -57,6 +57,7 @@ export default function AuthForm() {
         } else if (error) {
           throw error;
         } else {
+          await sendUserToBackend();
           if(1==1){
           toast.success('Welcome to ZippyTrip! Your account has been created.');//If no id is found in db goto preferences as the user is new
           navigate('/Preferences'); // After this go to preferences page(PASA   DONOT REMOVE BEFORE REDIRECTING)

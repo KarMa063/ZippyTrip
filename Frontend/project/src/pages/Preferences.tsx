@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
   Compass,
   Bus,
@@ -14,12 +15,12 @@ import {
   Mountain,
   School as Pool,
 } from 'lucide-react';
+import { getCurrentUser } from '../lib/supabase';
 
 interface PreferenceData {
   travelStyle: string;
   busComfort: string;
   travelTime: string;
-  stayType: string;
   amenities: string[];
 }
 
@@ -58,17 +59,6 @@ const preferenceSteps = [
     question: "When do you like to travel?"
   },
   {
-    title: "Stay Type",
-    icon: HomeIcon,
-    iconColor: "text-purple-400",
-    bgColor: "bg-purple-500/20",
-    selectedBgColor: "bg-purple-500",
-    borderColor: "border-purple-500",
-    options: ['Apartment', 'Guesthouse', 'Resort', 'Hotel', 'Hostel', 'Villa'],
-    key: "stayType",
-    question: "Choose your preferred accommodation type."
-  },
-  {
     title: "Amenities",
     icon: Star,
     iconColor: "text-purple-400",
@@ -92,16 +82,29 @@ const preferenceSteps = [
 
 function Preferences() {
   const [step, setStep] = useState(1);
+  const [userId, setUserId] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<PreferenceData>({
     travelStyle: '',
     busComfort: '',
     travelTime: '',
-    stayType: '',
     amenities: [],
   });
 
   const navigate = useNavigate();
   const currentStep = preferenceSteps[step - 1];
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = await getCurrentUser();
+        setUserId(user.user_id);
+      } catch (error) {
+        console.error('Error fetching user in Preferences:', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const handleOptionSelect = (option: string | { name: string; icon: any }) => {
     if (currentStep.isAmenities) {
@@ -140,16 +143,35 @@ function Preferences() {
   };
 
   const canProceed = () => {
-    if (currentStep.isAmenities) return true; // allow without selection
+    if (currentStep.isAmenities) return true;
     const value = preferences[currentStep.key as keyof PreferenceData];
     return value !== '';
   };
 
-  const savePreferences = () => {
-    console.log('Preferences saved:', preferences);
-    // optionally store in localStorage or send to backend here
-    navigate('/home');
-  };
+  const savePreferences = async () => {
+    if (!userId) {
+      console.error('User ID not available');
+      return;
+    }
+  
+    const payload = {
+      user_id: userId,
+      travel_style: preferences.travelStyle,
+      bus_comfort: preferences.busComfort,
+      travel_time: preferences.travelTime,
+      amenities: preferences.amenities,
+    };
+  
+    console.log('Sending payload:', payload); // ✅ ADD THIS LINE
+  
+    try {
+      const response = await axios.post('http://localhost:5000/api/preferences', payload);
+      console.log('Preferences saved to backend:', response.data);
+      navigate('/home');
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+    }
+  };  
 
   return (
     <div
