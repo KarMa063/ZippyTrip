@@ -20,7 +20,6 @@ const pool = new Pool({
 });
 
 const { router: propertyRoutes, propertyTableExists } = require('./guesthouse/properties');
-const { router: roomsRoutes, createRoomsTable } = require('./guesthouse/rooms');
 const { router: gbookingsRoutes, gbookingsTableExists } = require('./guesthouse/gbookings');
 const { router: preferencesRoutes, preferencesTableExists } = require('./routes/preferences');
 const { router: usersRoutes, usersTableExists } = require('./routes/users');
