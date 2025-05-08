@@ -372,11 +372,7 @@ const GuestHouseRooms: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Rooms Section */}
           <div className="lg:col-span-2">
-            <h2 className="text-2xl font-bold mb-4">Rooms</h2>
-            
-            {/* Add the date selection component */}
-            <DateSelectionComponent />
-            
+            <h2 className="text-2xl font-bold mb-4">Rooms</h2>            
             {isLoading ? (
               <div className="flex justify-center items-center h-64">
                 <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${
@@ -429,7 +425,7 @@ const GuestHouseRooms: React.FC = () => {
             )}
           </div>
 
-          {/* Reviews Section - Modified for Guesthouse Reviews */}
+          {/* Reviews Section */}
           <div className="lg:col-span-1">
             <div className={`p-6 rounded-lg shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
               <h2 className="text-2xl font-bold mb-4">Guesthouse Reviews</h2>
