@@ -162,6 +162,38 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+router.get('/:id/rooms', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const propertyResult = await pool.query('SELECT name FROM properties WHERE id = $1', [id]);
+        if (propertyResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Property not found" });
+        }
+
+        const roomsResult = await pool.query(
+            `SELECT 
+                id, 
+                name, 
+                capacity, 
+                CAST(price AS DECIMAL(10,2)) AS price, 
+                available AS availability, 
+                amenities, 
+                images 
+            FROM rooms 
+            WHERE property_id = $1`,
+            [id]
+        );
+        res.status(200).json({
+            success: true,
+            guestHouse: { name: propertyResult.rows[0].name },
+            rooms: roomsResult.rows
+        });
+    } catch (error) {
+        console.error('Error fetching rooms:', error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+});
+
 module.exports = {
     router,
     propertyTableExists

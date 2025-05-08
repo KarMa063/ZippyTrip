@@ -7,9 +7,11 @@ import {
   ChevronLeft, Languages, CreditCard, 
   Shield, Bell, BellRing, Eye, EyeOff, Camera 
 } from 'lucide-react';
+import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
 
-const SettingsPage = () => {
+const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isDarkMode, toggleTheme } = useGlobalTheme(); // Use global theme
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
@@ -24,7 +26,6 @@ const SettingsPage = () => {
     confirmPassword: '',
     language: 'en',
     currency: 'NPR',
-    theme: 'light',
     notificationsEnabled: true,
     emailNotifications: true,
     avatarFile: null as File | null,
@@ -63,7 +64,7 @@ const SettingsPage = () => {
           email: user.email,
           language: 'en',
           currency: 'NPR',
-          theme: 'light',
+          theme: isDarkMode ? 'dark' : 'light',
           notifications_enabled: true,
           email_notifications: true,
           created_at: new Date().toISOString(),
@@ -84,7 +85,6 @@ const SettingsPage = () => {
           email: user.email || '',
           language: 'en',
           currency: 'NPR',
-          theme: 'light',
           notificationsEnabled: true,
           emailNotifications: true,
         }));
@@ -96,7 +96,6 @@ const SettingsPage = () => {
           email: user.email || '',
           language: profile.language || 'en',
           currency: profile.currency || 'NPR',
-          theme: profile.theme || 'light',
           notificationsEnabled: profile.notifications_enabled ?? true,
           emailNotifications: profile.email_notifications ?? true,
         }));
@@ -161,7 +160,7 @@ const SettingsPage = () => {
         .update({
           full_name: formData.fullName,
           language: formData.language,
-          theme: formData.theme,
+          theme: isDarkMode ? 'dark' : 'light',
           currency: formData.currency,
           notifications_enabled: formData.notificationsEnabled,
           email_notifications: formData.emailNotifications,
@@ -181,19 +180,21 @@ const SettingsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500 border-b-2"></div>
+      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+        <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500 border-b-2`}></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
+    <div className={`min-h-screen p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="mr-4 p-2 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`mr-4 p-2 rounded-lg ${
+              isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
+            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
             aria-label="Go back"
           >
             <ChevronLeft className="h-6 w-6" />
@@ -203,7 +204,7 @@ const SettingsPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Profile */}
-          <section className="bg-gray-800 rounded-lg p-6">
+          <section className={`rounded-lg p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
             <h2 className="text-xl font-semibold mb-4 flex items-center">
               <User className="w-5 h-5 mr-2" /> Profile
             </h2>
@@ -213,11 +214,17 @@ const SettingsPage = () => {
                 <img
                   src={profileUrl || '/placeholder.png'}
                   alt="Profile"
-                  className="w-full h-full rounded-full object-cover border"
+                  className={`w-full h-full rounded-full object-cover border ${
+                    isDarkMode ? 'border-gray-600' : 'border-gray-300'
+                  }`}
                 />
                 <label
                   htmlFor="avatar-upload"
-                  className="absolute bottom-0 right-0 bg-blue-600 rounded-full p-1 cursor-pointer hover:bg-blue-700"
+                  className={`absolute bottom-0 right-0 rounded-full p-1 cursor-pointer ${
+                    isDarkMode
+                      ? 'bg-blue-700 hover:bg-blue-800'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                   aria-label="Change profile photo"
                 >
                   <Camera className="h-4 w-4 text-white" />
@@ -234,85 +241,121 @@ const SettingsPage = () => {
               </div>
               <div>
                 <p className="text-lg font-semibold">{formData.fullName}</p>
-                <p className="text-sm text-gray-400">{formData.email}</p>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {formData.email}
+                </p>
               </div>
             </div>
 
-            <label className="block text-sm text-gray-300 mb-1">Full Name</label>
+            <label className={`block text-sm mb-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>Full Name</label>
             <input
               type="text"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5"
+              className={`w-full rounded-lg p-2.5 ${
+                isDarkMode
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-gray-100 border-gray-300 text-gray-800'
+              } border`}
               required
               aria-label="Full Name"
             />
           </section>
 
           {/* Password */}
-          <section className="bg-gray-800 rounded-lg p-6">
+          <section className={`rounded-lg p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
             <h2 className="text-xl font-semibold mb-4 flex items-center">
               <Shield className="w-5 h-5 mr-2" /> Security
             </h2>
 
-            <label className="block text-sm text-gray-300 mb-1">Current Password</label>
+            <label className={`block text-sm mb-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>Current Password</label>
             <div className="relative">
               <input
                 type={showCurrentPassword ? 'text' : 'password'}
                 value={formData.currentPassword}
                 onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 pr-10"
+                className={`w-full rounded-lg p-2.5 pr-10 ${
+                  isDarkMode
+                    ? 'bg-gray-700 border-gray-600 text-gray-200'
+                    : 'bg-gray-100 border-gray-300 text-gray-800'
+                } border`}
               />
               <button
                 type="button"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                className="absolute inset-y-0 right-0 pr-3 text-gray-400"
+                className={`absolute inset-y-0 right-0 pr-3 ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}
                 aria-label="Toggle current password visibility"
               >
                 {showCurrentPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
 
-            <label className="block mt-4 text-sm text-gray-300 mb-1">New Password</label>
+            <label className={`block mt-4 text-sm mb-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>New Password</label>
             <div className="relative">
               <input
                 type={showNewPassword ? 'text' : 'password'}
                 value={formData.newPassword}
                 onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 pr-10"
+                className={`w-full rounded-lg p-2.5 pr-10 ${
+                  isDarkMode
+                    ? 'bg-gray-700 border-gray-600 text-gray-200'
+                    : 'bg-gray-100 border-gray-300 text-gray-800'
+                } border`}
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute inset-y-0 right-0 pr-3 text-gray-400"
+                className={`absolute inset-y-0 right-0 pr-3 ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}
                 aria-label="Toggle new password visibility"
               >
                 {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
 
-            <label className="block mt-4 text-sm text-gray-300 mb-1">Confirm New Password</label>
+            <label className={`block mt-4 text-sm mb-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>Confirm New Password</label>
             <input
               type="password"
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5"
+              className={`w-full rounded-lg p-2.5 ${
+                isDarkMode
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-gray-100 border-gray-300 text-gray-800'
+                } border`}
             />
           </section>
 
           {/* Preferences */}
-          <section className="bg-gray-800 rounded-lg p-6 space-y-6">
+          <section className={`rounded-lg p-6 space-y-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
             <h2 className="text-xl font-semibold mb-4 flex items-center">
               <Globe className="w-5 h-5 mr-2" /> Preferences
             </h2>
 
             {/* Language */}
             <div>
-              <label className="block text-sm mb-2 text-gray-300">Language</label>
+              <label className={`block text-sm mb-2 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>Language</label>
               <select
                 value={formData.language}
                 onChange={(e) => setFormData({ ...formData, language: e.target.value })}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5"
+                className={`w-full rounded-lg p-2.5 ${
+                  isDarkMode
+                    ? 'bg-gray-700 border-gray-600 text-gray-200'
+                    : 'bg-gray-100 border-gray-300 text-gray-800'
+                } border`}
               >
                 <option value="en">English</option>
                 <option value="ne">Nepali</option>
@@ -322,11 +365,17 @@ const SettingsPage = () => {
 
             {/* Currency */}
             <div>
-              <label className="block text-sm mb-2 text-gray-300">Currency</label>
+              <label className={`block text-sm mb-2 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>Currency</label>
               <select
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5"
+                className={`w-full rounded-lg p-2.5 ${
+                  isDarkMode
+                    ? 'bg-gray-700 border-gray-600 text-gray-200'
+                    : 'bg-gray-100 border-gray-300 text-gray-800'
+                } border`}
               >
                 <option value="NPR">Nepalese Rupee (NPR)</option>
                 <option value="USD">US Dollar (USD)</option>
@@ -337,24 +386,24 @@ const SettingsPage = () => {
 
             {/* Dark Mode */}
             <div className="flex items-center justify-between">
-              <label className="flex items-center text-sm text-gray-300" htmlFor="darkModeToggle">
+              <label className={`flex items-center text-sm ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`} htmlFor="darkModeToggle">
                 <Moon className="h-5 w-5 mr-2" /> Dark Mode
               </label>
               <button
                 type="button"
                 role="switch"
-                aria-checked={formData.theme === 'dark'}
+                aria-checked={isDarkMode}
                 id="darkModeToggle"
-                onClick={() =>
-                  setFormData({ ...formData, theme: formData.theme === 'dark' ? 'light' : 'dark' })
-                }
+                onClick={toggleTheme}
                 className={`w-12 h-6 rounded-full relative transition-colors ${
-                  formData.theme === 'dark' ? 'bg-blue-600' : 'bg-gray-600'
+                  isDarkMode ? 'bg-blue-600' : 'bg-gray-600'
                 }`}
               >
                 <span
                   className={`absolute left-1 top-1 w-4 h-4 rounded-full bg-white transform transition-transform ${
-                    formData.theme === 'dark' ? 'translate-x-6' : ''
+                    isDarkMode ? 'translate-x-6' : ''
                   }`}
                 />
               </button>
@@ -362,13 +411,15 @@ const SettingsPage = () => {
           </section>
 
           {/* Notifications */}
-          <section className="bg-gray-800 rounded-lg p-6 space-y-4">
+          <section className={`rounded-lg p-6 space-y-4 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
             <h2 className="text-xl font-semibold mb-4 flex items-center">
               <Bell className="w-5 h-5 mr-2" /> Notifications
             </h2>
 
             <div className="flex items-center justify-between">
-              <label htmlFor="pushToggle" className="flex items-center text-sm text-gray-300">
+              <label htmlFor="pushToggle" className={`flex items-center text-sm ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 <BellRing className="h-5 w-5 mr-2" /> Push Notifications
               </label>
               <button
@@ -395,7 +446,9 @@ const SettingsPage = () => {
             </div>
 
             <div className="flex items-center justify-between">
-              <label htmlFor="emailToggle" className="flex items-center text-sm text-gray-300">
+              <label htmlFor="emailToggle" className={`flex items-center text-sm ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 <Mail className="h-5 w-5 mr-2" /> Email Notifications
               </label>
               <button
@@ -425,7 +478,11 @@ const SettingsPage = () => {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg text-white font-medium transition"
+              className={`px-6 py-3 rounded-lg font-medium transition ${
+                isDarkMode
+                  ? 'bg-blue-700 text-white hover:bg-blue-800'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
               Save Changes
             </button>
