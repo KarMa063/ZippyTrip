@@ -55,57 +55,42 @@ export const fetchSchedules = async (date?: string) => {
     const params: any[] = [];
     
     if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      sqlQuery += ` WHERE s.departure_time >= $1 AND s.departure_time <= $2`;
-      params.push(startOfDay.toISOString(), endOfDay.toISOString());
+      sqlQuery += ` WHERE DATE(s.departure_time) = $1`;
+      params.push(date);
     }
     
-    sqlQuery += ` ORDER BY s.departure_time`;
+    sqlQuery += ` ORDER BY s.departure_time ASC`;
     
     const result = await query(sqlQuery, params);
     
-    // Transform the flat result into the expected nested structure
+    // Transform the data to include related information
     const schedules = result.rows.map(row => {
-      const schedule: ScheduleWithRelations = {
+      return {
         id: row.id,
-        route_id: row.route_id,
-        bus_id: row.bus_id,
-        driver_id: row.driver_id,
-        departure_time: row.departure_time,
-        arrival_time: row.arrival_time,
+        routeId: row.route_id,
+        route: row.route_name,
+        origin: row.route_origin,
+        destination: row.route_destination,
+        busId: row.bus_id,
+        bus: row.registration_number,
+        driverId: row.driver_id,
+        driver: row.driver_name,
+        driverPhone: row.driver_phone,
+        date: new Date(row.departure_time).toISOString().split('T')[0],
+        departureTime: new Date(row.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        arrivalTime: new Date(row.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         fare: row.fare,
-        available_seats: row.available_seats,
-        is_active: row.is_active,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        routes: row.route_id ? {
-          id: row.route_id,
-          name: row.route_name,
-          origin: row.route_origin,
-          destination: row.route_destination
-        } : undefined,
-        buses: row.bus_id ? {
-          id: row.bus_id,
-          registration_number: row.registration_number,
-          model: row.model,
-          capacity: row.capacity
-        } : undefined,
-        driver_name: row.driver_name,
-        driver_phone: row.driver_phone
+        availableSeats: row.available_seats,
+        status: row.is_active ? 'scheduled' : 'cancelled',
+        capacity: row.capacity || 0
       };
-      return schedule;
     });
     
     console.log("Fetched schedules:", schedules);
     return schedules;
-  } catch (err) {
-    console.error("Error in fetchSchedules:", err);
-    throw err;
+  } catch (error) {
+    console.error("Error fetching schedules:", error);
+    throw error;
   }
 };
 

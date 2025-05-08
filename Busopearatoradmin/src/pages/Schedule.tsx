@@ -41,16 +41,21 @@ const Schedule = () => {
   
   const formattedDate = date ? format(date, "yyyy-MM-dd") : undefined;
   
-  // Replace useRealtime with direct API call
+  // Fetch schedules when date changes
   useEffect(() => {
     const getSchedules = async () => {
       setLoading(true);
       try {
-        const result = await fetchSchedules(formattedDate);
-        console.log("API Response:", result); // Add this debug line
-        setScheduleData(result || []);
+        const data = await fetchSchedules(formattedDate);
+        console.log("API Response:", data);
+        setScheduleData(data || []);
       } catch (error) {
         console.error("Error fetching schedules:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load schedules",
+          variant: "destructive",
+        });
         setScheduleData([]);
       } finally {
         setLoading(false);
@@ -58,110 +63,59 @@ const Schedule = () => {
     };
     
     getSchedules();
-  }, [formattedDate]);
-
-  // Add this debug log to check the transformed data
-  useEffect(() => {
-    console.log("Schedule Data:", scheduleData);
-    console.log("Transformed Schedules:", schedules);
-  }, [scheduleData]);
-
-  const schedules = scheduleData.map(schedule => {
-    // Check if departure_time and arrival_time exist
-    if (!schedule.departure_time || !schedule.arrival_time) {
-      console.warn("Missing time data for schedule:", schedule);
-      return null;
-    }
+  }, [formattedDate, toast]);
+  
+  // Filter schedules based on search query and status
+  const filteredSchedules = scheduleData.filter(schedule => {
+    const matchesSearch = 
+      (schedule.route && schedule.route.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (schedule.origin && schedule.origin.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (schedule.destination && schedule.destination.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (schedule.bus && schedule.bus.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const departureTime = new Date(schedule.departure_time);
-    const arrivalTime = new Date(schedule.arrival_time);
+    const matchesStatus = statusFilter === "all" || schedule.status === statusFilter;
     
-    // Validate date objects
-    if (isNaN(departureTime.getTime()) || isNaN(arrivalTime.getTime())) {
-      console.warn("Invalid date format for schedule:", schedule);
-      return null;
-    }
-    
-    let status = "scheduled";
-    if (departureTime <= new Date() && arrivalTime >= new Date()) {
-      status = "in-transit";
-    } else if (arrivalTime < new Date()) {
-      status = "completed";
-    }
-    
-    const route = schedule.routes;
-    const bus = schedule.buses;
-    
-    return {
-      id: schedule.id,
-      route: route ? route.name : "Unknown Route",
-      routeId: route ? route.id : "Unknown",
-      departureTime: format(departureTime, "hh:mm a"),
-      arrivalTime: format(arrivalTime, "hh:mm a"),
-      date: format(departureTime, "yyyy-MM-dd"),
-      bus: bus ? `Bus #${bus.registration_number} - ${bus.model} (${bus.capacity} seats)` : "Unknown Bus",
-      busId: bus ? bus.id : null,
-      driver: schedule.driver_name || "Unassigned",
-      driverId: schedule.driver_id || null,
-      status,
-      bookedSeats: bus ? (bus.capacity - schedule.available_seats) : 0,
-      totalSeats: bus ? bus.capacity : 0,
-      fare: schedule.fare,
-      rawData: schedule
-    };
-  }).filter(Boolean); // Filter out null values
-
-  const filteredSchedules = schedules.filter((schedule) => {
-    const matchesDate = date 
-      ? schedule.date === format(date, "yyyy-MM-dd") 
-      : true;
-    
-    const matchesSearch = schedule.route.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      schedule.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      schedule.bus.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" 
-      ? true 
-      : schedule.status === statusFilter;
-    
-    return matchesDate && matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
-
-  const todaySchedules = schedules.filter(s => s.date === format(new Date(), "yyyy-MM-dd")).length;
-  const scheduledCount = schedules.filter(s => s.status === "scheduled").length;
-  const inTransitCount = schedules.filter(s => s.status === "in-transit").length;
-  const completedCount = schedules.filter(s => s.status === "completed").length;
-
-  // Function to handle edit button click
+  
+  // Calculate stats
+  const todaySchedules = scheduleData.filter(s => s.date === format(new Date(), "yyyy-MM-dd")).length;
+  const scheduledCount = scheduleData.filter(s => s.status === "scheduled").length;
+  const inTransitCount = scheduleData.filter(s => s.status === "in-transit").length;
+  const completedCount = scheduleData.filter(s => s.status === "completed").length;
+  
+  const handleAddSchedule = () => {
+    setIsAddModalOpen(true);
+  };
+  
   const handleEditSchedule = (schedule) => {
     setSelectedSchedule(schedule);
     setIsEditModalOpen(true);
   };
-
-  // Function to handle view button click
+  
   const handleViewSchedule = (schedule) => {
     setSelectedSchedule(schedule);
     setIsViewModalOpen(true);
   };
-
-  // Function to handle delete button click
+  
   const handleDeleteSchedule = (schedule) => {
     setSelectedSchedule(schedule);
     setIsDeleteDialogOpen(true);
   };
-
-  // Function to confirm deletion
-  const confirmDelete = async () => {
+  
+  const confirmDeleteSchedule = async () => {
     if (!selectedSchedule) return;
     
-    setLoading(true);
     try {
       await deleteSchedule(selectedSchedule.id);
+      
+      // Update local state
+      setScheduleData(scheduleData.filter(s => s.id !== selectedSchedule.id));
+      
       toast({
         title: "Success",
         description: "Schedule deleted successfully",
       });
-      refreshSchedules();
     } catch (error) {
       console.error("Error deleting schedule:", error);
       toast({
@@ -170,68 +124,65 @@ const Schedule = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
       setIsDeleteDialogOpen(false);
-    }
-  };
-
-  // Function to refresh schedules
-  const refreshSchedules = async () => {
-    setLoading(true);
-    try {
-      const result = await fetchSchedules(formattedDate);
-      setScheduleData(result || []);
-    } catch (error) {
-      console.error("Error fetching schedules:", error);
-    } finally {
-      setLoading(false);
+      setSelectedSchedule(null);
     }
   };
   
-  // Remove this duplicate declaration
-  // const { toast } = useToast();
+  const handleScheduleSuccess = async () => {
+    // Refresh data after add/edit
+    try {
+      const data = await fetchSchedules(formattedDate);
+      setScheduleData(data || []);
+      
+      // Close modals
+      setIsAddModalOpen(false);
+      setIsEditModalOpen(false);
+      setSelectedSchedule(null);
+      
+      toast({
+        title: "Success",
+        description: "Schedule updated successfully",
+      });
+    } catch (error) {
+      console.error("Error refreshing schedules:", error);
+    }
+  };
   
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Schedule Management</h1>
           <p className="text-muted-foreground mt-1">Manage your bus trips and schedules</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button className="bg-zippy-darkGray border-zippy-gray">
-            <Filter className="mr-2 h-4 w-4" />
-            Filter
-          </Button>
-          <Button 
-            className="bg-zippy-purple hover:bg-zippy-darkPurple"
-            onClick={() => setIsAddModalOpen(true)}
-          >
+        <div className="mt-4 sm:mt-0">
+          <Button onClick={handleAddSchedule}>
             <CalendarCheck className="mr-2 h-4 w-4" />
             Add Schedule
           </Button>
         </div>
       </div>
-
-      <ScheduleStats
+      
+      <ScheduleStats 
         todaySchedules={todaySchedules}
         scheduledCount={scheduledCount}
         inTransitCount={inTransitCount}
         completedCount={completedCount}
       />
-
-      <ScheduleFilters
-        date={date}
-        setDate={setDate}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-      />
-
-      <Card className="bg-zippy-darkGray border-zippy-gray overflow-hidden">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
+      
+      <Card>
+        <CardContent className="p-6">
+          <ScheduleFilters 
+            date={date}
+            setDate={setDate}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+          />
+          
+          <div className="mt-6">
             <ScheduleTable 
               loading={loading}
               schedules={filteredSchedules}
@@ -242,49 +193,49 @@ const Schedule = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Add Schedule Modal */}
-      <AddScheduleModal
+      
+      {/* Modals */}
+      <AddScheduleModal 
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSuccess={refreshSchedules}
+        onSuccess={handleScheduleSuccess}
       />
-
-      {/* Edit Schedule Modal */}
+      
       {selectedSchedule && (
-        <EditScheduleModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          schedule={selectedSchedule}
-          onSuccess={refreshSchedules}
-        />
+        <>
+          <EditScheduleModal 
+            isOpen={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setSelectedSchedule(null);
+            }}
+            schedule={selectedSchedule}
+            onSuccess={handleScheduleSuccess}
+          />
+          
+          <ViewScheduleModal 
+            isOpen={isViewModalOpen}
+            onClose={() => {
+              setIsViewModalOpen(false);
+              setSelectedSchedule(null);
+            }}
+            schedule={selectedSchedule}
+          />
+        </>
       )}
-
-      {/* View Schedule Modal */}
-      {selectedSchedule && (
-        <ViewScheduleModal
-          isOpen={isViewModalOpen}
-          onClose={() => setIsViewModalOpen(false)}
-          schedule={selectedSchedule}
-        />
-      )}
-
+      
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="bg-zippy-darkGray border-zippy-gray">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the schedule
-              and remove it from our servers.
+              This action cannot be undone. This will permanently delete the schedule.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-zippy-darkGray border-zippy-gray">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogCancel onClick={() => setSelectedSchedule(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteSchedule} className="bg-red-500 hover:bg-red-600">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

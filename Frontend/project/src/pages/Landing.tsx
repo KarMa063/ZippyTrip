@@ -1,234 +1,101 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plane, Globe, ArrowRight, 
-  Home, Map, Bus,
-} from 'lucide-react';
+import { Plane, Building2 } from 'lucide-react';
+import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
 import { supabase } from '../lib/supabase';
-import './Landing.css';
 
-// High-quality dark travel images
 const images = [
-  'https://images.pexels.com/photos/2440021/pexels-photo-2440021.jpeg?auto=compress&cs=tinysrgb&w=1920', // Dark mountains
-  'https://images.pexels.com/photos/2356045/pexels-photo-2356045.jpeg?auto=compress&cs=tinysrgb&w=1920', // Dark cityscape
-  'https://images.pexels.com/photos/1252869/pexels-photo-1252869.jpeg?auto=compress&cs=tinysrgb&w=1920', // Starry night mountains
+  'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fA%3D%3D&auto=format&fit=crop&w=2021&q=80',
+  'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDV8fHRyYXZlbHxlbnwwfHx8fDE2MzM1NTg5OTc&ixlib=rb-1.2.1&q=80&w=2020',
+  'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?cx=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDR8fHRyYXZlbHxlbnwwfHx8fDE2MzM1NTg5OTc&ixlib=rb-1.2.1&q=80&w=2020',
+  'https://images.unsplash.com/photo-1502791451862-7bd8c1df43a7?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+  'https://images.unsplash.com/photo-1516546453174-5e1098a4b4af?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
 ];
 
-// Travel quotes that will rotate
-const travelQuotes = [
-  { quote: "Travel is the only thing you buy that makes you richer.", author: "Anonymous" },
-  { quote: "The world is a book and those who do not travel read only one page.", author: "Saint Augustine" },
-  { quote: "Not all who wander are lost.", author: "J.R.R. Tolkien" },
-];
-
-export default function Landing() {
+const Landing: React.FC = () => {
   const navigate = useNavigate();
-  const [currentBgIndex, setCurrentBgIndex] = useState(0);
-  const [nextBgIndex, setNextBgIndex] = useState(1);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
-  const [showQuote, setShowQuote] = useState(true);
-  const [stars, setStars] = useState<Array<{id: number, size: number, top: string, left: string, delay: number}>>([]);
-  const heroRef = useRef<HTMLDivElement>(null);
-  
-  // Generate stars for the interactive background - reduced number for cleaner look
+  const { isDarkMode } = useGlobalTheme(); // Use global theme
+  const [bgImage, setBgImage] = useState<string>(images[0]);
+
   useEffect(() => {
-    const newStars = Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      size: Math.random() * 2 + 1, // Smaller stars
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      delay: Math.random() * 4
-    }));
-    setStars(newStars);
-  }, []);
+    const interval = setInterval(() => {
+      setBgImage(images[Math.floor(Math.random() * images.length)]);
+    }, 5000);
 
-  // Background image rotation effect with smoother transition
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentBgIndex(nextBgIndex);
-        setNextBgIndex((nextBgIndex + 1) % images.length);
-        setTimeout(() => {
-          setIsTransitioning(false);
-        }, 50);
-      }, 1500);
-    }, 8000); // Longer interval between changes
-
-    return () => clearInterval(intervalId);
-  }, [nextBgIndex]);
-
-  // Quote rotation effect
-  useEffect(() => {
-    const quoteInterval = setInterval(() => {
-      setShowQuote(false);
-      setTimeout(() => {
-        setCurrentQuoteIndex((prevIndex) => (prevIndex + 1) % travelQuotes.length);
-        setShowQuote(true);
-      }, 500);
-    }, 6000); // Longer interval for quotes
-
-    return () => clearInterval(quoteInterval);
+    return () => clearInterval(interval);
   }, []);
 
   const handleGetStarted = () => {
     navigate('/auth?mode=signup');
   };
 
+  const handleStaysClick = () => {
+    navigate('/guesthouses');
+  };
+
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Background Images with Transition */}
-      <div className="hidden">
-        {images.map((img, i) => (
-          <img key={i} src={img} alt="" />
-        ))}
-      </div>
-      
-      {/* Current background image */}
+    <div className="relative min-h-screen">
       <div
-        className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-2000 ${
-          isTransitioning ? 'opacity-0' : 'opacity-100'
-        }`}
-        style={{
-          backgroundImage: `url("${images[currentBgIndex]}")`,
-        }}
-      />
-      
-      {/* Next background image */}
-      <div
-        className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-2000 ${
-          isTransitioning ? 'opacity-100' : 'opacity-0'
-        }`}
-        style={{
-          backgroundImage: `url("${images[nextBgIndex]}")`,
-        }}
-      />
-      
-      {/* Dark overlay - increased opacity for darker background */}
-      <div className="absolute inset-0 bg-black bg-opacity-75"></div>
-
-      {/* Interactive star background - reduced for cleaner look */}
-      <div className="interactive-bg">
-        {stars.map(star => (
-          <div 
-            key={star.id}
-            className="star"
-            style={{
-              width: `${star.size}px`,
-              height: `${star.size}px`,
-              top: star.top,
-              left: star.left,
-              animationDelay: `${star.delay}s`
-            }}
-          />
-        ))}
+        className="absolute inset-0 bg-cover bg-center transition-all duration-1000"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      >
+        <div
+          className={`absolute inset-0 transition-opacity duration-300 ${
+            isDarkMode ? 'bg-black/70' : 'bg-black/60'
+          }`}
+        />
       </div>
-
-      {/* Diamond outline animation - kept as requested */}
-      <div className="diamond-outline"></div>
-      <div className="diamond-outline diamond-outline-delayed"></div>
 
       <div className="relative z-10 min-h-screen flex flex-col">
-        <header className="px-6 py-6 flex justify-between items-center">
+        <header className="px-4 py-6 flex justify-between items-center">
           <div className="flex items-center">
-            <div className="logo-container">
-              <Plane className="h-8 w-8 text-blue-500 plane-animation" />
-            </div>
-            <span className="ml-2 text-2xl font-bold text-white animated-text">
+            <Plane className={`h-8 w-8 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+            <span className={`ml-2 text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
               ZippyTrip
             </span>
           </div>
-          <div className="flex space-x-4">
+          <div className="flex gap-4">
             <button
               onClick={() => navigate('/auth?mode=login')}
-              className="diamond-button-outline"
+              className={`px-6 py-2 rounded-md transition duration-200 ${
+                isDarkMode
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
             >
-              <span className="diamond-button-content">Sign In</span>
+              Sign In
             </button>
           </div>
         </header>
 
-        <main className="flex-grow flex flex-col items-center justify-center px-4">
-          <div className="text-center max-w-4xl mx-auto">
-            {/* Quote Card - kept as requested */}
-            <div className={`quote-card mb-8 mx-auto ${showQuote ? 'quote-visible' : 'quote-hidden'}`}>
-              <div className="quote-icon">
-                <Globe className="w-6 h-6" />
-              </div>
-              <p className="quote-text">{travelQuotes[currentQuoteIndex].quote}</p>
-              <p className="quote-author">— {travelQuotes[currentQuoteIndex].author}</p>
-            </div>
-            
-            <h1 className="text-5xl font-bold text-white mb-6 text-glow">
+        <main className="flex-grow flex items-center justify-center px-4">
+          <div className="text-center">
+            <h1 className={`text-5xl font-bold ${isDarkMode ? 'text-white' : 'text-white'} mb-6`}>
               Travel Smarter, Adventure Better
             </h1>
-            <p className="text-xl text-gray-200 mb-10">
+            <p className={`text-xl ${isDarkMode ? 'text-gray-300' : 'text-gray-200'} mb-8`}>
               Join ZippyTrip to discover amazing destinations, plan your perfect
               trips, and create unforgettable memories.
             </p>
-            
             <button
               onClick={handleGetStarted}
-              className="hero-button"
+              className={`px-8 py-4 text-xl rounded-md transition duration-200 ${
+                isDarkMode
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
             >
-              <span>Get Started</span>
-              <ArrowRight className="ml-2 h-5 w-5" />
+              Get Started
             </button>
-          </div>
-
-          {/* Our Services section - kept as requested */}
-          <div className="w-full max-w-4xl mx-auto mt-16">
-            <h2 className="text-3xl font-bold text-white mb-8 text-center">Our Services</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Guesthouse Service */}
-              <div className="service-card">
-                <div className="service-icon">
-                  <Home className="w-6 h-6 text-blue-500" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">Guesthouse</h3>
-                <p className="text-gray-300 text-sm">
-                  Discover comfortable and authentic accommodations around the world.
-                </p>
-              </div>
-              
-              {/* Hidden Places Service */}
-              <div className="service-card">
-                <div className="service-icon">
-                  <Map className="w-6 h-6 text-blue-500" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">Hidden Places</h3>
-                <p className="text-gray-300 text-sm">
-                  Explore off-the-beaten-path destinations guided by local experts.
-                </p>
-              </div>
-              
-              {/* Bus Rental Service */}
-              <div className="service-card">
-                <div className="service-icon">
-                  <Bus className="w-6 h-6 text-blue-500" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">Bus Rental</h3>
-                <p className="text-gray-300 text-sm">
-                  Travel comfortably with our premium bus rental services.
-                </p>
-              </div>
-            </div>
           </div>
         </main>
 
-        <footer className="py-6 text-center text-gray-300 border-t border-gray-800 mt-16">
-          <div className="max-w-4xl mx-auto px-4">
-            <div className="flex justify-center items-center mb-2">
-              <div className="footer-icon-container">
-                <Plane className="h-5 w-5 text-blue-500" />
-              </div>
-              <span className="ml-2 text-lg font-bold text-white">ZippyTrip</span>
-            </div>
-            <p className="mb-2 text-sm">© 2025 ZippyTrip. All rights reserved.</p>
-          </div>
+        <footer className={`py-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-300'}`}>
+          <p>© 2025 ZippyTrip. All rights reserved.</p>
         </footer>
       </div>
     </div>
   );
-}
+};
+
+export default Landing;
