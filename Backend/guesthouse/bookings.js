@@ -15,7 +15,7 @@ const pool = new Pool({
 async function bookingsTableExists() {
     try {
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS bookings(
+            CREATE TABLE IF NOT EXISTS gbookings(
                 id SERIAL PRIMARY KEY,
                 traveller_id INTEGER NOT NULL,
                 property_id INTEGER NOT NULL,
@@ -30,6 +30,64 @@ async function bookingsTableExists() {
         console.error("Error checking or creating the bookings table:", error);
     }
 }
+
+// Add a new endpoint to check room availability for specific dates
+router.get('/check-availability', async (req, res) => {
+    const { property_id, check_in, check_out } = req.query;
+    
+    if (!property_id || !check_in || !check_out) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Missing required parameters: property_id, check_in, and check_out are required' 
+        });
+    }
+    
+    try {
+        // Get all rooms for the property
+        const roomsResult = await pool.query(
+            'SELECT id FROM rooms WHERE property_id = $1',
+            [property_id]
+        );
+        
+        if (roomsResult.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'No rooms found for this property' 
+            });
+        }
+        
+        // Get all room IDs
+        const roomIds = roomsResult.rows.map(room => room.id);
+        
+        // Check for bookings that overlap with the requested dates
+        const bookingsResult = await pool.query(
+            `SELECT room_id FROM gbookings 
+             WHERE property_id = $1 
+             AND room_id = ANY($2)
+             AND status != 'cancelled'
+             AND (
+                 (check_in <= $3 AND check_out > $3) OR
+                 (check_in < $4 AND check_out >= $4) OR
+                 (check_in >= $3 AND check_out <= $4)
+             )`,
+            [property_id, roomIds, check_in, check_out]
+        );
+        
+        // Create a set of unavailable room IDs
+        const unavailableRoomIds = new Set(bookingsResult.rows.map(booking => booking.room_id));
+        
+        res.json({ 
+            success: true, 
+            unavailableRoomIds: Array.from(unavailableRoomIds)
+        });
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to check availability' 
+        });
+    }
+});
 
 router.post('/', async (req, res) => {
     const { traveller_id, property_id, room_id, check_in, check_out } = req.body;
@@ -54,29 +112,14 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Check-in date cannot be in the past' });
         }
         
-        // First, check if the room is available
-        const availabilityCheck = await pool.query(
-            'SELECT available FROM rooms WHERE id = $1 AND property_id = $2',
-            [room_id, property_id]
-        );
-        
-        // If no room found or room is not available
-        if (availabilityCheck.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Room not found' });
-        }
-        
-        if (!availabilityCheck.rows[0].available) {
-            return res.status(400).json({ success: false, message: 'Room is not available for booking' });
-        }
-        
         // Check for overlapping bookings
         const overlapCheck = await pool.query(
-            `SELECT * FROM bookings 
+            `SELECT * FROM gbookings 
              WHERE room_id = $1 
              AND status != 'cancelled'
              AND (
-                 (check_in <= $2 AND check_out >= $2) OR
-                 (check_in <= $3 AND check_out >= $3) OR
+                 (check_in <= $2 AND check_out > $2) OR
+                 (check_in < $3 AND check_out >= $3) OR
                  (check_in >= $2 AND check_out <= $3)
              )`,
             [room_id, check_in, check_out]
@@ -97,15 +140,9 @@ router.post('/', async (req, res) => {
             
             // Create the booking
             const bookingResult = await client.query(
-                `INSERT INTO bookings (traveller_id, property_id, room_id, check_in, check_out)
+                `INSERT INTO gbookings (traveller_id, property_id, room_id, check_in, check_out)
                 VALUES ($1, $2, $3, $4, $5) RETURNING *`,
                 [traveller_id, property_id, room_id, check_in, check_out]
-            );
-            
-            // Update room availability to false
-            await client.query(
-                'UPDATE rooms SET available = false WHERE id = $1 AND property_id = $2',
-                [room_id, property_id]
             );
             
             await client.query('COMMIT');
@@ -125,7 +162,7 @@ router.post('/', async (req, res) => {
 
 router.get('/', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM bookings ORDER BY id DESC');
+        const result = await pool.query('SELECT * FROM gbookings ORDER BY id DESC');
         res.json({ success: true, bookings: result.rows });
     } catch (error) {
         console.error('Error fetching bookings:', error);
@@ -136,7 +173,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     const bookingId = req.params.id;
     try {
-        const result = await pool.query('SELECT * FROM bookings WHERE id = $1', [bookingId]);
+        const result = await pool.query('SELECT * FROM gbookings WHERE id = $1', [bookingId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -162,7 +199,7 @@ router.post('/:id/cancel', async (req, res) => {
             
             // Get booking details
             const bookingResult = await client.query(
-                'SELECT room_id, property_id FROM bookings WHERE id = $1',
+                'SELECT room_id, property_id FROM gbookings WHERE id = $1',
                 [bookingId]
             );
             
@@ -175,7 +212,7 @@ router.post('/:id/cancel', async (req, res) => {
             
             // Update booking status
             await client.query(
-                'UPDATE bookings SET status = $1 WHERE id = $2',
+                'UPDATE gbookings SET status = $1 WHERE id = $2',
                 ['cancelled', bookingId]
             );
             
@@ -202,5 +239,5 @@ router.post('/:id/cancel', async (req, res) => {
 
 module.exports = {
     router,
-    bookingsTableExists,
+    bookingsTableExists
 };

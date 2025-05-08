@@ -75,23 +75,58 @@ router.post('/:propertyId/rooms', async (req, res) => {
 // GET route to retrieve all rooms for a specific property
 router.get('/:propertyId/rooms', async (req, res) => {
   const { propertyId } = req.params;
+  const { check_in, check_out } = req.query;
 
   try {
-    const propertyCheck = await pool.query(
-      'SELECT id FROM properties WHERE id = $1',
+    // Get property details
+    const propertyResult = await pool.query(
+      'SELECT name FROM properties WHERE id = $1',
       [propertyId]
     );
 
-    if (propertyCheck.rows.length === 0) {
+    if (propertyResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Property not found" });
     }
 
-    const rooms = await pool.query(
+    // Get all rooms for the property
+    const roomsResult = await pool.query(
       'SELECT * FROM rooms WHERE property_id = $1',
       [propertyId]
     );
 
-    res.status(200).json({ success: true, rooms: rooms.rows });
+    let unavailableRoomIds = [];
+    
+    // If dates are provided, check for unavailable rooms
+    if (check_in && check_out) {
+      const bookingsResult = await pool.query(
+        `SELECT room_id FROM gbookings 
+         WHERE property_id = $1 
+         AND status != 'cancelled'
+         AND (
+             (check_in <= $2 AND check_out > $2) OR
+             (check_in < $3 AND check_out >= $3) OR
+             (check_in >= $2 AND check_out <= $3)
+         )`,
+        [propertyId, check_in, check_out]
+      );
+      
+      unavailableRoomIds = bookingsResult.rows.map(booking => booking.room_id);
+    }
+
+    // Format rooms with availability based on date checks
+    const formattedRooms = roomsResult.rows.map(room => {
+      const isAvailable = !unavailableRoomIds.includes(room.id);
+      return {
+        ...room,
+        isAvailable: isAvailable
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      guestHouse: { name: propertyResult.rows[0].name },
+      rooms: formattedRooms
+    });
   } catch (error) {
     console.error("Error fetching rooms:", error);
     res.status(500).json({ success: false, message: "Internal server error" });

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Moon, Sun, MapPin, Users, Calendar, ArrowLeft, Star, MessageSquare, X } from 'lucide-react';
 import ChatWidget from '../components/ChatWidget';
+import { getCurrentUser } from '../lib/supabase';
 
 interface Room {
   id: number;
@@ -41,11 +42,18 @@ const GuestHouseRooms: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [guestHouseReviews, setGuestHouseReviews] = useState<Review[]>([]);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [dateFilteredRooms, setDateFilteredRooms] = useState<Room[]>([]);
 
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/gproperties/${id}/rooms`);
+        // Include check-in and check-out dates in the request if they are set
+        let url = `http://localhost:5000/api/gproperties/${id}/rooms`;
+        if (checkInDate && checkOutDate) {
+          url += `?check_in=${checkInDate}&check_out=${checkOutDate}`;
+        }
+        
+        const response = await fetch(url);
         const data = await response.json();
         if (data.success) {
           const formattedRooms = data.rooms.map((room: Room) => ({
@@ -54,6 +62,7 @@ const GuestHouseRooms: React.FC = () => {
             reviews: room.reviews || []
           }));
           setRooms(formattedRooms);
+          setDateFilteredRooms(formattedRooms); // Initialize with all rooms
           setGuestHouse(data.guestHouse);
         } else {
           setError('Failed to fetch rooms');
@@ -69,7 +78,46 @@ const GuestHouseRooms: React.FC = () => {
     if (id) {
       fetchRooms();
     }
-  }, [id]);
+  }, [id, checkInDate, checkOutDate]); // Add dependencies to re-fetch when dates change
+
+  // Date Selection Component
+  const DateSelectionComponent = () => {
+    return (
+      <div className={`mb-6 p-4 rounded-lg shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <h3 className="text-lg font-semibold mb-3">Select Dates</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Check-in Date
+            </label>
+            <input
+              type="date"
+              value={checkInDate}
+              onChange={(e) => setCheckInDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className={`w-full p-2 rounded-lg ${
+                isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
+              }`}
+            />
+          </div>
+          <div>
+            <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Check-out Date
+            </label>
+            <input
+              type="date"
+              value={checkOutDate}
+              onChange={(e) => setCheckOutDate(e.target.value)}
+              min={checkInDate || new Date().toISOString().split('T')[0]}
+              className={`w-full p-2 rounded-lg ${
+                isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
+              }`}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     const fetchGuestHouseReviews = async () => {
@@ -161,8 +209,16 @@ const GuestHouseRooms: React.FC = () => {
     setBookingError(null);
     
     try {
-      // Get user ID from localStorage or use a default for demo
-      const travellerId = localStorage.getItem('userId') || '1';
+      // Get authenticated user from Supabase
+      const userData = await getCurrentUser();
+      
+      // If no user is authenticated, show an error
+      if (!userData) {
+        alert('You must be logged in to book a room');
+        setBookingStatus('error');
+        setBookingError('Authentication required');
+        return;
+      }
       
       const response = await fetch('http://localhost:5000/api/bookings', {
         method: 'POST',
@@ -170,7 +226,7 @@ const GuestHouseRooms: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          traveller_id: travellerId,
+          traveller_id: userData.user_id,
           property_id: id,
           room_id: roomId,
           check_in: checkInDate,
@@ -184,8 +240,12 @@ const GuestHouseRooms: React.FC = () => {
         setBookingStatus('success');
         alert('Room booked successfully!');
         
-        // Update the room's availability in the local state
-        setRooms(rooms.map(room => 
+        // Update the room's availability in both state variables
+        const updatedRooms = rooms.map(room => 
+          room.id === roomId ? { ...room, isAvailable: false } : room
+        );
+        setRooms(updatedRooms);
+        setDateFilteredRooms(updatedRooms.map(room => 
           room.id === roomId ? { ...room, isAvailable: false } : room
         ));
         
@@ -313,6 +373,10 @@ const GuestHouseRooms: React.FC = () => {
           {/* Rooms Section */}
           <div className="lg:col-span-2">
             <h2 className="text-2xl font-bold mb-4">Rooms</h2>
+            
+            {/* Add the date selection component */}
+            <DateSelectionComponent />
+            
             {isLoading ? (
               <div className="flex justify-center items-center h-64">
                 <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${
@@ -323,26 +387,28 @@ const GuestHouseRooms: React.FC = () => {
               <div className="text-center text-red-600 p-4">{error}</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {rooms.map((room) => (
+                {dateFilteredRooms.map((room) => (
                   <div
                     key={room.id}
-                    className={`rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform hover:scale-105 ${
-                      isDarkMode ? 'bg-gray-800' : 'bg-white'
-                    }`}
-                    onClick={() => setSelectedRoom(room)}
+                    className={`rounded-lg shadow-md overflow-hidden ${
+                      room.isAvailable 
+                        ? 'cursor-pointer transition-transform hover:scale-105' 
+                        : 'opacity-75 cursor-not-allowed'
+                    } ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}
+                    onClick={() => room.isAvailable ? setSelectedRoom(room) : null}
                   >
                     <div className="h-40 relative">
                       <img
                         src={room.images[0] || '/placeholder-room.jpg'}
                         alt={room.name}
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full object-cover ${!room.isAvailable ? 'filter grayscale' : ''}`}
                       />
                       <div className={`absolute bottom-0 left-0 right-0 py-1 px-2 text-sm ${
                         room.isAvailable 
                           ? 'bg-green-500 text-white' 
                           : 'bg-red-500 text-white'
                       }`}>
-                        {room.isAvailable ? 'Available' : 'Booked'}
+                        {room.isAvailable ? 'Available' : 'Not Available'}
                       </div>
                     </div>
                     <div className="p-4">
