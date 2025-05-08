@@ -1,6 +1,7 @@
 
 import { query } from '@/integrations/neon/client';
 import { Json } from "@/integrations/supabase/types";
+import { logActivity } from './activityLogs';
 
 // Type definitions
 export type Bus = {
@@ -56,6 +57,18 @@ export const createBus = async (busData: BusInsert) => {
       [registration_number, model, capacity, amenities, is_active]
     );
     
+    // Log the activity
+    await logActivity({
+      action: 'create',
+      entity_type: 'bus',
+      entity_id: result.rows[0].id,
+      details: {
+        registration_number: registration_number,
+        model: model,
+        capacity: capacity
+      }
+    });
+    
     return result.rows[0];
   } catch (err) {
     console.error("Error creating bus:", err);
@@ -82,6 +95,15 @@ export const updateBus = async (id: string, busData: BusUpdate) => {
     `;
     
     const result = await query(sqlQuery, [id, ...values]);
+    
+    // Log the activity
+    await logActivity({
+      action: 'update',
+      entity_type: 'bus',
+      entity_id: id,
+      details: busData
+    });
+    
     return result.rows[0];
   } catch (err) {
     console.error("Error updating bus:", err);
@@ -91,7 +113,22 @@ export const updateBus = async (id: string, busData: BusUpdate) => {
 
 export const deleteBus = async (id: string) => {
   try {
+    // Get bus details before deletion for activity log
+    const busDetails = await getBus(id);
+    
     await query('DELETE FROM buses WHERE id = $1', [id]);
+    
+    // Log the activity
+    await logActivity({
+      action: 'delete',
+      entity_type: 'bus',
+      entity_id: id,
+      details: {
+        registration_number: busDetails.registration_number,
+        model: busDetails.model
+      }
+    });
+    
     return true;
   } catch (err) {
     console.error("Error deleting bus:", err);
