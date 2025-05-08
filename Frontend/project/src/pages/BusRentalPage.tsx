@@ -3,6 +3,7 @@ import { Bus, Calendar, Users, Search, MapPin, ArrowRight, CreditCard, Luggage, 
 import { sendBusReminder } from './EmailController';
 import { useGlobalTheme } from '../components/GlobalThemeContext';
 import Navigation from './Navigation';
+import { getCurrentUserId } from '../lib/supabase';
 
 interface Seat {
   id: string;
@@ -52,7 +53,8 @@ const BusRentalPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch('http://localhost:4000/services');
+        // Change port from 4000 to 5000 and update endpoint
+        const response = await fetch('http://localhost:5000/api/routes');
         if (!response.ok) {
           throw new Error('Failed to fetch buses');
         }
@@ -92,9 +94,57 @@ const BusRentalPage: React.FC = () => {
     fetchBuses();
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('results');
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const searchUrl = new URLSearchParams();
+      if (searchParams.from) searchUrl.append('from', searchParams.from);
+      if (searchParams.to) searchUrl.append('to', searchParams.to);
+      
+      const response = await fetch(`http://localhost:5000/api/routes/search?${searchUrl.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch buses');
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch buses');
+      }
+      
+      // Transform the routes data to match the BusRoute interface
+      const transformedBuses = data.routes.map((route: any) => ({
+        id: route.id,
+        from: route.origin,
+        to: route.destination,
+        departure: '08:00 AM', // You might want to add these fields to your routes table
+        arrival: '10:00 AM',    // or fetch them from a related schedules table
+        price: 1200, // Example price - you might want to add this to your routes table
+        operator: 'ZippyBus Express',
+        duration: route.duration || '2h',
+        amenities: ['wifi', 'charging', 'snacks'],
+        seatsAvailable: 30,
+        type: 'AC',
+        seats: Array.from({ length: 40 }, (_, i) => ({
+          id: `seat-${i + 1}`,
+          number: `${i + 1}`,
+          isBooked: Math.random() > 0.7,
+          type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
+        }))
+      }));
+      
+      setBuses(transformedBuses);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error searching buses:', err);
+    } finally {
+      setIsLoading(false);
+      setStep('results');
+    }
   };
 
   const handleBusSelection = (bus: BusRoute) => {
@@ -127,18 +177,26 @@ const BusRentalPage: React.FC = () => {
     
     if (selectedBus) {
       try {
+        // Get the current user ID
+        const userId = await getCurrentUserId();
+        
+        if (!userId) {
+          alert('You must be logged in to book a bus. Please sign in and try again.');
+          return;
+        }
+        
         const bookingData = {
-          user_id: 'user_id',
+          user_id: userId,
           schedule_id: selectedBus.id,
           seat_numbers: selectedSeats,
           total_fare: selectedBus.price * selectedSeats.length,
-          status: 'pending',
+          status: 'confirmed',
           payment_status: 'pending',
-          payment_method: null,
+          payment_method: 'card',
           booking_date: new Date().toISOString()
         };
 
-        const response = await fetch('http://localhost:4000/bookings', {
+        const response = await fetch('http://localhost:5000/api/bus-bookings', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -149,6 +207,9 @@ const BusRentalPage: React.FC = () => {
         if (!response.ok) {
           throw new Error('Failed to create booking');
         }
+        
+        const bookingResponse = await response.json();
+        console.log('Booking created:', bookingResponse);
 
         const emailResponse = await sendBusReminder({
           email: userEmail,
@@ -176,7 +237,7 @@ const BusRentalPage: React.FC = () => {
           setUserName('');
           window.location.href = '/profile';
         }, 3000);
-
+      
       } catch (error) {
         console.error('Booking failed:', error);
         alert('Failed to complete booking. Please try again.');
