@@ -399,77 +399,92 @@ const Dashboard = () => {
             </Card>
 
             {/* Upcoming Schedules Section */}
-            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp`} style={{
+            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp overflow-hidden`} style={{
             animationDelay: '500ms'
           }}>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-center mb-4">
+              <CardContent className="p-0">
+                <div className="flex justify-between items-center p-6 border-b border-zippy-gray">
                   <h2 className="text-2xl font-bold gold-stroke">Upcoming Schedules</h2>
-                  <Button variant="outline" className="bg-gray-800 border-gray-700 hover:bg-gray-700" onClick={() => navigate('/schedule')}>
-                    View All
+                  <Button variant="outline" className="bg-zippy-purple/20 border-zippy-purple/50 hover:bg-zippy-purple/30 transition-all duration-300" onClick={() => navigate('/schedule')}>
+                    <span>View All</span>
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
                 
-                {/* Date Selection */}
-                <div className="flex space-x-2 overflow-x-auto pb-2 mb-4">
+                {/* Date Selection - Improved UI */}
+                <div className="flex bg-zippy-gray/30 p-2 overflow-x-auto no-scrollbar">
                   {getNextSevenDays().map((day, index) => (
                     <Button
                       key={index}
-                      variant={isSameDay(day, selectedDay) ? "default" : "outline"}
-                      className={`${isSameDay(day, selectedDay) ? 'bg-zippy-purple' : 'bg-gray-800 border-gray-700'} flex-shrink-0 rounded-md`}
+                      variant="ghost"
+                      className={`${
+                        isSameDay(day, selectedDay) 
+                          ? 'bg-zippy-purple text-white' 
+                          : 'hover:bg-zippy-gray/50 text-gray-300'
+                      } flex-shrink-0 rounded-full transition-all duration-200 mx-1 px-4`}
                       onClick={() => setSelectedDay(day)}
                     >
-                      <div className="flex flex-col items-center">
-                        <span className="text-xs">{format(day, 'EEE')}</span>
-                        <span className="text-lg font-bold">{format(day, 'd')}</span>
+                      <div className="flex flex-col items-center py-1">
+                        <span className="text-xs font-medium">{format(day, 'EEE')}</span>
+                        <span className="text-xl font-bold my-0.5">{format(day, 'd')}</span>
                         <span className="text-xs">{format(day, 'MMM')}</span>
                       </div>
                     </Button>
                   ))}
                 </div>
                 
-                {/* Schedules for Selected Day */}
-                <div className="space-y-4">
+                {/* Schedules for Selected Day - Improved UI */}
+                <div className="p-4">
                   {isLoading ? (
                     <div className="flex justify-center p-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zippy-purple"></div>
                     </div>
                   ) : getSchedulesForSelectedDay().length > 0 ? (
-                    getSchedulesForSelectedDay().map((schedule) => (
-                      <div 
-                        key={schedule.id}
-                        className="bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors duration-200"
-                        onClick={() => navigate(`/schedule?id=${schedule.id}`)}
-                      >
-                        <div className="p-4">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center space-x-3">
-                              <div className={`${getStatusColor(schedule.status)} rounded-full p-2.5`}>
-                                <Bus className="h-5 w-5 text-white" />
+                    <div className="space-y-3">
+                      {getSchedulesForSelectedDay().map((schedule) => (
+                        <div 
+                          key={schedule.id}
+                          className="bg-zippy-gray/30 rounded-lg cursor-pointer hover:bg-zippy-gray/50 transition-all duration-200 overflow-hidden flex"
+                          onClick={() => navigate(`/schedule?id=${schedule.id}`)}
+                        >
+                          {/* Status indicator */}
+                          <div className={`w-1.5 ${getStatusColor(schedule.status)}`}></div>
+                          
+                          <div className="p-3 flex-1">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center space-x-3">
+                                <div className={`${getStatusColor(schedule.status)} rounded-full p-2 shadow-sm`}>
+                                  <Bus className="h-4 w-4 text-white" />
+                                </div>
+                                <div>
+                                  <h3 className="font-medium text-white">{schedule.routeName}</h3>
+                                  <p className="text-sm text-gray-400 flex items-center">
+                                    <MapPin className="h-3 w-3 mr-1 inline" /> {schedule.origin} to {schedule.destination}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <h3 className="font-medium">{schedule.routeName}</h3>
-                                <p className="text-sm text-muted-foreground">{schedule.origin} to {schedule.destination}</p>
+                              <div className="text-right">
+                                <p className="text-lg font-bold flex items-center justify-end">
+                                  <Clock className="h-4 w-4 mr-1 text-zippy-purple" />
+                                  {schedule.departureTime}
+                                </p>
+                                <p className="text-xs text-gray-400">{format(schedule.date, 'dd MMM yyyy')}</p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold">{schedule.departureTime}</p>
-                              <p className="text-sm text-muted-foreground">{format(schedule.date, 'dd MMM yyyy')}</p>
+                            <div className="mt-2 flex justify-between items-center text-sm">
+                              <span className="text-gray-400">Bus: {schedule.busNumber}</span>
+                              <Badge className={`${getStatusColor(schedule.status)} text-white px-2 py-0.5 text-xs rounded-full`}>
+                                {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
+                              </Badge>
                             </div>
-                          </div>
-                          <div className="mt-3 flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">Bus: {schedule.busNumber}</span>
-                            <Badge variant="outline" className={`${getStatusColor(schedule.status)} bg-opacity-10 text-${getStatusColor(schedule.status).replace('bg-', '')}`}>
-                              {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
-                            </Badge>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   ) : (
-                    <div className="text-center p-8 text-muted-foreground">
-                      No schedules found for {format(selectedDay, 'dd MMM yyyy')}.
+                    <div className="text-center py-12 px-4">
+                      <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-500 opacity-50" />
+                      <p className="text-lg font-medium text-gray-300">No schedules found for {format(selectedDay, 'dd MMM yyyy')}</p>
                     </div>
                   )}
                 </div>
