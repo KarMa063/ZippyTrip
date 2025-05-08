@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { attractionsDb } from "@/lib/neonClient";
 
 interface AttractionData {
   id: number;
@@ -25,8 +26,6 @@ interface AttractionData {
   image: string;
   status: "open" | "closed" | "limited";
 }
-
-const API_URL = "http://localhost:3000/attractions";
 
 export default function Attractions() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,23 +44,27 @@ export default function Attractions() {
   });
 
   useEffect(() => {
-    fetchAttractions();
+    // Ensure the attractions table exists when the component mounts
+    attractionsDb.ensureTableExists().then(() => {
+      fetchAttractions();
+    });
   }, []);
 
   const fetchAttractions = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      if (data.success) {
-        setAttractions(data.attractions);
-      } else {
+      const data = await attractionsDb.getAllAttractions();
+      console.log("Fetched data:", data);
+      setAttractions(data.attractions || []);
+      if (!data.success) {
         toast.error("Failed to fetch attractions");
       }
     } catch (err) {
+      console.error("Error fetching attractions:", err);
       toast.error("Error fetching attractions");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const filteredAttractions = attractions.filter(attraction =>
@@ -73,8 +76,7 @@ export default function Attractions() {
   const handleDeleteAttraction = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this attraction?")) return;
     try {
-      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-      const data = await res.json();
+      const data = await attractionsDb.deleteAttraction(id);
       if (data.success) {
         toast.success("Attraction deleted successfully");
         fetchAttractions();
@@ -82,6 +84,7 @@ export default function Attractions() {
         toast.error(data.message || "Failed to delete attraction");
       }
     } catch (err) {
+      console.error("Error deleting attraction:", err);
       toast.error("Error deleting attraction");
     }
   };
@@ -99,12 +102,7 @@ export default function Attractions() {
   const handleAddAttraction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_URL}/addattraction`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newAttraction),
-      });
-      const data = await res.json();
+      const data = await attractionsDb.addAttraction(newAttraction);
       if (data.success) {
         toast.success("Attraction added successfully");
         setShowAddForm(false);
@@ -122,6 +120,7 @@ export default function Attractions() {
         toast.error(data.message || "Failed to add attraction");
       }
     } catch (err) {
+      console.error("Error adding attraction:", err);
       toast.error("Error adding attraction");
     }
   };
