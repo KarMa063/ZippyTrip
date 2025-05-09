@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const { propertyTableExists } = require('./guesthouse/properties');
 const { router: guestHouseRoomsRouter, createRoomsTable } = require('./guesthouse/rooms');
 const { router: bookingsRoutes, bookingsTableExists } = require('./guesthouse/bookings');
+const { router: reviewsRouter, createReviewsTable } = require('./guesthouse/reviews'); // Add this line
 const { router: busRoutesRouter, createRoutesTable } = require('./routes/busRoutes');
 const { router: busBookingsRouter, createBookingsTable } = require('./routes/bookingRoutes');
 const { router: preferencesRouter, preferencesTableExists } = require('./routes/preferences');
@@ -24,6 +25,7 @@ const pool = new Pool({
 propertyTableExists(); 
 createRoomsTable();
 bookingsTableExists();
+createReviewsTable();
 preferencesTableExists();
 usersTableExists();
 
@@ -33,6 +35,7 @@ app.use(express.json());
 
 // Mount the routers
 app.use('/api/gproperties', guestHouseRoomsRouter);
+app.use('/api/gproperties', reviewsRouter);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/routes', busRoutesRouter);
 app.use('/api/bus-bookings', busBookingsRouter);

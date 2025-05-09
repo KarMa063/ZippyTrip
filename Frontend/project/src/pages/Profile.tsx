@@ -76,7 +76,6 @@ const Profile: React.FC = () => {
         if (busResponse.data.success) {
           // Transform backend bookings to match the Ticket interface
           const transformedTickets = busResponse.data.bookings.map((booking: any) => {
-            // Parse seat numbers from string to array (if it's already in the format "seat-1", use it directly)
             const seatNumbers = booking.seat_numbers.startsWith('seat-') 
               ? booking.seat_numbers.split(',') 
               : booking.seat_numbers.split(',').map((seat: string) => `seat-${seat.trim()}`);
@@ -86,13 +85,13 @@ const Profile: React.FC = () => {
               busId: booking.schedule_id || booking.route_id,
               from: booking.origin || '',
               to: booking.destination || '',
-              departure: '08:00 AM', // Default or fetch from schedule if available
-              arrival: '10:00 AM', // Default or fetch from schedule if available
+              departure: '08:00 AM',
+              arrival: '10:00 AM',
               date: new Date(booking.booking_date).toISOString().split('T')[0],
               operator: 'ZippyBus Express',
               price: booking.total_fare,
               seats: seatNumbers,
-              passengerName: userIdString, // Use user ID as name or fetch user profile if available
+              passengerName: userIdString,
               busType: 'AC',
               status: booking.status === 'cancelled' ? 'cancelled' : 'active',
               bookingDate: booking.booking_date
@@ -159,7 +158,6 @@ const Profile: React.FC = () => {
           }
         } catch (guestHouseError) {
           console.error('Error fetching guesthouse bookings:', guestHouseError);
-          // Don't set the main error, just log it
         }
         
       } catch (err) {
@@ -197,7 +195,6 @@ const Profile: React.FC = () => {
         }, { timeout: 5000 });
         
         if (response.data.success) {
-          // Update the ticket status to cancelled locally
           const updatedTickets = tickets.map(ticket =>
             ticket.id === ticketId ? { ...ticket, status: 'cancelled' as const } : ticket
           );

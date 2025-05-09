@@ -21,7 +21,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ guestHouseId, ownerId }) => {
 
   useEffect(() => {
     // Create WebSocket connection
-    const socket = new WebSocket(`ws://localhost:5000/chat/${guestHouseId}`); // Remove 'ws/' prefix
+    const socket = new WebSocket(`ws://localhost:5000/chat/${guestHouseId}`);
     
     socket.onopen = () => {
       console.log('Connected to chat server');
@@ -37,7 +37,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ guestHouseId, ownerId }) => {
     socket.onmessage = (event) => {
       try {
         const receivedMessage = JSON.parse(event.data);
-        if (receivedMessage.type !== 'connect') {  // Don't show connection messages
+        if (receivedMessage.type !== 'connect') {
           setMessages(prev => [...prev, receivedMessage]);
         }
       } catch (error) {
