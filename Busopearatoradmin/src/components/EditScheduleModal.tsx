@@ -1,20 +1,21 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fetchRoutes, fetchBuses, fetchDrivers, createSchedule } from "@/services/api";
+import { fetchRoutes, fetchBuses, fetchDrivers, updateSchedule } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { format, parse } from "date-fns";
 
-interface AddScheduleModalProps {
+interface EditScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
+  schedule: any;
   onSuccess: () => void;
 }
 
-const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps) => {
+const EditScheduleModal = ({ isOpen, onClose, schedule, onSuccess }: EditScheduleModalProps) => {
   const { toast } = useToast();
   const [routes, setRoutes] = useState<any[]>([]);
   const [buses, setBuses] = useState<any[]>([]);
@@ -22,13 +23,42 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
   const [loading, setLoading] = useState(false);
   
   // Form state
-  const [routeId, setRouteId] = useState("");
-  const [busId, setBusId] = useState("");
-  const [driverId, setDriverId] = useState("");
-  const [departureDate, setDepartureDate] = useState("");
-  const [departureTime, setDepartureTime] = useState("");
-  const [arrivalTime, setArrivalTime] = useState("");
-  const [fare, setFare] = useState("");
+  const [routeId, setRouteId] = useState(schedule?.routeId || "");
+  const [busId, setBusId] = useState(schedule?.busId || "");
+  const [driverId, setDriverId] = useState(schedule?.driverId || "");
+  const [departureDate, setDepartureDate] = useState(schedule?.date || "");
+  const [departureTime, setDepartureTime] = useState(
+    schedule?.departureTime ? 
+    format(parse(schedule.departureTime, "hh:mm a", new Date()), "HH:mm") : 
+    ""
+  );
+  const [arrivalTime, setArrivalTime] = useState(
+    schedule?.arrivalTime ? 
+    format(parse(schedule.arrivalTime, "hh:mm a", new Date()), "HH:mm") : 
+    ""
+  );
+  const [fare, setFare] = useState(schedule?.fare?.toString() || "");
+  
+  // Update form state when schedule changes
+  useEffect(() => {
+    if (schedule) {
+      setRouteId(schedule.routeId || "");
+      setBusId(schedule.busId || "");
+      setDriverId(schedule.driverId || "");
+      setDepartureDate(schedule.date || "");
+      setDepartureTime(
+        schedule.departureTime ? 
+        format(parse(schedule.departureTime, "hh:mm a", new Date()), "HH:mm") : 
+        ""
+      );
+      setArrivalTime(
+        schedule.arrivalTime ? 
+        format(parse(schedule.arrivalTime, "hh:mm a", new Date()), "HH:mm") : 
+        ""
+      );
+      setFare(schedule.fare?.toString() || "");
+    }
+  }, [schedule]);
   
   // Fetch data
   useEffect(() => {
@@ -37,7 +67,7 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
         const [routesData, busesData, driversData] = await Promise.all([
           fetchRoutes(),
           fetchBuses(),
-          fetchDrivers() // You'll need to implement this API function
+          fetchDrivers()
         ]);
         
         setRoutes(routesData || []);
@@ -55,14 +85,6 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
     
     if (isOpen) {
       fetchData();
-      // Reset form
-      setRouteId("");
-      setBusId("");
-      setDriverId("");
-      setDepartureDate("");
-      setDepartureTime("");
-      setArrivalTime("");
-      setFare("");
     }
   }, [isOpen, toast]);
   
@@ -71,6 +93,10 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
     setLoading(true);
     
     try {
+      if (!schedule || !schedule.id) {
+        throw new Error("Schedule ID is missing");
+      }
+      
       // Combine date and time
       const departureDateTime = new Date(`${departureDate}T${departureTime}`);
       const arrivalDateTime = new Date(`${departureDate}T${arrivalTime}`);
@@ -80,35 +106,29 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
         arrivalDateTime.setDate(arrivalDateTime.getDate() + 1);
       }
       
-      // Get the selected bus to calculate available seats
-      const selectedBus = buses.find(bus => bus.id === busId);
-      const availableSeats = selectedBus ? selectedBus.capacity : 0;
-      
       const scheduleData = {
         route_id: routeId,
         bus_id: busId,
-        driver_id: driverId, // Add driver ID
+        driver_id: driverId,
         departure_time: departureDateTime.toISOString(),
         arrival_time: arrivalDateTime.toISOString(),
         fare: parseFloat(fare),
-        available_seats: availableSeats,
-        is_active: true
       };
       
-      await createSchedule(scheduleData);
+      await updateSchedule(schedule.id, scheduleData);
       
       toast({
         title: "Success",
-        description: "Schedule created successfully",
+        description: "Schedule updated successfully",
       });
       
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Error creating schedule:", error);
+      console.error("Error updating schedule:", error);
       toast({
         title: "Error",
-        description: "Failed to create schedule",
+        description: "Failed to update schedule",
         variant: "destructive",
       });
     } finally {
@@ -120,7 +140,7 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px] bg-zippy-darkGray border-zippy-gray text-white">
         <DialogHeader>
-          <DialogTitle>Add New Schedule</DialogTitle>
+          <DialogTitle>Edit Schedule</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -180,6 +200,7 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
               value={departureDate}
               onChange={(e) => setDepartureDate(e.target.value)}
               required
+              className="bg-zippy-darkGray border-zippy-gray"
             />
           </div>
           
@@ -192,6 +213,7 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
                 value={departureTime}
                 onChange={(e) => setDepartureTime(e.target.value)}
                 required
+                className="bg-zippy-darkGray border-zippy-gray"
               />
             </div>
             
@@ -203,12 +225,13 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
                 value={arrivalTime}
                 onChange={(e) => setArrivalTime(e.target.value)}
                 required
+                className="bg-zippy-darkGray border-zippy-gray"
               />
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="fare">Fare ($)</Label>
+            <Label htmlFor="fare">Fare (NPR)</Label>
             <Input
               id="fare"
               type="number"
@@ -217,15 +240,25 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
               value={fare}
               onChange={(e) => setFare(e.target.value)}
               required
+              className="bg-zippy-darkGray border-zippy-gray"
             />
           </div>
           
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose}
+              className="bg-zippy-darkGray border-zippy-gray"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="bg-zippy-purple hover:bg-zippy-darkPurple">
-              {loading ? "Creating..." : "Create Schedule"}
+            <Button 
+              type="submit" 
+              className="bg-zippy-purple hover:bg-zippy-darkPurple"
+              disabled={loading}
+            >
+              {loading ? "Updating..." : "Update Schedule"}
             </Button>
           </div>
         </form>
@@ -234,4 +267,4 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
   );
 };
 
-export default AddScheduleModal;
+export default EditScheduleModal;

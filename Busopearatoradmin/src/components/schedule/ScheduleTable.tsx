@@ -1,160 +1,113 @@
 
-import { Clock, Bus, User, Edit, Trash2, MoreVertical } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Loader2, Edit, Eye, Trash, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatNPR } from "@/utils/formatters";
-import { getStatusBadge, getOccupancyPercentage, getOccupancyColor } from "./scheduleUtils";
-
-interface Schedule {
-  id: string;
-  route: string;
-  routeId: string;
-  departureTime: string;
-  arrivalTime: string;
-  bus: string;
-  driver: string;
-  status: string;
-  bookedSeats: number;
-  totalSeats: number;
-  fare: number;
-}
 
 interface ScheduleTableProps {
   loading: boolean;
-  schedules: Schedule[];
+  schedules: any[];
+  onEditSchedule: (schedule: any) => void;
+  onViewSchedule?: (schedule: any) => void;
+  onDeleteSchedule?: (schedule: any) => void;
 }
 
-export const ScheduleTable = ({ loading, schedules }: ScheduleTableProps) => {
+export const ScheduleTable = ({ 
+  loading, 
+  schedules, 
+  onEditSchedule,
+  onViewSchedule,
+  onDeleteSchedule
+}: ScheduleTableProps) => {
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return <Badge variant="outline" className="border-blue-500 text-blue-500">Scheduled</Badge>;
+      case "in-transit":
+        return <Badge variant="outline" className="border-amber-500 text-amber-500 bg-amber-500/10">In Transit</Badge>;
+      case "completed":
+        return <Badge variant="outline" className="border-green-500 text-green-500">Completed</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-zippy-purple" />
+        <span className="ml-2">Loading schedules...</span>
+      </div>
+    );
+  }
+
   return (
     <Table>
       <TableHeader className="bg-zippy-gray">
         <TableRow>
-          <TableHead>Schedule ID</TableHead>
+          <TableHead>ID</TableHead>
           <TableHead>Route</TableHead>
-          <TableHead>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Time
-            </div>
-          </TableHead>
-          <TableHead>
-            <div className="flex items-center gap-2">
-              <Bus className="h-4 w-4" />
-              Bus
-            </div>
-          </TableHead>
-          <TableHead>
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Driver
-            </div>
-          </TableHead>
+          <TableHead>Date</TableHead>
+          <TableHead>Time</TableHead>
+          <TableHead>Bus</TableHead>
+          <TableHead>Driver</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Seats</TableHead>
           <TableHead>Fare</TableHead>
-          <TableHead>Occupancy</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {loading ? (
+        {schedules.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={9} className="h-24 text-center">
-              Loading schedules...
+            <TableCell colSpan={10} className="h-24 text-center">
+              No schedules found
             </TableCell>
           </TableRow>
-        ) : schedules.length > 0 ? (
+        ) : (
           schedules.map((schedule) => (
-            <TableRow key={schedule.id} className="border-b border-zippy-gray">
-              <TableCell className="font-medium">{schedule.id}</TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span>{schedule.route}</span>
-                  <span className="text-xs text-muted-foreground">{schedule.routeId}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span className="flex items-center">
-                    <span className="w-14">Dep:</span>
-                    <span>{schedule.departureTime}</span>
-                  </span>
-                  <span className="flex items-center">
-                    <span className="w-14">Arr:</span>
-                    <span>{schedule.arrivalTime}</span>
-                  </span>
-                </div>
-              </TableCell>
+            <TableRow key={schedule.id}>
+              <TableCell className="font-medium">{schedule.id.substring(0, 8)}</TableCell>
+              <TableCell>{schedule.route}</TableCell>
+              <TableCell>{schedule.date}</TableCell>
+              <TableCell>{schedule.departureTime} - {schedule.arrivalTime}</TableCell>
               <TableCell>{schedule.bus}</TableCell>
               <TableCell>{schedule.driver}</TableCell>
               <TableCell>{getStatusBadge(schedule.status)}</TableCell>
-              <TableCell>{formatNPR(schedule.fare)}</TableCell>
+              <TableCell>{schedule.bookedSeats}/{schedule.totalSeats}</TableCell>
+              <TableCell>₹{schedule.fare}</TableCell>
               <TableCell>
-                {schedule.status !== "cancelled" ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 bg-zippy-gray rounded-full h-2 overflow-hidden">
-                      <div 
-                        className={`h-full ${getOccupancyColor(getOccupancyPercentage(schedule.bookedSeats, schedule.totalSeats))}`}
-                        style={{ width: `${getOccupancyPercentage(schedule.bookedSeats, schedule.totalSeats)}%` }}
-                      />
-                    </div>
-                    <span className={`text-xs ${getOccupancyColor(getOccupancyPercentage(schedule.bookedSeats, schedule.totalSeats))}`}>
-                      {schedule.bookedSeats}/{schedule.totalSeats} 
-                      ({getOccupancyPercentage(schedule.bookedSeats, schedule.totalSeats)}%)
-                    </span>
-                  </div>
-                ) : (
-                  <span className="text-xs text-muted-foreground">N/A</span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 w-8 p-0">
                       <span className="sr-only">Open menu</span>
-                      <MoreVertical className="h-4 w-4" />
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-zippy-darkGray border-zippy-gray">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="cursor-pointer focus:bg-zippy-gray focus:text-white">
+                  <DropdownMenuContent align="end">
+                    {onViewSchedule && (
+                      <DropdownMenuItem onClick={() => onViewSchedule(schedule)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => onEditSchedule(schedule)}>
                       <Edit className="mr-2 h-4 w-4" />
-                      <span>Edit Schedule</span>
+                      Edit
                     </DropdownMenuItem>
-                    {schedule.status === "scheduled" && (
-                      <DropdownMenuItem className="cursor-pointer focus:bg-zippy-gray focus:text-white">
-                        <Bus className="mr-2 h-4 w-4" />
-                        <span>Change Bus</span>
-                      </DropdownMenuItem>
-                    )}
-                    {schedule.status === "scheduled" && (
-                      <DropdownMenuItem className="cursor-pointer focus:bg-zippy-gray focus:text-white">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Change Driver</span>
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    {schedule.status === "scheduled" && (
+                    {onDeleteSchedule && (
                       <DropdownMenuItem 
-                        className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                        onClick={() => onDeleteSchedule(schedule)}
+                        className="text-red-600"
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Cancel Trip</span>
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -162,12 +115,6 @@ export const ScheduleTable = ({ loading, schedules }: ScheduleTableProps) => {
               </TableCell>
             </TableRow>
           ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={9} className="h-24 text-center">
-              No schedules found for the selected criteria.
-            </TableCell>
-          </TableRow>
         )}
       </TableBody>
     </Table>

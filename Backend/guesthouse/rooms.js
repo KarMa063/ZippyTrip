@@ -113,10 +113,10 @@ router.get('/:propertyId/rooms', async (req, res) => {
       unavailableRoomIds = bookingsResult.rows.map(booking => booking.room_id);
     }
 
-    // Format rooms with availability based on date checks
     const formattedRooms = roomsResult.rows.map(room => {
-      const isAvailable = !unavailableRoomIds.includes(room.id);
-      return {
+    const bookingAvailable = !unavailableRoomIds.includes(room.id);
+    const isAvailable = room.available && bookingAvailable;
+    return {
         ...room,
         isAvailable: isAvailable
       };
