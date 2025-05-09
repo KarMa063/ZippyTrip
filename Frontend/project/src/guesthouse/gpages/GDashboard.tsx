@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../gc
 import { Button } from "../gcomponents/button";
 import { MessageSquare, Plus, Home, BarChart3, Calendar, DollarSign } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../gcomponents/tabs";
+import axios from "axios";
 
 interface Property {
   id: number;
@@ -16,20 +17,34 @@ interface Property {
   rooms: any[]; // You can define the rooms type more specifically
 }
 
+interface Booking {
+  id: string;
+  traveller_id: string;
+  property_id: number;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'declined';
+  traveller_email?: string;
+  property_name?: string;
+}
+
 const GDashboard = () => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
   // Mock data for dashboard
   const stats = [
     { title: "Total Properties", value: properties.length.toString(), icon: <Home className="h-5 w-5 text-blue-500" /> },
-    { title: "Active Bookings", value: "12", icon: <Calendar className="h-5 w-5 text-green-500" /> },
-    { title: "Pending Requests", value: "3", icon: <BarChart3 className="h-5 w-5 text-yellow-500" /> },
+    { 
+      title: "Active Bookings", 
+      value: bookings.filter(b => b.status.toLowerCase() === 'confirmed').length.toString(), 
+      icon: <Calendar className="h-5 w-5 text-green-500" /> 
+    },
+    { 
+      title: "Pending Requests", 
+      value: bookings.filter(b => b.status.toLowerCase() === 'pending').length.toString(), 
+      icon: <BarChart3 className="h-5 w-5 text-yellow-500" /> 
+    },
     { title: "Total Revenue", value: "NRs. 425,000", icon: <DollarSign className="h-5 w-5 text-purple-500" /> },
-  ];
-
-  const recentBookings = [
-    { id: 1, property: "Hotel Lo Mustang", guest: "John Doe", status: "Confirmed" },
-    { id: 2, property: "Hotel Mystic Mountain", guest: "Jane Smith", status: "Pending" },
   ];
 
   const recentMessages = [
@@ -46,12 +61,48 @@ const GDashboard = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        setProperties(data.properties || []); // Adjust key if needed
+        setProperties(data.properties || []);
       } catch (error) {
         console.error("Failed to fetch properties:", error);
       }
     };
 
+    const fetchBookings = async () => {
+      try {
+        const bookingsResponse = await axios.get('http://localhost:5000/api/bookings');
+        const bookingsData = bookingsResponse.data.bookings;
+
+        const enrichedBookings = await Promise.all(
+          bookingsData.map(async (booking: Booking) => {
+            try {
+              const [user, property] = await Promise.all([
+                axios.get(`http://localhost:5000/api/users/${booking.traveller_id}`),
+                axios.get(`http://localhost:5000/api/gproperties/${booking.property_id}`),
+              ]);
+              
+              return {
+                ...booking,
+                traveller_email: user.data.user.user_email,
+                property_name: property.data.property.name,
+              };
+            } catch (error) {
+              console.error(`Error enriching booking ${booking.id}:`, error);
+              return {
+                ...booking,
+                traveller_email: 'Not available',
+                property_name: 'Not available',
+              };
+            }
+          })
+        );
+        
+        setBookings(enrichedBookings);
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+      }
+    };
+
+    fetchBookings();
     fetchProperties();
   }, []);
 
@@ -123,34 +174,35 @@ const GDashboard = () => {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Recent Bookings</CardTitle>
-              <CardDescription>Your latest booking activity</CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => navigate("/bookings")}>
-              View All
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-left text-sm font-medium">
-                    <th className="pb-3 pr-4">Property</th>
-                    <th className="pb-3 pr-4">Guest</th>
-                    <th className="pb-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentBookings.map((booking) => (
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Recent Bookings</CardTitle>
+            <CardDescription>Your latest booking activity</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => navigate("/gbookings")}>
+            View All
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b text-left text-sm font-medium">
+                  <th className="pb-3 pr-4">Property</th>
+                  <th className="pb-3 pr-4">Guest</th>
+                  <th className="pb-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.length > 0 ? (
+                  bookings.map((booking) => (
                     <tr key={booking.id} className="border-b text-sm">
-                      <td className="py-3 pr-4">{booking.property}</td>
-                      <td className="py-3 pr-4">{booking.guest}</td>
+                      <td className="py-3 pr-4">{booking.property_name}</td>
+                      <td className="py-3 pr-4">{booking.traveller_email}</td>
                       <td className="py-3">
                         <span
                           className={`inline-block px-2 py-1 rounded-full text-xs ${
-                            booking.status === "Confirmed"
+                            booking.status === "confirmed"
                               ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
                               : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
                           }`}
@@ -159,12 +211,19 @@ const GDashboard = () => {
                         </span>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} className="py-3 text-center text-sm text-muted-foreground">
+                      No bookings found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
       </div>
 
       <Card>
