@@ -4,7 +4,6 @@ import { Button } from "../gcomponents/button";
 import { 
   Card, 
   CardContent, 
-  CardDescription,
   CardHeader, 
   CardTitle 
 } from "../gcomponents/card";
@@ -12,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../gcomponents/tabs";
 import { Badge } from "../gcomponents/badge";
 import { Separator } from "../gcomponents/separator";
 import { 
-  Home, 
   CalendarDays, 
   Star, 
   BedDouble, 
@@ -24,6 +22,16 @@ import {
   Trash,
   Plus 
 } from "lucide-react";
+
+interface Review {
+  id: number;
+  userName: string;
+  rating: number;
+  comment: string;
+  date: string;
+  user_id?: string;
+  email?: string;
+}
 
 const PropertyDetails = () => {
   const { id: propertyId } = useParams<{ id: string }>();
@@ -54,6 +62,22 @@ const PropertyDetails = () => {
         if (!roomsData.success) {
           throw new Error("Failed to load rooms");
         }
+        // Fetch reviews
+      const reviewsResponse = await fetch(`http://localhost:5000/api/gproperties/${propertyId}/reviews`);
+      if (!reviewsResponse.ok) {
+        throw new Error("Failed to fetch reviews");
+      }
+      const reviewsData = await reviewsResponse.json();
+      if (!reviewsData.success) {
+        throw new Error("Failed to load reviews");
+      }
+
+      console.log(reviewsData.reviews.map((review: Review) => review.rating));
+
+    const averageRating = 
+      reviewsData.reviews.length > 0
+        ? reviewsData.reviews.reduce((total: number, review: Review) => total + Number(review.rating), 0) / reviewsData.reviews.length
+        : 0;
         // Calculate occupancy stats
         const totalRooms = roomsData.rooms.length;
         const occupiedRooms = roomsData.rooms.filter((room: any) => !room.available).length;
@@ -83,24 +107,9 @@ const PropertyDetails = () => {
               status: "Pending",
             },
           ],
-          reviews: [
-            {
-              id: "rev1",
-              guestName: "Sarah M.",
-              rating: 5,
-              date: "2025-03-15",
-              comment: "Amazing view and excellent service!",
-            },
-            {
-              id: "rev2",
-              guestName: "Thomas B.",
-              rating: 4,
-              date: "2025-03-10",
-              comment: "Very comfortable stay, highly recommended.",
-            },
-          ],
-          averageRating: 4.7,
-          totalReviews: 12
+          reviews: reviewsData.reviews, 
+          averageRating: Number(averageRating.toFixed(1)),
+          totalReviews: reviewsData.reviews.length,
         };
         setProperty(combinedData);
       } catch (error) {
@@ -370,59 +379,68 @@ const PropertyDetails = () => {
             <h2 className="text-xl font-bold">Guest Reviews</h2>
             <div className="flex items-center gap-2">
               <span className="font-medium">Average Rating:</span>
-              {renderStars(property.averageRating)}
-              <span className="ml-1 text-sm text-muted-foreground">({property.totalReviews} reviews)</span>
+              {renderStars(property.averageRating)} {/* Average rating stars */}
+              <span className="ml-1 text-sm text-muted-foreground">
+                ({property.totalReviews} reviews)
+              </span>
             </div>
           </div>
 
           <div className="space-y-4">
-            {property.reviews.map((review: any) => (
-              <Card key={review.id}>
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="font-medium">{review.guestName}</div>
-                      <div className="text-sm text-muted-foreground">{review.date}</div>
+            {property.reviews && property.reviews.length > 0 ? (
+              property.reviews.map((review: Review) => (
+                <Card key={review.id}>
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-medium">{review.userName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(review.date).toLocaleDateString()}
+                        </div>
+                      </div>
+                      {renderStars(review.rating)} {/* Display stars for each review */}
                     </div>
-                    {renderStars(review.rating)}
-                  </div>
-                  <p className="mt-2">{review.comment}</p>
+                    <p className="mt-2">{review.comment}</p>
 
-                  {/* Response if exists */}
-                  {review.response && (
-                    <div className="mt-3 pl-4 border-l-2 border-muted text-sm text-muted-foreground">
-                      <p className="font-medium">Owner's Response:</p>
-                      <p>{review.response}</p>
-                    </div>
-                  )}
+                    {/* Commented out response section for guesthouse owner */}
+                    {/* {review.response && (
+                      <div className="mt-3 pl-4 border-l-2 border-muted text-sm text-muted-foreground">
+                        <p className="font-medium">Owner's Response:</p>
+                        <p>{review.response}</p>
+                      </div>
+                    )} */}
 
-                  {/* Respond to review */}
-                  {!review.response && (
-                    <div className="mt-4 space-y-2">
-                      <textarea
-                        rows={2}
-                        placeholder="Write a response..."
-                        className="w-full rounded p-2 text-sm bg-background text-foreground border border-input placeholder:text-muted-foreground"
-                        onChange={(e) => review.tempResponse = e.target.value}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          const updatedReviews = property.reviews.map((r: any) =>
-                            r.id === review.id ? { ...r, response: review.tempResponse } : r
-                          );
-                          setProperty({ ...property, reviews: updatedReviews });
-                        }}
-                      >
-                        Respond
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    {/* Respond to review if no response exists */}
+                    {/* {!review.response && (
+                      <div className="mt-4 space-y-2">
+                        <textarea
+                          rows={2}
+                          placeholder="Write a response..."
+                          className="w-full rounded p-2 text-sm bg-background text-foreground border border-input placeholder:text-muted-foreground"
+                          onChange={(e) => review.tempResponse = e.target.value}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const updatedReviews = property.reviews.map((r: Review) =>
+                              r.id === review.id ? { ...r, response: review.tempResponse } : r
+                            );
+                            setProperty({ ...property, reviews: updatedReviews });
+                          }}
+                        >
+                          Respond
+                        </Button>
+                      </div>
+                    )} */}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <p>No reviews available.</p>
+            )}
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );
