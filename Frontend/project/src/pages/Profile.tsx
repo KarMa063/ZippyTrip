@@ -104,22 +104,54 @@ const Profile: React.FC = () => {
         
         // Fetch user's guesthouse bookings
         try {
-          const guestHouseResponse = await axios.get(`http://localhost:5000/api/bookings/user/${userIdString}`);
+          const guestHouseResponse = await axios.get(`http://localhost:5000/api/bookings`, {
+            params: { traveller_id: userIdString }
+          });
           
           if (guestHouseResponse.data.success) {
-            const transformedGuestHouseBookings = guestHouseResponse.data.bookings.map((booking: any) => {
+            // Filter bookings for this user
+            const userBookings = guestHouseResponse.data.bookings.filter(
+              (booking: any) => booking.traveller_id === userIdString
+            );
+            
+            // Create an array of promises to fetch room details for each booking
+            const roomDetailsPromises = userBookings.map(async (booking: any) => {
+              try {
+                // Fetch property details
+                const propertyResponse = await axios.get(`http://localhost:5000/api/gproperties/${booking.property_id}`);
+                
+                // Fetch room details
+                const roomResponse = await axios.get(
+                  `http://localhost:5000/api/gproperties/${booking.property_id}/rooms/${booking.room_id}`
+                );
+                
+                return {
+                  booking,
+                  property: propertyResponse.data.success ? propertyResponse.data.property : null,
+                  room: roomResponse.data.success ? roomResponse.data.room : null
+                };
+              } catch (error) {
+                console.error(`Error fetching details for booking ${booking.id}:`, error);
+                return { booking, property: null, room: null };
+              }
+            });
+            
+            // Wait for all room detail requests to complete
+            const bookingsWithDetails = await Promise.all(roomDetailsPromises);
+            
+            const transformedGuestHouseBookings = bookingsWithDetails.map(({ booking, property, room }) => {
               return {
                 id: booking.id,
                 guestHouseId: booking.property_id,
-                guestHouseName: booking.property_name || booking.room_name || 'ZippyStay Guesthouse',
-                roomType: booking.room_name || 'Standard Room',
+                guestHouseName: property?.name || booking.property_name || 'ZippyStay Guesthouse',
+                roomType: room?.name || booking.room_name || 'Standard Room',
                 checkIn: booking.check_in,
                 checkOut: booking.check_out,
-                guests: booking.capacity || 1,
-                price: parseFloat(booking.price) || 0,
+                guests: room?.capacity || booking.capacity || 1,
+                price: room ? parseFloat(room.price) : 0,
                 status: booking.status === 'cancelled' ? 'cancelled' : 'active',
                 bookingDate: booking.created_at || new Date().toISOString(),
-                location: booking.address || 'Unknown Location'
+                location: property?.address || 'Unknown Location'
               };
             });
             
