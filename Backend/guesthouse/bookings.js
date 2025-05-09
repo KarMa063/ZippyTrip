@@ -17,7 +17,7 @@ async function bookingsTableExists() {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS gbookings(
                 id SERIAL PRIMARY KEY,
-                traveller_id INTEGER NOT NULL,
+                traveller_id VARCHAR NOT NULL,
                 property_id INTEGER NOT NULL,
                 room_id INTEGER NOT NULL,
                 check_in DATE NOT NULL,
@@ -162,7 +162,7 @@ router.post('/', async (req, res) => {
 
 router.get('/', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM gbookings ORDER BY id DESC');
+        const result = await pool.query('SELECT * FROM gbookings ORDER BY check_in ASC, check_out ASC');
         res.json({ success: true, bookings: result.rows });
     } catch (error) {
         console.error('Error fetching bookings:', error);
@@ -186,54 +186,75 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Add a new endpoint to cancel booking and make room available again
-router.post('/:id/cancel', async (req, res) => {
-    const bookingId = req.params.id;
-    
+router.patch('/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['pending', 'confirmed', 'cancelled', 'declined'].includes(status)) {  // Fixed typo
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid status value'
+        });
+    }
+
+    const client = await pool.connect();
     try {
-        // Begin transaction
-        const client = await pool.connect();
-        
-        try {
-            await client.query('BEGIN');
-            
-            // Get booking details
-            const bookingResult = await client.query(
-                'SELECT room_id, property_id FROM gbookings WHERE id = $1',
-                [bookingId]
-            );
-            
-            if (bookingResult.rows.length === 0) {
-                await client.query('ROLLBACK');
-                return res.status(404).json({ success: false, message: 'Booking not found' });
-            }
-            
-            const { room_id, property_id } = bookingResult.rows[0];
-            
-            // Update booking status
-            await client.query(
-                'UPDATE gbookings SET status = $1 WHERE id = $2',
-                ['cancelled', bookingId]
-            );
-            
-            // Make room available again
-            await client.query(
-                'UPDATE rooms SET available = true WHERE id = $1 AND property_id = $2',
-                [room_id, property_id]
-            );
-            
-            await client.query('COMMIT');
-            
-            res.status(200).json({ success: true, message: 'Booking cancelled and room is available again' });
-        } catch (error) {
+        await client.query('BEGIN');
+
+        // Lock the booking row for update
+        const bookingResult = await client.query(
+            `SELECT * FROM gbookings WHERE id = $1 FOR UPDATE`,
+            [id]
+        );
+
+        if (bookingResult.rows.length === 0) {
             await client.query('ROLLBACK');
-            throw error;
-        } finally {
-            client.release();
+            return res.status(404).json({ success: false, message: 'Booking not found' });
         }
+
+        const booking = bookingResult.rows[0];
+
+        // Update status
+        const result = await client.query(
+            `UPDATE gbookings SET status = $1 WHERE id = $2 RETURNING *`,
+            [status, id]
+        );
+
+        // Update room availability
+        if (status === 'confirmed') {
+            await client.query(
+                `UPDATE rooms SET available = false 
+                 WHERE id = $1 AND property_id = $2`,
+                [booking.room_id, booking.property_id]
+            );
+        } 
+        else if (status === 'cancelled' || status === 'declined') {
+            const otherBookings = await client.query(
+                `SELECT 1 FROM gbookings
+                 WHERE room_id = $1
+                 AND id != $2
+                 AND status = 'confirmed'
+                 AND check_out > CURRENT_DATE`,
+                [booking.room_id, id]
+            );
+
+            if (otherBookings.rows.length === 0) {
+                await client.query(
+                    `UPDATE rooms SET available = true 
+                     WHERE id = $1 AND property_id = $2`,
+                    [booking.room_id, booking.property_id]
+                );
+            }
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true, booking: result.rows[0] });
     } catch (error) {
-        console.error('Error cancelling booking:', error);
-        res.status(500).json({ success: false, message: 'Failed to cancel booking' });
+        await client.query('ROLLBACK');
+        console.error('Error updating status:', error);
+        res.status(500).json({ success: false, message: 'Failed to update status' });
+    } finally {
+        client.release();
     }
 });
 

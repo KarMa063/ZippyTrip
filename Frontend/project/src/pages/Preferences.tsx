@@ -5,7 +5,6 @@ import {
   Compass,
   Bus,
   Clock,
-  Home as HomeIcon,
   Star,
   Wifi,
   Coffee,
@@ -162,7 +161,7 @@ function Preferences() {
       amenities: preferences.amenities,
     };
   
-    console.log('Sending payload:', payload); // ✅ ADD THIS LINE
+    console.log('Sending payload:', payload); 
   
     try {
       const response = await axios.post('http://localhost:5000/api/preferences', payload);

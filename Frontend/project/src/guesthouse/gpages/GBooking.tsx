@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../gcomponents/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../gcomponents/tabs";
+import { Tabs, TabsContent } from "../gcomponents/tabs";
 import { Button } from "../gcomponents/button";
 import {
   Select,
@@ -17,121 +17,147 @@ import {
   DialogTitle,
 } from "../gcomponents/dialog";
 import { toast } from "react-hot-toast";
-import { DayPicker } from "react-day-picker";
-import 'react-day-picker/dist/style.css';
+import axios from "axios";
 
-// Mock data for bookings
-const bookingsData = [
-  {
-    id: "1",
-    propertyName: "Ocean View Suite",
-    roomNumber: "101",
-    guestName: "John Doe",
-    checkIn: "2025-05-06",
-    checkOut: "2025-05-15",
-    status: "Confirmed",
-    email: "john.doe@example.com",
-    phone: "555-123-4567"
-  },
-  {
-    id: "2",
-    propertyName: "Mountain Cabin",
-    roomNumber: "201",
-    guestName: "Jane Smith",
-    checkIn: "2025-04-12",
-    checkOut: "2025-04-14",
-    status: "Pending",
-    email: "jane.smith@example.com",
-    phone: "555-987-6543"
-  },
-  {
-    id: "3",
-    propertyName: "City Apartment",
-    roomNumber: "301",
-    guestName: "Robert Brown",
-    checkIn: "2025-04-15",
-    checkOut: "2025-04-20",
-    status: "Confirmed",
-    email: "robert.brown@example.com",
-    phone: "555-456-7890"
-  },
-];
+interface Booking {
+  id: string;
+  traveller_id: string;
+  property_id: number;
+  room_id: number;
+  check_in: string;
+  check_out: string;
+  status: string;
+  // These will be fetched separately
+  traveller_email?: string;
+  property_name?: string;
+  room_name?: string;
+}
 
-const Bookings = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [selectedBooking, setSelectedBooking] = useState<typeof bookingsData[0] | null>(null);
+const GBookings = () => {
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [actionDialog, setActionDialog] = useState<{ open: boolean, type: string }>({ open: false, type: '' });
-  const [bookings, setBookings] = useState(bookingsData);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   
-  const handleDateChange = (selectedDate: Date | undefined) => {
-    setDate(selectedDate);
-  };
-  
-  const handleBookingAction = (action: string) => {
-    let message = "";
-    let updatedBookings = [...bookings];
-    const bookingIndex = updatedBookings.findIndex(b => b.id === selectedBooking?.id);
+  // Fetch bookings and related data
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        // 1. Fetch basic booking data
+        const bookingsResponse = await axios.get('http://localhost:5000/api/bookings');
+        const bookingsData = bookingsResponse.data.bookings;
+        
+        const enrichedBookings = await Promise.all(
+          bookingsData.map(async (booking: Booking) => {
+            try {
+              const [user, property, room] = await Promise.all([
+                axios.get(`http://localhost:5000/api/users/${booking.traveller_id}`),
+                axios.get(`http://localhost:5000/api/gproperties/${booking.property_id}`),
+                axios.get(`http://localhost:5000/api/gproperties/${booking.property_id}/rooms/${booking.room_id}`)
+              ]);
+              
+              return {
+                ...booking,
+                traveller_email: user.data.user.user_email, // Changed from user.data.email
+                property_name: property.data.property.name, // Changed from property.data.name
+                room_name: room.data.room?.name || 'Standard Room' // Adjust based on actual room response
+              };
+            } catch (error) {
+              console.error(`Error enriching booking ${booking.id}:`, error);
+              return {
+                ...booking,
+                traveller_email: 'Not available',
+                property_name: 'Not available',
+                room_name: 'Not available'
+              };
+            }
+          })
+        );
+        
+        setBookings(enrichedBookings);
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+        toast.error('Failed to load bookings');
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    if (bookingIndex !== -1 && selectedBooking) {
+    fetchBookings();
+  }, []);
+
+  const handleBookingAction = async (action: string) => {
+    if (!selectedBooking) return;
+  
+    try {
+      let message = "";
+      let updatedStatus = selectedBooking.status;
+  
       switch (action) {
         case "checkin":
-          message = `Check-in processed for ${selectedBooking.guestName}`;
+          message = `Check-in processed for ${selectedBooking.traveller_email}`;
           break;
         case "checkout":
-          message = `Check-out processed for ${selectedBooking.guestName}`;
+          message = `Check-out processed for ${selectedBooking.traveller_email}`;
           break;
         case "cancel":
-          updatedBookings[bookingIndex] = {
-            ...updatedBookings[bookingIndex],
-            status: "Cancelled"
-          };
-          message = `Booking for ${selectedBooking.guestName} has been cancelled`;
+          updatedStatus = "cancelled";
+          message = `Booking for ${selectedBooking.traveller_email} has been cancelled`;
           break;
         case "approve":
-          updatedBookings[bookingIndex] = {
-            ...updatedBookings[bookingIndex],
-            status: "Confirmed"
-          };
-          message = `Booking for ${selectedBooking.guestName} has been approved`;
+          updatedStatus = "confirmed";
+          message = `Booking for ${selectedBooking.traveller_email} has been approved`;
           break;
         case "decline":
-          updatedBookings[bookingIndex] = {
-            ...updatedBookings[bookingIndex],
-            status: "Declined"
-          };
-          message = `Booking for ${selectedBooking.guestName} has been declined`;
+          updatedStatus = "declined";
+          message = `Booking for ${selectedBooking.traveller_email} has been declined`;
           break;
+        default:
+          toast.error('Invalid action');
+          return;
       }
-      
-      setBookings(updatedBookings);
-      toast.success(message);
+  
+      // Send request to backend using new status endpoint
+      const response = await axios.patch(`http://localhost:5000/api/bookings/${selectedBooking.id}/status`, {
+        status: updatedStatus
+      });
+  
+      if (response.data.success) {
+        // Update local state with the new booking data
+        const updatedBooking = response.data.booking;
+        setBookings(bookings.map(booking =>
+          booking.id === updatedBooking.id
+            ? { ...booking, status: updatedBooking.status }
+            : booking
+        ));
+  
+        toast.success(message);
+      } else {
+        toast.error('Backend update failed');
+      }
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      toast.error('Failed to update booking');
     }
-    
+  
     setActionDialog({ open: false, type: '' });
     setSelectedBooking(null);
   };
-  
-  // Filter bookings for the selected date (if any)
-  const filteredBookings = date 
-    ? bookings.filter(booking => {
-        const checkInDate = new Date(booking.checkIn);
-        const checkOutDate = new Date(booking.checkOut);
-        const selectedDate = new Date(date);
-        
-        // Reset time part for comparison
-        checkInDate.setHours(0, 0, 0, 0);
-        checkOutDate.setHours(0, 0, 0, 0);
-        selectedDate.setHours(0, 0, 0, 0);
-        
-        return selectedDate >= checkInDate && selectedDate <= checkOutDate;
-      })
-    : bookings;
-
+    
   // Filter by status for list view
   const statusFilteredBookings = statusFilter === "all" 
     ? bookings 
     : bookings.filter(booking => booking.status.toLowerCase() === statusFilter.toLowerCase());
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -140,139 +166,7 @@ const Bookings = () => {
         <p className="text-muted-foreground">Manage your property bookings</p>
       </div>
       
-      <Tabs defaultValue="calendar">
-        <TabsList>
-          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-          <TabsTrigger value="list">List View</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="calendar" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-[320px_1fr]">
-            <Card>
-              <CardContent className="p-2">
-                <DayPicker 
-                  selected={date} 
-                  onDayClick={handleDateChange}
-                  className="custom-day-picker"
-                  modifiersClassNames={{
-                    selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                    today: "bg-accent text-accent-foreground"
-                  }}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {date 
-                    ? `Bookings for ${date.toLocaleDateString()}`
-                    : "All Bookings"
-                  }
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {filteredBookings.length === 0 ? (
-                  <div className="text-center py-6 text-muted-foreground">
-                    <p>No bookings found for this date.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredBookings.map(booking => (
-                      <div key={booking.id} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h4 className="font-medium">{booking.propertyName} - Room {booking.roomNumber}</h4>
-                            <p className="text-sm">Guest: {booking.guestName}</p>
-                          </div>
-                          <div 
-                            className={`text-xs px-2 py-1 rounded-full ${
-                              booking.status === 'Confirmed' 
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
-                                : booking.status === 'Pending'
-                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
-                                  : booking.status === 'Declined'
-                                    ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
-                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
-                            }`}
-                          >
-                            {booking.status}
-                          </div>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Check-in: {booking.checkIn}</span>
-                          <span>Check-out: {booking.checkOut}</span>
-                        </div>
-                        <div className="mt-3 pt-3 border-t flex justify-end gap-2">
-                          {booking.status === 'Pending' && (
-                            <>
-                              <Button 
-                                variant="default"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedBooking(booking);
-                                  setActionDialog({ open: true, type: 'approve' });
-                                }}
-                              >
-                                Approve
-                              </Button>
-                              <Button 
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedBooking(booking);
-                                  setActionDialog({ open: true, type: 'decline' });
-                                }}
-                              >
-                                Decline
-                              </Button>
-                            </>
-                          )}
-                          {booking.status === 'Confirmed' && (
-                            <>
-                              <Button 
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedBooking(booking);
-                                  setActionDialog({ open: true, type: 'checkin' });
-                                }}
-                              >
-                                Check-in
-                              </Button>
-                              <Button 
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedBooking(booking);
-                                  setActionDialog({ open: true, type: 'checkout' });
-                                }}
-                              >
-                                Check-out
-                              </Button>
-                            </>
-                          )}
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setActionDialog({ open: true, type: 'cancel' });
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
+      <Tabs defaultValue="list" className="space-y-6">        
         <TabsContent value="list">
           <Card>
             <CardHeader>
@@ -301,7 +195,7 @@ const Bookings = () => {
                   <thead>
                     <tr className="border-b text-left text-sm font-medium">
                       <th className="p-3">Property & Room</th>
-                      <th className="p-3">Guest</th>
+                      <th className="p-3">Guest Email</th>
                       <th className="p-3">Check-in</th>
                       <th className="p-3">Check-out</th>
                       <th className="p-3">Status</th>
@@ -312,31 +206,36 @@ const Bookings = () => {
                     {statusFilteredBookings.map(booking => (
                       <tr key={booking.id} className="border-b">
                         <td className="p-3">
-                          <div className="font-medium">{booking.propertyName}</div>
-                          <div className="text-sm text-muted-foreground">Room {booking.roomNumber}</div>
+                          <div className="font-medium">{booking.property_name || 'Loading...'}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Room {booking.room_name || 'Loading...'}
+                          </div>
                         </td>
                         <td className="p-3">
-                          <div>{booking.guestName}</div>
-                          <div className="text-sm text-muted-foreground">{booking.email}</div>
+                          <div>{booking.traveller_email || 'Loading...'}</div>
                         </td>
-                        <td className="p-3">{booking.checkIn}</td>
-                        <td className="p-3">{booking.checkOut}</td>
+                        <td className="p-3">
+                          {new Date(booking.check_in).toLocaleDateString()}
+                        </td>
+                        <td className="p-3">
+                          {new Date(booking.check_out).toLocaleDateString()}
+                        </td>
                         <td className="p-3">
                           <span className={`inline-block px-2 py-1 rounded-full text-xs ${
-                            booking.status === 'Confirmed' 
+                            booking.status === 'confirmed' 
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
-                              : booking.status === 'Pending'
+                              : booking.status === 'pending'
                                 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
-                                : booking.status === 'Declined'
+                                : booking.status === 'declined'
                                   ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
                                   : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
                           }`}>
-                            {booking.status}
+                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                           </span>
                         </td>
                         <td className="p-3">
                           <div className="flex gap-2">
-                            {booking.status === 'Pending' && (
+                            {booking.status === 'pending' && (
                               <>
                                 <Button 
                                   variant="default" 
@@ -360,7 +259,7 @@ const Bookings = () => {
                                 </Button>
                               </>
                             )}
-                            {booking.status === 'Confirmed' && (
+                            {booking.status === 'confirmed' && (
                               <>
                                 <Button 
                                   variant="ghost" 
@@ -392,6 +291,7 @@ const Bookings = () => {
                                 setSelectedBooking(booking);
                                 setActionDialog({ open: true, type: 'cancel' });
                               }}
+                              disabled={booking.status === 'cancelled'}
                             >
                               Cancel
                             </Button>
@@ -422,12 +322,12 @@ const Bookings = () => {
           {selectedBooking && (
             <div className="py-4">
               <div className="space-y-2">
-                <p><span className="font-medium">Guest:</span> {selectedBooking.guestName}</p>
-                <p><span className="font-medium">Property:</span> {selectedBooking.propertyName}</p>
-                <p><span className="font-medium">Room:</span> {selectedBooking.roomNumber}</p>
-                <p><span className="font-medium">Check-in Date:</span> {selectedBooking.checkIn}</p>
-                <p><span className="font-medium">Check-out Date:</span> {selectedBooking.checkOut}</p>
-                <p><span className="font-medium">Current Status:</span> {selectedBooking.status}</p>
+                <p><span className="font-medium">Guest Email:</span> {selectedBooking.traveller_email || 'Not available'}</p>
+                <p><span className="font-medium">Property:</span> {selectedBooking.property_name || 'Not available'}</p>
+                <p><span className="font-medium">Room:</span> {selectedBooking.room_name || 'Not available'}</p>
+                <p><span className="font-medium">Check-in Date:</span> {new Date(selectedBooking.check_in).toLocaleDateString()}</p>
+                <p><span className="font-medium">Check-out Date:</span> {new Date(selectedBooking.check_out).toLocaleDateString()}</p>
+                <p><span className="font-medium">Current Status:</span> {selectedBooking.status.charAt(0).toUpperCase() + selectedBooking.status.slice(1)}</p>
               </div>
               {(actionDialog.type === 'cancel' || actionDialog.type === 'decline') && (
                 <div className="mt-4 p-3 bg-destructive/10 rounded-md text-destructive text-sm">
@@ -442,11 +342,7 @@ const Bookings = () => {
             </Button>
             <Button 
               onClick={() => handleBookingAction(actionDialog.type)}
-              variant={
-                actionDialog.type === 'cancel' || actionDialog.type === 'decline' 
-                  ? 'destructive' 
-                  : 'default'
-              }
+              variant={actionDialog.type === 'cancel' || actionDialog.type === 'decline' ? 'destructive' : 'default'}
             >
               {actionDialog.type === 'checkin' ? 'Complete Check-in' : 
                actionDialog.type === 'checkout' ? 'Complete Check-out' : 
@@ -461,4 +357,4 @@ const Bookings = () => {
   );
 };
 
-export default Bookings;
+export default GBookings;

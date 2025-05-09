@@ -128,7 +128,7 @@ const GDashboard = () => {
               <CardTitle>Recent Bookings</CardTitle>
               <CardDescription>Your latest booking activity</CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={() => navigate("/bookings")}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/gbookings")}>
               View All
             </Button>
           </CardHeader>

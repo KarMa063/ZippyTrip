@@ -332,14 +332,13 @@ const PropertyDetails = () => {
         <TabsContent value="bookings" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Bookings</h2>
-            <Button><Plus className="h-4 w-4 mr-2" /> New Booking</Button>
-          </div>
+           </div>
           <Card>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b text-left text-sm font-medium">
-                    <th className="p-4">Guest</th>
+                    <th className="p-4">Guest Email</th>
                     <th className="p-4">Room</th>
                     <th className="p-4">Check-in</th>
                     <th className="p-4">Check-out</th>
