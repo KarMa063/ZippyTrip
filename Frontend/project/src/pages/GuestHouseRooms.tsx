@@ -264,6 +264,9 @@ const GuestHouseRooms: React.FC = () => {
         
         // Close the modal
         setSelectedRoom(null);
+        
+        // Redirect to profile page
+        navigate('/profile', { state: { activeTab: 'guesthouse' } });
       } else {
         setBookingStatus('error');
         setBookingError(data.message || 'Failed to book room');

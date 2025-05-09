@@ -53,33 +53,32 @@ const BusRentalPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Change port from 4000 to 5000 and update endpoint
-        const response = await fetch('http://localhost:5000/api/routes');
+        // Fetch schedules which include route information
+        const response = await fetch('http://localhost:5000/api/routes/schedules/search');
         if (!response.ok) {
           throw new Error('Failed to fetch buses');
         }
         const data = await response.json();
 
-        const busesData = Array.isArray(data) ? data : [data];
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to fetch buses');
+        }
+
+        const schedules = data.schedules || [];
         
-        const transformedBuses = busesData.map((bus: any) => ({
-          id: bus.id,
-          from: bus.departureLocation,
-          to: bus.arrivalLocation,
-          departure: bus.departureTime,
-          arrival: bus.arrivalTime,
-          price: bus.price,
-          operator: bus.operator,
-          duration: bus.duration,
-          amenities: bus.amenities || [],
-          seatsAvailable: bus.availableSeats,
-          type: bus.busType === 'airConditioned' ? 'AC' : 'Non-AC',
-          seats: Array.from({ length: bus.totalSeats }, (_, i) => ({
-            id: `seat-${i + 1}`,
-            number: `${i + 1}`,
-            isBooked: Math.random() > 0.7,
-            type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
-          }))
+        const transformedBuses = schedules.map((schedule: any) => ({
+          id: schedule.id,
+          from: schedule.origin,
+          to: schedule.destination,
+          departure: new Date(schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          arrival: new Date(schedule.arrival_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          price: schedule.fare,
+          operator: schedule.route_name || 'ZippyBus Express',
+          duration: schedule.duration || calculateDuration(schedule.departure_time, schedule.arrival_time),
+          amenities: ['wifi', 'charging', 'snacks'],
+          seatsAvailable: schedule.available_seats,
+          type: 'AC',
+          seats: generateSeats(schedule.available_seats)
         }));
         
         setBuses(transformedBuses);
@@ -94,6 +93,27 @@ const BusRentalPage: React.FC = () => {
     fetchBuses();
   }, []);
 
+  // Helper function to calculate duration between two timestamps
+  const calculateDuration = (departure: string, arrival: string) => {
+    const departureTime = new Date(departure);
+    const arrivalTime = new Date(arrival);
+    const durationMs = arrivalTime.getTime() - departureTime.getTime();
+    const hours = Math.floor(durationMs / (1000 * 60 * 60));
+    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Helper function to generate seats
+  const generateSeats = (availableSeats: number) => {
+    const totalSeats = availableSeats + Math.floor(availableSeats * 0.3); // Adding some booked seats
+    return Array.from({ length: totalSeats }, (_, i) => ({
+      id: `seat-${i + 1}`,
+      number: `${i + 1}`,
+      isBooked: i >= availableSeats, // Mark seats as booked if they exceed available seats
+      type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
+    }));
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -103,8 +123,9 @@ const BusRentalPage: React.FC = () => {
       const searchUrl = new URLSearchParams();
       if (searchParams.from) searchUrl.append('from', searchParams.from);
       if (searchParams.to) searchUrl.append('to', searchParams.to);
+      if (searchParams.date) searchUrl.append('date', searchParams.date);
       
-      const response = await fetch(`http://localhost:5000/api/routes/search?${searchUrl.toString()}`);
+      const response = await fetch(`http://localhost:5000/api/routes/schedules/search?${searchUrl.toString()}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch buses');
@@ -116,25 +137,21 @@ const BusRentalPage: React.FC = () => {
         throw new Error(data.message || 'Failed to fetch buses');
       }
       
-      // Transform the routes data to match the BusRoute interface
-      const transformedBuses = data.routes.map((route: any) => ({
-        id: route.id,
-        from: route.origin,
-        to: route.destination,
-        departure: '08:00 AM', // You might want to add these fields to your routes table
-        arrival: '10:00 AM',    // or fetch them from a related schedules table
-        price: 1200, // Example price - you might want to add this to your routes table
-        operator: 'ZippyBus Express',
-        duration: route.duration || '2h',
+      const schedules = data.schedules || [];
+      
+      const transformedBuses = schedules.map((schedule: any) => ({
+        id: schedule.id,
+        from: schedule.origin,
+        to: schedule.destination,
+        departure: new Date(schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        arrival: new Date(schedule.arrival_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        price: schedule.fare,
+        operator: schedule.route_name || 'ZippyBus Express',
+        duration: schedule.duration || calculateDuration(schedule.departure_time, schedule.arrival_time),
         amenities: ['wifi', 'charging', 'snacks'],
-        seatsAvailable: 30,
+        seatsAvailable: schedule.available_seats,
         type: 'AC',
-        seats: Array.from({ length: 40 }, (_, i) => ({
-          id: `seat-${i + 1}`,
-          number: `${i + 1}`,
-          isBooked: Math.random() > 0.7,
-          type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
-        }))
+        seats: generateSeats(schedule.available_seats)
       }));
       
       setBuses(transformedBuses);
@@ -185,15 +202,19 @@ const BusRentalPage: React.FC = () => {
           return;
         }
         
+        const userIdString = typeof userId === 'object' ? userId.user_id : userId;
+        
         const bookingData = {
-          user_id: userId,
+          user_id: userIdString,
           schedule_id: selectedBus.id,
           seat_numbers: selectedSeats,
           total_fare: selectedBus.price * selectedSeats.length,
           status: 'confirmed',
           payment_status: 'pending',
           payment_method: 'card',
-          booking_date: new Date().toISOString()
+          booking_date: new Date().toISOString(),
+          origin: selectedBus.from,     // Add origin from selectedBus
+          destination: selectedBus.to   // Add destination from selectedBus
         };
 
         const response = await fetch('http://localhost:5000/api/bus-bookings', {

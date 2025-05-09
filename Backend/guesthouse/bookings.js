@@ -11,21 +11,34 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false },
 });
 
-// Ensure the bookings table exists
+// Ensure the bookings table exists with the updated structure
 async function bookingsTableExists() {
     try {
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS gbookings(
-                id SERIAL PRIMARY KEY,
-                traveller_id INTEGER NOT NULL,
-                property_id INTEGER NOT NULL,
-                room_id INTEGER NOT NULL,
-                check_in DATE NOT NULL,
-                check_out DATE NOT NULL,
-                status TEXT DEFAULT 'pending'
+            CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+            
+            CREATE TABLE IF NOT EXISTS bookings (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                user_id UUID,
+                schedule_id UUID,
+                booking_date TIMESTAMP WITH TIME ZONE,
+                seat_numbers TEXT,
+                total_fare NUMERIC,
+                status TEXT,
+                payment_status TEXT,
+                payment_method TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                origin TEXT,
+                destination TEXT,
+                CONSTRAINT bookings_pkey PRIMARY KEY (id),
+                CONSTRAINT bookings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles (id) ON DELETE CASCADE,
+                CONSTRAINT bookings_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES public.schedules (id) ON DELETE SET NULL
             );
+            
+            CREATE UNIQUE INDEX IF NOT EXISTS bookings_pkey ON bookings USING BTREE (id);
         `);
-        console.log("Bookings table checked/created successfully.");
+        console.log("Bookings table checked/created successfully with updated structure.");
     } catch (error) {
         console.error("Error checking or creating the bookings table:", error);
     }
@@ -89,74 +102,30 @@ router.get('/check-availability', async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => {
-    const { traveller_id, property_id, room_id, check_in, check_out } = req.body;
+// Implementing Room Booking Persistence and Profile Redirection
+
+// Add a new endpoint to get user's guesthouse bookings
+router.get('/user/:userId', async (req, res) => {
+    const { userId } = req.params;
     
     try {
-        // Validate dates
-        const checkInDate = new Date(check_in);
-        const checkOutDate = new Date(check_out);
-        
-        if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
-            return res.status(400).json({ success: false, message: 'Invalid date format' });
-        }
-        
-        if (checkInDate >= checkOutDate) {
-            return res.status(400).json({ success: false, message: 'Check-out date must be after check-in date' });
-        }
-        
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (checkInDate < today) {
-            return res.status(400).json({ success: false, message: 'Check-in date cannot be in the past' });
-        }
-        
-        // Check for overlapping bookings
-        const overlapCheck = await pool.query(
-            `SELECT * FROM gbookings 
-             WHERE room_id = $1 
-             AND status != 'cancelled'
-             AND (
-                 (check_in <= $2 AND check_out > $2) OR
-                 (check_in < $3 AND check_out >= $3) OR
-                 (check_in >= $2 AND check_out <= $3)
-             )`,
-            [room_id, check_in, check_out]
+        // Join gbookings with rooms and properties to get complete booking information
+        const result = await pool.query(
+            `SELECT gb.*, 
+                    r.name as room_name, r.price, r.capacity, r.images,
+                    p.name as property_name, p.address
+             FROM gbookings gb
+             JOIN rooms r ON gb.room_id = r.id
+             JOIN properties p ON gb.property_id = p.id
+             WHERE gb.traveller_id = $1
+             ORDER BY gb.id DESC`,
+            [userId]
         );
         
-        if (overlapCheck.rows.length > 0) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Room is already booked for the selected dates' 
-            });
-        }
-        
-        // Begin transaction
-        const client = await pool.connect();
-        
-        try {
-            await client.query('BEGIN');
-            
-            // Create the booking
-            const bookingResult = await client.query(
-                `INSERT INTO gbookings (traveller_id, property_id, room_id, check_in, check_out)
-                VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-                [traveller_id, property_id, room_id, check_in, check_out]
-            );
-            
-            await client.query('COMMIT');
-            
-            res.status(201).json({ success: true, booking: bookingResult.rows[0] });
-        } catch (error) {
-            await client.query('ROLLBACK');
-            throw error;
-        } finally {
-            client.release();
-        }
+        res.json({ success: true, bookings: result.rows });
     } catch (error) {
-        console.error('Error creating booking:', error);
-        res.status(500).json({ success: false, message: 'Failed to create booking' });
+        console.error('Error fetching user bookings:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch bookings' });
     }
 });
 
@@ -237,7 +206,40 @@ router.post('/:id/cancel', async (req, res) => {
     }
 });
 
+// GET user's guesthouse bookings
+router.get('/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    // Join with properties and rooms to get complete booking information
+    const result = await pool.query(`
+      SELECT 
+        b.id, 
+        b.traveller_id, 
+        b.property_id, 
+        b.room_id, 
+        b.check_in, 
+        b.check_out, 
+        b.status,
+        p.name as property_name,
+        p.address as property_address,
+        r.name as room_name,
+        r.price
+      FROM gbookings b
+      JOIN properties p ON b.property_id = p.id
+      JOIN rooms r ON b.room_id = r.id
+      WHERE b.traveller_id = $1
+      ORDER BY b.check_in DESC
+    `, [userId]);
+
+    res.json({ success: true, bookings: result.rows });
+  } catch (error) {
+    console.error('Error fetching user bookings:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch bookings' });
+  }
+});
+
 module.exports = {
     router,
-    bookingsTableExists
+    bookingsTableExists,
 };
