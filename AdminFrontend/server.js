@@ -1,21 +1,15 @@
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import cors from 'cors';
-import fs from 'fs/promises';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const fs = require('fs').promises;
+const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 8087;
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());  // Modern replacement for bodyParser.json()
-
-// Serve static files from the dist directory
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(bodyParser.json());
 
 // Data file path
 const dataFilePath = path.join(__dirname, 'destinations.json');
@@ -128,11 +122,6 @@ app.delete('/api/destinations/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete destination' });
   }
-});
-
-// Send all requests to index.html so that client-side routing works
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // Start server
