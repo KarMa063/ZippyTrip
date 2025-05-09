@@ -1,7 +1,6 @@
 import React from 'react';
 import { MapPin, Star } from 'lucide-react';
 import { useGlobalTheme } from '../components/GlobalThemeContext';
-import Navigation from './Navigation';
 
 interface Destination {
   id: string;
@@ -35,8 +34,7 @@ const PopularDestinations: React.FC = () => {
   const { isDarkMode } = useGlobalTheme();
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
-      <Navigation />
+    <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
       <div className="max-w-7xl mx-auto px-4 py-8">
         <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
           Popular Destinations

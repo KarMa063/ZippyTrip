@@ -22,6 +22,8 @@ interface Review {
   rating: number;
   comment: string;
   date: string;
+  user_id?: string;
+  email?: string;
 }
 
 const GuestHouseRooms: React.FC = () => {
@@ -39,9 +41,8 @@ const GuestHouseRooms: React.FC = () => {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
-  const [userName, setUserName] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false); 
   const [guestHouseReviews, setGuestHouseReviews] = useState<Review[]>([]);
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [dateFilteredRooms, setDateFilteredRooms] = useState<Room[]>([]);
 
   useEffect(() => {
@@ -62,7 +63,7 @@ const GuestHouseRooms: React.FC = () => {
             reviews: room.reviews || []
           }));
           setRooms(formattedRooms);
-          setDateFilteredRooms(formattedRooms); // Initialize with all rooms
+          setDateFilteredRooms(formattedRooms);
           
           // Fetch the full guesthouse details to get description and address
           const guestHouseResponse = await fetch(`http://localhost:5000/api/gproperties/${id}`);
@@ -72,7 +73,7 @@ const GuestHouseRooms: React.FC = () => {
             setGuestHouse({
               ...guestHouseData.property,
               name: data.guestHouse.name || guestHouseData.property.name,
-              location: guestHouseData.property.address // Map address to location for UI
+              location: guestHouseData.property.address
             });
           } else {
             setGuestHouse(data.guestHouse);
@@ -149,26 +150,36 @@ const GuestHouseRooms: React.FC = () => {
       fetchGuestHouseReviews();
     }
   }, [id]);
-
-  // Calculate average rating for the guesthouse
+  const ratings = guestHouseReviews.map(r => +r.rating);  
   const averageGuestHouseRating = guestHouseReviews.length > 0 
-    ? (guestHouseReviews.reduce((sum, review) => sum + review.rating, 0) / guestHouseReviews.length).toFixed(1)
-    : 'No reviews';
+  ? parseFloat((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1))
+  : 'No reviews';
 
   const submitReview = async () => {
-    if (!userName.trim() || !reviewText.trim()) {
-      alert('Please enter your name and review');
+    if (!reviewText.trim()) {
+      alert('Please enter your review');
       return;
     }
 
     setReviewSubmitting(true);
 
     try {
+      // Get authenticated user from Supabase
+      const userData = await getCurrentUser();
+      
+      // If no user is authenticated, show an error
+      if (!userData) {
+        alert('You must be logged in to submit a review');
+        setReviewSubmitting(false);
+        return;
+      }
+
       const newReview = {
-        userName,
+        user_id: userData.user_id,
+        email: userData.user_email,
         rating: reviewRating,
-        comment: reviewText,
-        date: new Date().toISOString(),
+        review: reviewText,
+        createdAt: new Date().toISOString(),
         guestHouseId: id
       };
 
@@ -183,11 +194,20 @@ const GuestHouseRooms: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Add the new review to the state
-        setGuestHouseReviews([...guestHouseReviews, newReview]);
+        // Add the new review to the state - format it to match the Review interface
+        const formattedReview: Review = {
+          id: data.review.id || Math.random(),
+          userName: userData.user_email.split('@')[0] || 'Anonymous', // Use email username for display
+          rating: reviewRating,
+          comment: reviewText,
+          date: new Date().toISOString(),
+          user_id: userData.user_id,
+          email: userData.user_email
+        };
+        
+        setGuestHouseReviews([...guestHouseReviews, formattedReview]);
         
         // Reset form
-        setUserName('');
         setReviewText('');
         setReviewRating(5);
         
@@ -264,6 +284,9 @@ const GuestHouseRooms: React.FC = () => {
         
         // Close the modal
         setSelectedRoom(null);
+        
+        // Redirect to profile page
+        navigate('/profile', { state: { activeTab: 'guesthouse' } });
       } else {
         setBookingStatus('error');
         setBookingError(data.message || 'Failed to book room');
@@ -483,40 +506,25 @@ const GuestHouseRooms: React.FC = () => {
                 )}
               </div>
               
-              {/* Write a Review Section */}
+              {/* Write a Review Section - Update this part */}
               <div className="mt-6 pt-4 border-t border-gray-300">
                 <h3 className="text-lg font-semibold mb-3">Write a Review</h3>
                 <div className="space-y-3">
                   <div>
                     <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      Your Name
-                    </label>
-                    <input
-                      type="text"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                      className={`w-full p-2 rounded-lg ${
-                        isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                       Rating
                     </label>
                     <div className="flex items-center">
-                      {[1, 2, 3, 4, 5].map((rating) => (
+                      {[1, 2, 3, 4, 5].map((star) => (
                         <button
-                          key={rating}
+                          key={star}
                           type="button"
-                          onClick={() => setReviewRating(rating)}
+                          onClick={() => setReviewRating(star)}
                           className="focus:outline-none"
                         >
                           <Star
                             className={`h-6 w-6 ${
-                              rating <= reviewRating
-                                ? 'text-yellow-400 fill-yellow-400'
-                                : 'text-gray-300'
+                              star <= reviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
                             }`}
                           />
                         </button>
@@ -530,20 +538,22 @@ const GuestHouseRooms: React.FC = () => {
                     <textarea
                       value={reviewText}
                       onChange={(e) => setReviewText(e.target.value)}
-                      rows={3}
+                      rows={4}
                       className={`w-full p-2 rounded-lg ${
                         isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
                       }`}
+                      placeholder="Share your experience..."
+                      required
                     ></textarea>
                   </div>
                   <button
                     onClick={submitReview}
                     disabled={reviewSubmitting}
-                    className={`w-full py-2 rounded-lg ${
+                    className={`px-4 py-2 rounded-lg ${
                       isDarkMode
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                    } ${reviewSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        ? 'bg-blue-600 hover:bg-blue-700'
+                        : 'bg-blue-500 hover:bg-blue-600'
+                    } text-white w-full ${reviewSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
                   </button>

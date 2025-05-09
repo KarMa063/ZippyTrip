@@ -5,13 +5,12 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-// PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 
-// POST endpoint to handle ticket cancellations
+// POST endpoint to handle guesthouse booking cancellations
 router.post('/cancel', async (req, res) => {
   try {
     const { id } = req.body;
@@ -25,8 +24,8 @@ router.post('/cancel', async (req, res) => {
 
     // Update the booking status to 'cancelled' in the database
     const result = await pool.query(
-      `UPDATE bookings 
-       SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP 
+      `UPDATE gbookings 
+       SET status = 'cancelled'
        WHERE id = $1 
        RETURNING *`,
       [id]
@@ -41,14 +40,14 @@ router.post('/cancel', async (req, res) => {
 
     res.status(200).json({ 
       success: true, 
-      message: 'Ticket cancelled successfully',
+      message: 'Booking cancelled successfully',
       booking: result.rows[0]
     });
   } catch (error) {
-    console.error('Error cancelling ticket:', error);
+    console.error('Error cancelling booking:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to cancel ticket',
+      message: 'Failed to cancel booking',
       error: error.message
     });
   }
