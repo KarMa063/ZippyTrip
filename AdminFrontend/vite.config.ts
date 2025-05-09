@@ -19,9 +19,9 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5173,
+    port: 8087,  // Changed from 8082 to 8087 to avoid conflicts
     host: true,
-    strictPort: true,
+    strictPort: false,  // Allow fallback to another port if 8087 is in use
     hmr: {
       overlay: false
     }
