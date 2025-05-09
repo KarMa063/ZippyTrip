@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../gcomponents/card";
-import { Tabs, TabsContent } from "../gcomponents/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../gcomponents/tabs";
 import { Button } from "../gcomponents/button";
 import {
   Select,
@@ -27,7 +27,7 @@ interface Booking {
   check_in: string;
   check_out: string;
   status: string;
-  // These will be fetched separately
+  checkin_status: 'not_checked_in' | 'checked_in' | 'checked_out';
   traveller_email?: string;
   property_name?: string;
   room_name?: string;
@@ -39,16 +39,15 @@ const GBookings = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
-  
-  // Fetch bookings and related data
+  const [activeTab, setActiveTab] = useState("current");
+
   useEffect(() => {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-        // 1. Fetch basic booking data
         const bookingsResponse = await axios.get('http://localhost:5000/api/bookings');
         const bookingsData = bookingsResponse.data.bookings;
-        
+
         const enrichedBookings = await Promise.all(
           bookingsData.map(async (booking: Booking) => {
             try {
@@ -60,9 +59,9 @@ const GBookings = () => {
               
               return {
                 ...booking,
-                traveller_email: user.data.user.user_email, // Changed from user.data.email
-                property_name: property.data.property.name, // Changed from property.data.name
-                room_name: room.data.room?.name || 'Standard Room' // Adjust based on actual room response
+                traveller_email: user.data.user.user_email,
+                property_name: property.data.property.name,
+                room_name: room.data.room?.name || 'Standard Room'
               };
             } catch (error) {
               console.error(`Error enriching booking ${booking.id}:`, error);
@@ -84,72 +83,85 @@ const GBookings = () => {
         setLoading(false);
       }
     };
-    
+
     fetchBookings();
   }, []);
 
   const handleBookingAction = async (action: string) => {
     if (!selectedBooking) return;
-  
+
     try {
-      let message = "";
-      let updatedStatus = selectedBooking.status;
-  
+      let endpoint = '';
+      let message = '';
+      let payload = {};
+
       switch (action) {
         case "checkin":
-          message = `Check-in processed for ${selectedBooking.traveller_email}`;
+          endpoint = 'check-in';
+          message = `${selectedBooking.traveller_email} has been checked in`;
           break;
         case "checkout":
-          message = `Check-out processed for ${selectedBooking.traveller_email}`;
-          break;
-        case "cancel":
-          updatedStatus = "cancelled";
-          message = `Booking for ${selectedBooking.traveller_email} has been cancelled`;
+          endpoint = 'check-out';
+          message = `${selectedBooking.traveller_email} has been checked out`;
           break;
         case "approve":
-          updatedStatus = "confirmed";
+          endpoint = 'status';
+          payload = { status: 'confirmed' };
           message = `Booking for ${selectedBooking.traveller_email} has been approved`;
           break;
         case "decline":
-          updatedStatus = "declined";
+          endpoint = 'status';
+          payload = { status: 'declined' };
           message = `Booking for ${selectedBooking.traveller_email} has been declined`;
+          break;
+        case "cancel":
+          endpoint = 'status';
+          payload = { status: 'cancelled' };
+          message = `Booking for ${selectedBooking.traveller_email} has been cancelled`;
           break;
         default:
           toast.error('Invalid action');
           return;
       }
-  
-      // Send request to backend using new status endpoint
-      const response = await axios.patch(`http://localhost:5000/api/bookings/${selectedBooking.id}/status`, {
-        status: updatedStatus
-      });
-  
+
+      const response = await axios.patch(
+        `http://localhost:5000/api/bookings/${selectedBooking.id}/${endpoint}`,
+        payload
+      );
+
       if (response.data.success) {
-        // Update local state with the new booking data
-        const updatedBooking = response.data.booking;
-        setBookings(bookings.map(booking =>
-          booking.id === updatedBooking.id
-            ? { ...booking, status: updatedBooking.status }
-            : booking
+        setBookings(bookings.map(booking => 
+          booking.id === selectedBooking.id ? response.data.booking : booking
         ));
-  
         toast.success(message);
-      } else {
-        toast.error('Backend update failed');
       }
     } catch (error) {
       console.error('Error updating booking:', error);
       toast.error('Failed to update booking');
     }
-  
+
     setActionDialog({ open: false, type: '' });
     setSelectedBooking(null);
   };
+
+  // Filter bookings based on active tab
+  const filteredBookings = bookings.filter(booking => {
+    const today = new Date();
+    const checkOutDate = new Date(booking.check_out);
     
-  // Filter by status for list view
-  const statusFilteredBookings = statusFilter === "all" 
-    ? bookings 
-    : bookings.filter(booking => booking.status.toLowerCase() === statusFilter.toLowerCase());
+    if (activeTab === "current") {
+      // Show bookings that are not yet checked out or check-out date is in the future
+      return booking.checkin_status !== 'checked_out' && checkOutDate >= today;
+    } else {
+      // Show bookings that are checked out or check-out date has passed
+      return booking.checkin_status === 'checked_out' || checkOutDate < today;
+    }
+  });
+
+  // Apply additional status filter
+  const statusFilteredBookings = statusFilter === "all"
+    ? filteredBookings
+    : filteredBookings.filter(booking => booking.status.toLowerCase() === statusFilter.toLowerCase());
 
   if (loading) {
     return (
@@ -165,13 +177,18 @@ const GBookings = () => {
         <h1 className="text-3xl font-bold tracking-tight">Bookings</h1>
         <p className="text-muted-foreground">Manage your property bookings</p>
       </div>
-      
-      <Tabs defaultValue="list" className="space-y-6">        
-        <TabsContent value="list">
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="current">Current Bookings</TabsTrigger>
+          <TabsTrigger value="previous">Previous Bookings</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="current">
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>All Bookings</CardTitle>
+                <CardTitle>Current Bookings</CardTitle>
                 <Select 
                   value={statusFilter}
                   onValueChange={(value) => setStatusFilter(value)}
@@ -191,37 +208,38 @@ const GBookings = () => {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-left text-sm font-medium">
-                      <th className="p-3">Property & Room</th>
-                      <th className="p-3">Guest Email</th>
-                      <th className="p-3">Check-in</th>
-                      <th className="p-3">Check-out</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3">Actions</th>
+                    <tr className="border-b text-left text-xs font-medium">
+                      <th className="p-2">Property & Room</th>
+                      <th className="p-2">Guest Email</th>
+                      <th className="p-2">Check-in</th>
+                      <th className="p-2">Check-out</th>
+                      <th className="p-2">Status</th>
+                      <th className="p-2">Check-in Status</th>
+                      <th className="p-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {statusFilteredBookings.map(booking => (
                       <tr key={booking.id} className="border-b">
-                        <td className="p-3">
-                          <div className="font-medium">{booking.property_name || 'Loading...'}</div>
-                          <div className="text-sm text-muted-foreground">
+                        <td className="p-2">
+                          <div className="font-medium text-sm">{booking.property_name || 'Loading...'}</div>
+                          <div className="text-xs text-muted-foreground">
                             Room {booking.room_name || 'Loading...'}
                           </div>
                         </td>
-                        <td className="p-3">
-                          <div>{booking.traveller_email || 'Loading...'}</div>
+                        <td className="p-2 text-xs">
+                          {booking.traveller_email || 'Loading...'}
                         </td>
-                        <td className="p-3">
+                        <td className="p-2 text-xs">
                           {new Date(booking.check_in).toLocaleDateString()}
                         </td>
-                        <td className="p-3">
+                        <td className="p-2 text-xs">
                           {new Date(booking.check_out).toLocaleDateString()}
                         </td>
-                        <td className="p-3">
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                        <td className="p-2 text-xs">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
                             booking.status === 'confirmed' 
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
                               : booking.status === 'pending'
@@ -233,7 +251,19 @@ const GBookings = () => {
                             {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                           </span>
                         </td>
-                        <td className="p-3">
+                        <td className="p-2 text-xs">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
+                            booking.checkin_status === 'checked_in' 
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
+                              : booking.checkin_status === 'checked_out'
+                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+                          }`}>
+                            {booking.checkin_status === 'checked_in' ? 'Checked In' :
+                            booking.checkin_status === 'checked_out' ? 'Checked Out' : 'Not Checked In'}
+                          </span>
+                        </td>
+                        <td className="p-2">
                           <div className="flex gap-2">
                             {booking.status === 'pending' && (
                               <>
@@ -261,26 +291,30 @@ const GBookings = () => {
                             )}
                             {booking.status === 'confirmed' && (
                               <>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedBooking(booking);
-                                    setActionDialog({ open: true, type: 'checkin' });
-                                  }}
-                                >
-                                  Check-in
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedBooking(booking);
-                                    setActionDialog({ open: true, type: 'checkout' });
-                                  }}
-                                >
-                                  Check-out
-                                </Button>
+                                {booking.checkin_status !== 'checked_in' && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedBooking(booking);
+                                      setActionDialog({ open: true, type: 'checkin' });
+                                    }}
+                                  >
+                                    Check-in
+                                  </Button>
+                                )}
+                                {booking.checkin_status === 'checked_in' && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedBooking(booking);
+                                      setActionDialog({ open: true, type: 'checkout' });
+                                    }}
+                                  >
+                                    Check-out
+                                  </Button>
+                                )}
                               </>
                             )}
                             <Button 
@@ -299,6 +333,101 @@ const GBookings = () => {
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="previous">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Previous Bookings</CardTitle>
+                <Select 
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="declined">Declined</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs font-medium">
+                      <th className="p-2">Property & Room</th>
+                      <th className="p-2">Guest Email</th>
+                      <th className="p-2">Check-in</th>
+                      <th className="p-2">Check-out</th>
+                      <th className="p-2">Status</th>
+                      <th className="p-2">Check-in Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statusFilteredBookings.length > 0 ? (
+                      statusFilteredBookings.map(booking => (
+                        <tr key={booking.id} className="border-b">
+                          <td className="p-2">
+                            <div className="font-medium text-sm">{booking.property_name || 'Loading...'}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Room {booking.room_name || 'Loading...'}
+                            </div>
+                          </td>
+                          <td className="p-2 text-xs">
+                            {booking.traveller_email || 'Loading...'}
+                          </td>
+                          <td className="p-2 text-xs">
+                            {new Date(booking.check_in).toLocaleDateString()}
+                          </td>
+                          <td className="p-2 text-xs">
+                            {new Date(booking.check_out).toLocaleDateString()}
+                          </td>
+                          <td className="p-2 text-xs">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
+                              booking.status === 'confirmed' 
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
+                                : booking.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                                  : booking.status === 'declined'
+                                    ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+                            }`}>
+                              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="p-2 text-xs">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
+                              booking.checkin_status === 'checked_in' 
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
+                                : booking.checkin_status === 'checked_out'
+                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+                            }`}>
+                              {booking.checkin_status === 'checked_in' ? 'Checked In' :
+                              booking.checkin_status === 'checked_out' ? 'Checked Out' : 'Not Checked In'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                          No previous bookings found
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -328,6 +457,8 @@ const GBookings = () => {
                 <p><span className="font-medium">Check-in Date:</span> {new Date(selectedBooking.check_in).toLocaleDateString()}</p>
                 <p><span className="font-medium">Check-out Date:</span> {new Date(selectedBooking.check_out).toLocaleDateString()}</p>
                 <p><span className="font-medium">Current Status:</span> {selectedBooking.status.charAt(0).toUpperCase() + selectedBooking.status.slice(1)}</p>
+                <p><span className="font-medium">Check-in Status:</span> {selectedBooking.checkin_status === 'checked_in' ? 'Checked In' :
+                   selectedBooking.checkin_status === 'checked_out' ? 'Checked Out' : 'Not Checked In'}</p>
               </div>
               {(actionDialog.type === 'cancel' || actionDialog.type === 'decline') && (
                 <div className="mt-4 p-3 bg-destructive/10 rounded-md text-destructive text-sm">

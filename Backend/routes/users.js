@@ -69,7 +69,6 @@ router.get('/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      console.log(`User with ID ${id} not found.`);
       return res.status(404).json({ error: 'User not found' });
     }
     res.json({ user: result.rows[0] });
