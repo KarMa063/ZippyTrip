@@ -139,7 +139,7 @@ export default function Flights() {
                 <TableCell>{flight.departure}</TableCell>
                 <TableCell>{flight.destination}</TableCell>
                 <TableCell>{flight.departureTime}</TableCell>
-                <TableCell>${flight.price}</TableCell>
+                <TableCell>NPR {flight.price}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className={getStatusColor(flight.status)}>
                     {flight.status === 'on-time' ? 'On Time' : 

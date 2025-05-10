@@ -87,7 +87,7 @@ export default function SignIn() {
         <div className="diamond-bg diamond-bg-3"></div>
       </div>
       
-      {/* Center container - changed to flex with justify-center */}
+      {/* Center container - fixed to properly center content */}
       <div className="flex justify-center items-center w-full z-10">
         {/* Online status indicator */}
         <div className="absolute top-4 right-4 flex items-center text-sm">
@@ -97,7 +97,7 @@ export default function SignIn() {
           </span>
         </div>
         
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center">
           <div className="logo-container mb-4">
             <div className="text-zippy-blue mr-2 logo-icon">
               <Plane size={40} />
