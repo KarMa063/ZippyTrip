@@ -20,7 +20,7 @@ interface GuestHouse {
     address: string;
     email?: string;
     contact?: string;
-    images: string[] | any; // Updated to handle both string[] and JSON object
+    images: string[] | any;
     rooms: number;
     location?: string;
     price?: number;
