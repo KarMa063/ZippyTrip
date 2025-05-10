@@ -25,7 +25,7 @@ interface Review {
   date: string;
   user_id?: string;
   email?: string;
-  ownerReply?: string; // Changed from OwnerReply to ownerReply
+  ownerReply?: string;
 }
 
 const GuestHouseRooms: React.FC = () => {
@@ -310,7 +310,6 @@ const GuestHouseRooms: React.FC = () => {
             console.log('Booking confirmation email sent successfully');
           } catch (emailError) {
             console.error('Failed to send booking confirmation email:', emailError);
-            // Continue with booking process even if email fails
           }
         }
         
@@ -432,7 +431,14 @@ const GuestHouseRooms: React.FC = () => {
                   {guestHouse && (
                     <button 
                       className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
-                      onClick={() => setSelectedRoom(null)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const chatWidget = document.querySelector('.fixed.bottom-4.right-4.z-50 button');
+                        if (chatWidget && chatWidget instanceof HTMLElement) {
+                          chatWidget.click();
+                        }
+                      }}
                     >
                       <MessageSquare className="h-4 w-4 inline mr-2" />
                       Chat with Owner
@@ -742,7 +748,7 @@ const GuestHouseRooms: React.FC = () => {
       {guestHouse && (
         <ChatWidget 
           guestHouseId={id as string} 
-          ownerId={guestHouse.ownerId} 
+          ownerId={"1"} 
         />
       )}
     </div>

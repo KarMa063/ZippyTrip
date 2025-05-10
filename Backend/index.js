@@ -5,6 +5,7 @@ const { router: guestHousePropertiesRouter, propertyTableExists } = require('./g
 const { router: guestHouseRoomsRouter, createRoomsTable } = require('./guesthouse/rooms');
 const { router: bookingsRoutes, bookingsTableExists } = require('./guesthouse/bookings');
 const { router: reviewsRouter, createReviewsTable } = require('./guesthouse/reviews');
+const { router: chatRouter, createChatMessagesTable } = require('./guesthouse/chat');
 const { router: busRoutesRouter, createRoutesTable } = require('./routes/busRoutes');
 const { router: busBookingsRouter, createBookingsTable } = require('./routes/bookingRoutes');
 const { router: preferencesRouter, preferencesTableExists } = require('./routes/preferences');
@@ -28,6 +29,8 @@ bookingsTableExists();
 createReviewsTable();
 preferencesTableExists();
 usersTableExists();
+// Initialize tables
+createChatMessagesTable();
 
 // Middleware
 app.use(cors());
@@ -37,6 +40,7 @@ app.use(express.json());
 app.use('/api/gproperties', guestHousePropertiesRouter);
 app.use('/api/gproperties', guestHouseRoomsRouter);
 app.use('/api/gproperties', reviewsRouter);
+app.use('/api/gproperties', chatRouter);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/routes', busRoutesRouter);
 app.use('/api/bus-bookings', busBookingsRouter);
@@ -61,6 +65,7 @@ app.use((err, req, res, next) => {
 
 // Use the guesthouse authentication route
 app.use('/api/guesthouse-auth', guesthouseAuthRoutes);
+
 
 // Start server
 const PORT = process.env.PORT || 5000;

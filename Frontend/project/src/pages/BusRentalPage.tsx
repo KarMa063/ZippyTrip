@@ -105,11 +105,11 @@ const BusRentalPage: React.FC = () => {
 
   // Helper function to generate seats
   const generateSeats = (availableSeats: number) => {
-    const totalSeats = availableSeats + Math.floor(availableSeats * 0.3); // Adding some booked seats
+    const totalSeats = availableSeats + Math.floor(availableSeats * 0.3);
     return Array.from({ length: totalSeats }, (_, i) => ({
       id: `seat-${i + 1}`,
       number: `${i + 1}`,
-      isBooked: i >= availableSeats, // Mark seats as booked if they exceed available seats
+      isBooked: i >= availableSeats,
       type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
     }));
   };

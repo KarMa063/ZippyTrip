@@ -68,7 +68,8 @@ const GuestHouseBooking: React.FC = () => {
                         
                         return {
                             ...property,
-                            images: processedImages
+                            images: processedImages,
+                            ownerId: property.owner_id,
                         };
                     });
                     
@@ -216,7 +217,7 @@ const GuestHouseBooking: React.FC = () => {
                 <ChatWidget 
                     key={guestHouse.id}
                     guestHouseId={guestHouse.id.toString()} 
-                    ownerId={guestHouse.ownerId} 
+                    ownerId={'1'} 
                 />
             ))}
         </div>
