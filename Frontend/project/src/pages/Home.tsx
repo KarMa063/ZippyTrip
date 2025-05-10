@@ -2,9 +2,6 @@ import './Home.css'; // Import external CSS for animations
 import Navigation from './Navigation';
 import BackgroundCarousel from './BackgroundCarousel';
 import PopularDestinations from './PopularDestinations';
-import { getCurrentUser } from '../lib/supabase';
-
-getCurrentUser();
 
 const Home = () => {
   return (

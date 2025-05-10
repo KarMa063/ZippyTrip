@@ -15,7 +15,6 @@ import {
   AlertDialogTrigger,
 } from "../gcomponents/alert-dialog";
 import { Search, Plus, Edit, Trash2 } from "lucide-react";
-import placeholderImage from "../images/placeholder.png";
 
 type Property = {
   id: string;
@@ -24,7 +23,7 @@ type Property = {
   description?: string;
   contact: string;
   email?: string;
-  images: string[];
+  images: string;
   rooms: number;
 };
 
@@ -109,7 +108,7 @@ const GProperties = () => {
               <Link to={`/gproperties/${property.id}`}>
                 <div className="aspect-video overflow-hidden">
                   <img
-                    src={property.images?.[0]}
+                    src={property.images}
                     alt={property.name}
                     className="object-cover w-full h-full group-hover:scale-105 transition-transform"
                   />

@@ -1,10 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { propertyTableExists } = require('./guesthouse/properties');
+const { router: guestHousePropertiesRouter, propertyTableExists } = require('./guesthouse/properties');
 const { router: guestHouseRoomsRouter, createRoomsTable } = require('./guesthouse/rooms');
 const { router: bookingsRoutes, bookingsTableExists } = require('./guesthouse/bookings');
-const { router: reviewsRouter, createReviewsTable } = require('./guesthouse/reviews'); // Add this line
+const { router: reviewsRouter, createReviewsTable } = require('./guesthouse/reviews');
 const { router: busRoutesRouter, createRoutesTable } = require('./routes/busRoutes');
 const { router: busBookingsRouter, createBookingsTable } = require('./routes/bookingRoutes');
 const { router: preferencesRouter, preferencesTableExists } = require('./routes/preferences');
@@ -34,6 +34,7 @@ app.use(cors());
 app.use(express.json());
 
 // Mount the routers
+app.use('/api/gproperties', guestHousePropertiesRouter);
 app.use('/api/gproperties', guestHouseRoomsRouter);
 app.use('/api/gproperties', reviewsRouter);
 app.use('/api/bookings', bookingsRoutes);
@@ -44,33 +45,6 @@ app.use('/api/users', usersRouter);
 // Health check route
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
-});
-
-// Properties routes
-app.get('/api/gproperties', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM properties');
-    res.json({ success: true, properties: result.rows });
-  } catch (error) {
-    console.error('Error fetching properties:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch properties' });
-  }
-});
-
-app.get('/api/gproperties/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Property not found' });
-    }
-    
-    res.json({ success: true, property: result.rows[0] });
-  } catch (error) {
-    console.error('Error fetching property:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch property' });
-  }
 });
 
 // Error handling middleware
