@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Moon, Sun, MapPin, Users, Calendar, ArrowLeft, Star, MessageSquare, X } from 'lucide-react';
 import ChatWidget from '../components/ChatWidget';
 import { getCurrentUser } from '../lib/supabase';
+import { sendRoomBookingConfirmation } from './EmailController';
 
 interface Room {
   id: number;
@@ -41,38 +42,60 @@ const GuestHouseRooms: React.FC = () => {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
-  const [reviewSubmitting, setReviewSubmitting] = useState(false); 
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [guestHouseReviews, setGuestHouseReviews] = useState<Review[]>([]);
   const [dateFilteredRooms, setDateFilteredRooms] = useState<Room[]>([]);
 
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        // Include check-in and check-out dates in the request if they are set
         let url = `http://localhost:5000/api/gproperties/${id}/rooms`;
         if (checkInDate && checkOutDate) {
           url += `?check_in=${checkInDate}&check_out=${checkOutDate}`;
         }
-        
+
         const response = await fetch(url);
         const data = await response.json();
         if (data.success) {
-          const formattedRooms = data.rooms.map((room: Room) => ({
-            ...room,
-            isAvailable: room.isAvailable === undefined ? true : room.isAvailable,
-            reviews: room.reviews || []
-          }));
+          const formattedRooms = data.rooms.map((room: Room) => {
+            // Process images
+            let processedImages = [];
+            
+            if (room.images) {
+              if (typeof room.images === 'string') {
+                try {
+                  // Try to parse if it's a JSON string
+                  processedImages = JSON.parse(room.images);
+                } catch (e) {
+                  // If parsing fails, use as is
+                  processedImages = [room.images];
+                }
+              } else if (Array.isArray(room.images)) {
+                processedImages = room.images;
+              } else if (typeof room.images === 'object') {
+                // If it's already an object (parsed JSONB)
+                processedImages = Object.values(room.images);
+              }
+            }
+            
+            return {
+              ...room,
+              images: processedImages,
+              isAvailable: room.isAvailable === undefined ? true : room.isAvailable,
+              reviews: room.reviews || []
+            };
+          });
+          
           setRooms(formattedRooms);
           setDateFilteredRooms(formattedRooms);
-          
-          // Fetch the full guesthouse details to get description and address
+
           const guestHouseResponse = await fetch(`http://localhost:5000/api/gproperties/${id}`);
           const guestHouseData = await guestHouseResponse.json();
-          
+
           if (guestHouseData.success) {
             setGuestHouse({
               ...guestHouseData.property,
-              name: data.guestHouse.name || guestHouseData.property.name,
+              name: data.guestHouse?.name || guestHouseData.property.name,
               location: guestHouseData.property.address
             });
           } else {
@@ -94,44 +117,37 @@ const GuestHouseRooms: React.FC = () => {
     }
   }, [id, checkInDate, checkOutDate]);
 
-  // Date Selection Component
-  const DateSelectionComponent = () => {
-    return (
-      <div className={`mb-6 p-4 rounded-lg shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <h3 className="text-lg font-semibold mb-3">Select Dates</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Check-in Date
-            </label>
-            <input
-              type="date"
-              value={checkInDate}
-              onChange={(e) => setCheckInDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-              className={`w-full p-2 rounded-lg ${
-                isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
-              }`}
-            />
-          </div>
-          <div>
-            <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Check-out Date
-            </label>
-            <input
-              type="date"
-              value={checkOutDate}
-              onChange={(e) => setCheckOutDate(e.target.value)}
-              min={checkInDate || new Date().toISOString().split('T')[0]}
-              className={`w-full p-2 rounded-lg ${
-                isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
-              }`}
-            />
-          </div>
+  const DateSelectionComponent = () => (
+    <div className={`mb-6 p-4 rounded-lg shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+      <h3 className="text-lg font-semibold mb-3">Select Dates</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            Check-in Date
+          </label>
+          <input
+            type="date"
+            value={checkInDate}
+            onChange={(e) => setCheckInDate(e.target.value)}
+            min={new Date().toISOString().split('T')[0]}
+            className={`w-full p-2 rounded-lg ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'}`}
+          />
+        </div>
+        <div>
+          <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            Check-out Date
+          </label>
+          <input
+            type="date"
+            value={checkOutDate}
+            onChange={(e) => setCheckOutDate(e.target.value)}
+            min={checkInDate || new Date().toISOString().split('T')[0]}
+            className={`w-full p-2 rounded-lg ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'}`}
+          />
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 
   useEffect(() => {
     const fetchGuestHouseReviews = async () => {
@@ -139,7 +155,11 @@ const GuestHouseRooms: React.FC = () => {
         const response = await fetch(`http://localhost:5000/api/gproperties/${id}/reviews`);
         const data = await response.json();
         if (data.success) {
-          setGuestHouseReviews(data.reviews || []);
+          const reviewsWithDates = data.reviews.map((review: any) => ({
+            ...review,
+            date: review.date || review.createdAt || new Date().toISOString()
+          }));
+          setGuestHouseReviews(reviewsWithDates);
         }
       } catch (err) {
         console.error('Error fetching guesthouse reviews:', err);
@@ -150,10 +170,11 @@ const GuestHouseRooms: React.FC = () => {
       fetchGuestHouseReviews();
     }
   }, [id]);
-  const ratings = guestHouseReviews.map(r => +r.rating);  
-  const averageGuestHouseRating = guestHouseReviews.length > 0 
-  ? parseFloat((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1))
-  : 'No reviews';
+
+  const ratings = guestHouseReviews.map(r => +r.rating);
+  const averageGuestHouseRating = guestHouseReviews.length > 0
+    ? parseFloat((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1))
+    : 'No reviews';
 
   const submitReview = async () => {
     if (!reviewText.trim()) {
@@ -164,10 +185,7 @@ const GuestHouseRooms: React.FC = () => {
     setReviewSubmitting(true);
 
     try {
-      // Get authenticated user from Supabase
       const userData = await getCurrentUser();
-      
-      // If no user is authenticated, show an error
       if (!userData) {
         alert('You must be logged in to submit a review');
         setReviewSubmitting(false);
@@ -185,36 +203,30 @@ const GuestHouseRooms: React.FC = () => {
 
       const response = await fetch(`http://localhost:5000/api/gproperties/${id}/reviews`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newReview),
       });
-
       const data = await response.json();
 
       if (data.success) {
-        // Add the new review to the state - format it to match the Review interface
         const formattedReview: Review = {
-          id: data.review.id || Math.random(),
-          userName: userData.user_email.split('@')[0] || 'Anonymous', // Use email username for display
+          id: data.review.id,
+          userName: userData.user_email.split('@')[0] || 'Anonymous',
           rating: reviewRating,
           comment: reviewText,
-          date: new Date().toISOString(),
+          date: data.review.createdat,
           user_id: userData.user_id,
           email: userData.user_email
         };
-        
+
         setGuestHouseReviews([...guestHouseReviews, formattedReview]);
-        
-        // Reset form
         setReviewText('');
         setReviewRating(5);
-        
         alert('Thank you for your review!');
       } else {
         alert('Failed to submit review. Please try again.');
       }
+
     } catch (err) {
       console.error('Error submitting review:', err);
       alert('An error occurred while submitting your review.');
@@ -271,6 +283,35 @@ const GuestHouseRooms: React.FC = () => {
       
       if (data.success) {
         setBookingStatus('success');
+        
+        // Find the booked room
+        const bookedRoom = rooms.find(room => room.id === roomId);
+        
+        // Send email confirmation
+        if (bookedRoom) {
+          try {
+            // Import the email function
+            const { sendRoomBookingConfirmation } = await import('../pages/EmailController');
+            
+            await sendRoomBookingConfirmation({
+              email: userData.user_email,
+              guestName: userData.user_name || userData.user_email.split('@')[0],
+              guestHouseName: guestHouse?.name || 'Guesthouse',
+              roomName: bookedRoom.name,
+              checkInDate: checkInDate,
+              checkOutDate: checkOutDate,
+              price: bookedRoom.price,
+              location: guestHouse?.location || 'N/A',
+              guests: bookedRoom.capacity
+            });
+            
+            console.log('Booking confirmation email sent successfully');
+          } catch (emailError) {
+            console.error('Failed to send booking confirmation email:', emailError);
+            // Continue with booking process even if email fails
+          }
+        }
+        
         alert('Room booked successfully!');
         
         // Update the room's availability in both state variables
@@ -278,14 +319,10 @@ const GuestHouseRooms: React.FC = () => {
           room.id === roomId ? { ...room, isAvailable: false } : room
         );
         setRooms(updatedRooms);
-        setDateFilteredRooms(updatedRooms.map(room => 
-          room.id === roomId ? { ...room, isAvailable: false } : room
-        ));
+        setDateFilteredRooms(updatedRooms);
         
-        // Close the modal
+        // Close the modal and redirect to profile page
         setSelectedRoom(null);
-        
-        // Redirect to profile page
         navigate('/profile', { state: { activeTab: 'guesthouse' } });
       } else {
         setBookingStatus('error');
@@ -295,8 +332,8 @@ const GuestHouseRooms: React.FC = () => {
     } catch (err) {
       console.error('Error booking room:', err);
       setBookingStatus('error');
-      setBookingError('An error occurred while booking the room');
-      alert('An error occurred while booking the room. Please try again.');
+      setBookingError('An unexpected error occurred');
+      alert('An error occurred while booking the room.');
     }
   };
 
@@ -470,7 +507,7 @@ const GuestHouseRooms: React.FC = () => {
                 <div className="flex items-center">
                   <div className="flex mr-2">
                     {averageGuestHouseRating !== 'No reviews' ? (
-                      renderStars(Math.round(parseFloat(averageGuestHouseRating as string)))
+                      renderStars(Math.round(averageGuestHouseRating))
                     ) : null}
                   </div>
                   <span className="font-bold">{averageGuestHouseRating}</span>
@@ -495,7 +532,7 @@ const GuestHouseRooms: React.FC = () => {
                         {review.comment}
                       </p>
                       <div className={`text-xs mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {new Date(review.date).toLocaleDateString()}
+                        {review.date ? new Date(review.date).toLocaleDateString() : 'No date available'}
                       </div>
                     </div>
                   ))

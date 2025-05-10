@@ -20,13 +20,14 @@ interface GuestHouse {
     address: string;
     email?: string;
     contact?: string;
-    images: string[];
+    images: string[] | any; // Updated to handle both string[] and JSON object
     rooms: number;
     location?: string;
     price?: number;
     rating?: number;
     amenities?: string[];
     reviews?: Review[];
+    ownerId?: string;
 }
 
 const GuestHouseBooking: React.FC = () => {
@@ -43,7 +44,35 @@ const GuestHouseBooking: React.FC = () => {
                 const data = await response.json();
 
                 if (Array.isArray(data.properties)) {
-                    setGuestHousesList(data.properties);
+                    // Process the properties to ensure images are in the correct format
+                    const processedProperties = data.properties.map((property: any) => {
+                        let processedImages = [];
+                        
+                        // Handle different image formats from the backend
+                        if (property.images) {
+                            if (typeof property.images === 'string') {
+                                try {
+                                    // Try to parse if it's a JSON string
+                                    processedImages = JSON.parse(property.images);
+                                } catch (e) {
+                                    // If parsing fails, use as is
+                                    processedImages = [property.images];
+                                }
+                            } else if (Array.isArray(property.images)) {
+                                processedImages = property.images;
+                            } else if (typeof property.images === 'object') {
+                                // If it's already an object (parsed JSONB)
+                                processedImages = Object.values(property.images);
+                            }
+                        }
+                        
+                        return {
+                            ...property,
+                            images: processedImages
+                        };
+                    });
+                    
+                    setGuestHousesList(processedProperties);
                 } else {
                     console.error('Unexpected response shape:', data);
                     setError('Unexpected data format');
@@ -61,6 +90,26 @@ const GuestHouseBooking: React.FC = () => {
 
     const handleViewRooms = (guestHouseId: number) => {
         navigate(`/guesthouse/${guestHouseId}/rooms`);
+    };
+
+    // Helper function to get image URL
+    const getImageUrl = (images: any, index: number = 0): string => {
+        if (!images || images.length === 0) {
+            return '/placeholder-image.jpg';
+        }
+        
+        const image = images[index];
+        // Check if the image is a full URL or just a path
+        if (typeof image === 'string') {
+            if (image.startsWith('http')) {
+                return image;
+            } else {
+                // If it's a relative path, prepend the backend URL
+                return `http://localhost:5000/${image}`;
+            }
+        }
+        
+        return '/placeholder-image.jpg';
     };
 
     return (
@@ -107,9 +156,13 @@ const GuestHouseBooking: React.FC = () => {
                                 >
                                     <div className="relative h-56">
                                         <img
-                                            src={guestHouse.images?.[0] || '/placeholder-image.jpg'}
+                                            src={getImageUrl(guestHouse.images)}
                                             alt={guestHouse.name}
                                             className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.src = '/placeholder-image.jpg';
+                                            }}
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                         <div className="absolute bottom-4 left-4 text-white">

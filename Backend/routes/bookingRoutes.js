@@ -34,6 +34,7 @@ async function createBookingsTable() {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         origin TEXT,
         destination TEXT,
+        email TEXT,
         CONSTRAINT bookings_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_profiles (id) ON DELETE CASCADE,
         CONSTRAINT bookings_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES schedules (id) ON DELETE SET NULL
       );
@@ -58,7 +59,8 @@ router.post('/', async (req, res) => {
     payment_method, 
     booking_date,
     origin,
-    destination
+    destination,
+    email
   } = req.body;
   
   if (!user_id) {
@@ -70,8 +72,8 @@ router.post('/', async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO bookings 
-        (user_id, schedule_id, seat_numbers, total_fare, status, payment_status, payment_method, booking_date, origin, destination)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        (user_id, schedule_id, seat_numbers, total_fare, status, payment_status, payment_method, booking_date, origin, destination, email)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         user_id, 
@@ -83,7 +85,8 @@ router.post('/', async (req, res) => {
         payment_method, 
         booking_date,
         origin,
-        destination
+        destination,
+        email
       ]
     );
     

@@ -34,10 +34,9 @@ async function createReviewsTable() {
 // POST route to create a review
 router.post('/:propertyId/reviews', async (req, res) => {
   const { propertyId } = req.params;
-  const { user_id, email, rating, review, createdAt } = req.body;
+  const { user_id, email, rating, review } = req.body;
 
   try {
-    // Check if the propertyId exists in the properties table
     const propertyCheck = await pool.query(
       'SELECT id FROM properties WHERE id = $1',
       [propertyId]
@@ -47,20 +46,12 @@ router.post('/:propertyId/reviews', async (req, res) => {
       return res.status(404).json({ success: false, message: "Property not found" });
     }
 
-    // If property exists, proceed with review insertion
     const result = await pool.query(
       `INSERT INTO guesthouse_reviews 
-        (property_id, user_id, email, rating, review, createdAt)
-       VALUES ($1, $2, $3, $4, $5, $6)
+        (property_id, user_id, email, rating, review)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [
-        propertyId,
-        user_id,
-        email,
-        rating,
-        review,
-        createdAt || new Date()
-      ]
+      [propertyId, user_id, email, rating, review]
     );
 
     res.status(201).json({ success: true, review: result.rows[0] });
@@ -82,11 +73,11 @@ router.get('/:propertyId/reviews', async (req, res) => {
 
     const formattedReviews = reviewsResult.rows.map(review => ({
       id: review.id,
-      userName: review.email.split('@')[0] || 'Anonymous', // Using email instead of user_id for display
+      userName: review.email.split('@')[0] || 'Anonymous',
       rating: review.rating,
       comment: review.review,
       date: review.createdAt,
-      email: review.email // Include full email for reference
+      email: review.email
     }));
 
     res.status(200).json({

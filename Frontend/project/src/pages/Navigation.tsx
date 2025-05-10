@@ -175,40 +175,19 @@ const Navigation: React.FC = () => {
               <Bell className="h-5 w-5 hover-text" />
             </button>
 
-            <div className="relative">
-              <button
-                ref={serviceButtonRef}
-                onClick={() => setServiceMenuOpen((prev) => !prev)}
-                className={`flex items-center space-x-2 border-2 ${
-                  isDarkMode
-                    ? 'border-blue-400 text-blue-400 hover:bg-gray-800'
-                    : 'border-blue-600 text-blue-600 hover:bg-blue-50'
-                } rounded-full px-4 py-1 transition-colors`}
-              >
-                <span className="font-medium hover-text">List your Services</span>
-              </button>
-              {serviceMenuOpen && (
-                <div
-                  ref={serviceMenuRef}
-                  className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-1 z-50"
-                >
-                  <button
-                    onClick={handleGuestHouseOwnerClick}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 flex items-center"
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    List your GuestHouse
-                  </button>
-                  <button
-                    onClick={handleBusOperatorClick}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 flex items-center"
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    List your bus services
-                  </button>
-                </div>
-              )}
-            </div>
+<div className="relative">
+  <button
+    onClick={handleGuestHouseOwnerClick} // Directly call the login function
+    className={`flex items-center space-x-2 border-2 ${
+      isDarkMode
+        ? 'border-blue-400 text-blue-400 hover:bg-gray-800'
+        : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+    } rounded-full px-4 py-1 transition-colors`}
+  >
+    <span className="font-medium hover-text">List your Guesthouse</span>
+  </button>
+</div>
+
 
             <div className="relative">
               <button
