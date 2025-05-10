@@ -465,7 +465,7 @@ export function Attractions() {
               <Card key={attraction.id} className="bg-zippy-darker border-white/[0.03] text-white overflow-hidden">
                 <div className="h-48 overflow-hidden relative">
                   <img 
-                    src={attraction.image_url} 
+                    src={attraction.image} 
                     alt={attraction.name} 
                     className="w-full h-full object-cover"
                   />
@@ -564,7 +564,7 @@ export function Attractions() {
               <div className="space-y-4">
                 <div className="h-48 overflow-hidden rounded-lg">
                   <img 
-                    src={selectedAttraction.image_url} 
+                    src={selectedAttraction.image}
                     alt={selectedAttraction.name} 
                     className="w-full h-full object-cover"
                   />
