@@ -25,6 +25,7 @@ interface Review {
   date: string;
   user_id?: string;
   email?: string;
+  ownerReply?: string; // Changed from OwnerReply to ownerReply
 }
 
 const GuestHouseRooms: React.FC = () => {
@@ -153,11 +154,12 @@ const GuestHouseRooms: React.FC = () => {
     const fetchGuestHouseReviews = async () => {
       try {
         const response = await fetch(`http://localhost:5000/api/gproperties/${id}/reviews`);
-        const data = await response.json();
+        const data = await response.json();        
         if (data.success) {
           const reviewsWithDates = data.reviews.map((review: any) => ({
             ...review,
-            date: review.date || review.createdAt || new Date().toISOString()
+            date: review.date || review.createdAt || null,
+            ownerReply: review.ownerReply || review.owner_reply || null
           }));
           setGuestHouseReviews(reviewsWithDates);
         }
@@ -534,6 +536,16 @@ const GuestHouseRooms: React.FC = () => {
                       <div className={`text-xs mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         {review.date ? new Date(review.date).toLocaleDateString() : 'No date available'}
                       </div>
+                      
+                      {/* Owner Reply Section */}
+                      {review.ownerReply && (
+                        <div className={`mt-3 pl-3 border-l-2 ${isDarkMode ? 'border-blue-500 bg-gray-700' : 'border-blue-500 bg-blue-50'} p-2 rounded`}>
+                          <div className="font-medium text-sm mb-1">Owner Reply:</div>
+                          <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            {review.ownerReply}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (

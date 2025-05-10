@@ -32,8 +32,12 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+// List of allowed guesthouse owner emails
+const ALLOWED_GUESTHOUSE_EMAILS = ['zippytrip101@gmail.com', 'zippyguest'];
+
 const GLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
@@ -46,9 +50,25 @@ const GLogin = () => {
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
+    setAuthError(null);
+    
     try {
-      console.log("Login attempt with:", data);
+      // Check if email is in the allowed list
+      if (!ALLOWED_GUESTHOUSE_EMAILS.includes(data.email)) {
+        setAuthError("You are not authorized to access the guesthouse owner portal.");
+        toast.error("Unauthorized access attempt");
+        return;
+      }
+      
+      // For demo purposes, we're using a timeout to simulate API call
+      // In a real app, you would make an API call to your backend
       setTimeout(() => {
+        // Store authentication info in localStorage
+        localStorage.setItem('guesthouseOwner', JSON.stringify({
+          email: data.email,
+          role: "guesthouse_owner"
+        }));
+        
         toast.success("Login successful. Welcome back!");
         navigate("/gdashboard");
       }, 1000);
@@ -81,6 +101,12 @@ const GLogin = () => {
           </CardHeader>
 
           <CardContent className="space-y-4">
+            {authError && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {authError}
+              </div>
+            )}
+            
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -128,11 +154,11 @@ const GLogin = () => {
                   )}
                 />
 
-                <Button type="submit" className="w-full">
-                      <span className="flex items-center gap-2">
-                      <LogIn className="h-4 w-4" />
-                      Log in
-                    </span>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  <span className="flex items-center gap-2">
+                    <LogIn className="h-4 w-4" />
+                    {isLoading ? "Logging in..." : "Log in"}
+                  </span>
                 </Button>
               </form>
             </Form>
@@ -140,7 +166,7 @@ const GLogin = () => {
 
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-sm text-center text-muted-foreground">
-              Don’t have an account?{" "}
+              Don't have an account?{" "}
               <Link to="/gsignup" className="text-primary underline-offset-4 hover:underline">
                 Sign up
               </Link>
