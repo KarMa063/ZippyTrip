@@ -6,9 +6,6 @@ import BackgroundCarousel from './BackgroundCarousel';
 import PopularDestinations from './PopularDestinations';
 import SearchBar from './SearchBar';
 import TripPlanner from './TripPlanner';
-import { getCurrentUser } from '../lib/supabase';
-
-getCurrentUser();
 
 const Home = () => {
   return (

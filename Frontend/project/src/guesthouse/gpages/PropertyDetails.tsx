@@ -72,8 +72,6 @@ const PropertyDetails = () => {
         throw new Error("Failed to load reviews");
       }
 
-      console.log(reviewsData.reviews.map((review: Review) => review.rating));
-
     const averageRating = 
       reviewsData.reviews.length > 0
         ? reviewsData.reviews.reduce((total: number, review: Review) => total + Number(review.rating), 0) / reviewsData.reviews.length
@@ -268,7 +266,7 @@ const PropertyDetails = () => {
               <Card key={room.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
                 <div className="relative">
                   <img 
-                    src={room.image} 
+                    src={room.images} 
                     alt={room.name} 
                     className="h-48 w-full object-cover rounded-t-lg"
                   />

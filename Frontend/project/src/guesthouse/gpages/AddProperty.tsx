@@ -1,29 +1,26 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Input } from "../gcomponents/input";
 import { Textarea } from "../gcomponents/textarea";
 import { Button } from "../gcomponents/button";
-import { UploadCloud } from "lucide-react";
-import { useDropzone } from "react-dropzone";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import placeholderImage from "../images/placeholder.png";
+
+interface PropertyFormData {
+  name: string;
+  description: string;
+  streetAddress: string;
+  city: string;
+  district: string;
+  email: string;
+  phoneNumber: string;
+  images: string;
+  rooms: number;
+}
 
 export default function AddProperty() {
-  const form = useForm();
+  const form = useForm<PropertyFormData>();
   const navigate = useNavigate();
-  const [images, setImages] = useState<string[]>([]);
 
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: { 'image/*': [] },
-    maxFiles: 10,
-    onDrop: (acceptedFiles) => {
-      const imagePreviews = acceptedFiles.map(file => URL.createObjectURL(file));
-      setImages(prev => [...prev, ...imagePreviews].slice(0, 10));
-    }
-  });
-
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: PropertyFormData) => {
     const propertyData = {
       name: data.name,
       description: data.description,
@@ -32,22 +29,34 @@ export default function AddProperty() {
       district: data.district,
       email: data.email,
       phoneNumber: data.phoneNumber,
-      images: images,  // Default image
-      rooms: parseInt(data.rooms, 10) || 1,
+      images: data.images,
+      rooms: data.rooms || 1,
     };
 
     try {
-      const response = await axios.post("http://localhost:5000/api/gproperties/addproperty", propertyData);
-      
-      if (response.data.success) {
+      const response = await fetch("http://localhost:5000/api/gproperties/addproperty", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(propertyData),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || "Failed to add property");
+      }
+
+      if (responseData.success) {
         alert("Property added successfully!");
-        navigate("/gproperties");  // Navigate to properties listing page
+        navigate("/gproperties");
       } else {
-        alert("Failed to add property. Please try again.");
+        alert(responseData.message || "Failed to add property. Please try again.");
       }
     } catch (error) {
       console.error("Error adding property:", error);
-      alert("An error occurred. Please try again.");
+      alert(error instanceof Error ? error.message : "An error occurred. Please try again.");
     }
   };
 
@@ -93,44 +102,9 @@ export default function AddProperty() {
 
       <section className="space-y-4 border rounded-lg p-4">
         <h2 className="text-xl font-semibold">Property Images</h2>
-        <div {...getRootProps()} className="border-dashed border-2 rounded-lg p-6 text-center cursor-pointer">
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center gap-2">
-            <UploadCloud className="w-6 h-6" />
-            <p className="text-sm">Drag & drop images here, or click to select files</p>
-            <p className="text-xs text-muted-foreground">JPEG, JPG, PNG, or WebP (max 10 images)</p>
-          </div>
+        <div>
+          <Input placeholder="Enter image url" {...form.register("images")} />
         </div>
-
-        {/* {images.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {images.map((src, i) => (
-              <img
-                key={i}
-                src={src}
-                alt={`Uploaded ${i}`}
-                draggable
-                onDragStart={(e) => e.dataTransfer.setData("drag-index", i.toString())}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  const draggedFrom = parseInt(e.dataTransfer.getData("drag-index"));
-                  const draggedTo = i;
-                  if (draggedFrom === draggedTo) return;
-                  const updated = [...images];
-                  const [moved] = updated.splice(draggedFrom, 1);
-                  updated.splice(draggedTo, 0, moved);
-                  setImages(updated);
-                }}
-                className="rounded-lg h-28 object-cover w-full cursor-move border"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-sm text-muted-foreground">
-            <img src="/placeholder.png" className="mx-auto h-20 opacity-30" alt="No images" />
-            <p>No images uploaded</p>
-          </div>
-        )} */}
       </section>
 
       <div className="text-right">

@@ -22,7 +22,7 @@ async function propertyTableExists() {
                 address TEXT,
                 email TEXT,
                 contact TEXT,
-                images JSONB,
+                images TEXT,
                 rooms INTEGER
             );
         `);
@@ -59,7 +59,7 @@ router.post("/addproperty", async (req, res) => {
                 address,
                 email,
                 phoneNumber,
-                JSON.stringify(images),
+                images,
                 rooms,
             ]
         );
@@ -147,7 +147,7 @@ router.put('/:id', async (req, res) => {
                 address,
                 email,
                 contact,
-                JSON.stringify(images),
+                images,
                 rooms,
                 id
             ]
