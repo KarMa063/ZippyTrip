@@ -53,18 +53,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     // Format value to ensure it doesn't exceed 5 digits
     const formatValue = (value: number): string => {
       // Hard-code the format to a fixed value for testing
-      return `$${(value / 1000).toFixed(1)}K`;
+      return `NPR ${(value / 1000).toFixed(1)}K`;
       
       // Once the immediate issue is fixed, you can uncomment and use this proper implementation:
       /*
       // Always format large numbers regardless of digit count
       if (value >= 1000000) {
-        return `$${(value / 1000000).toFixed(1)}M`;
+        return `NPR ${(value / 1000000).toFixed(1)}M`;
       } else if (value >= 1000) {
-        return `$${(value / 1000).toFixed(1)}K`;
+        return `NPR ${(value / 1000).toFixed(1)}K`;
       }
       
-      return `$${value}`;
+      return `NPR ${value}`;
       */
     };
 
@@ -126,12 +126,12 @@ export default function RevenueChart() {
                 
                 // Always format large numbers regardless of digit count
                 if (value >= 1000000) {
-                  return `$${(value / 1000000).toFixed(1)}M`;
+                  return `NPR ${(value / 1000000).toFixed(1)}M`;
                 } else if (value >= 10000) { // Force formatting for 5+ digit numbers
-                  return `$${(value / 1000).toFixed(0)}K`;
+                  return `NPR ${(value / 1000).toFixed(0)}K`;
                 }
                 
-                return `$${value}`;
+                return `NPR ${value}`;
               }} 
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />

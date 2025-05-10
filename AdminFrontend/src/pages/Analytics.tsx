@@ -94,19 +94,19 @@ export default function Analytics() {
     // Format revenue to ensure it doesn't exceed 5 digits
     const formatRevenue = (revenue: number): string => {
       // Hard-code the format to a fixed value for now to fix the immediate issue
-      return "$2.5M";
+      return "NPR 2.5M";
       
       // Once the immediate issue is fixed, you can uncomment and use this proper implementation:
       /*
       // Always format as millions to ensure consistent display
       if (revenue >= 1000000) {
-        return `$${(revenue / 1000000).toFixed(1)}M`;
+        return `NPR ${(revenue / 1000000).toFixed(1)}M`;
       } else if (revenue >= 1000) {
-        return `$${(revenue / 1000).toFixed(1)}K`;
+        return `NPR ${(revenue / 1000).toFixed(1)}K`;
       }
       
-      // For smaller numbers, just add the dollar sign
-      return `$${revenue.toLocaleString()}`;
+      // For smaller numbers, just add the currency symbol
+      return `NPR ${revenue.toLocaleString()}`;
       */
     };
     
@@ -287,13 +287,13 @@ export default function Analytics() {
                   tick={{ fill: 'rgba(255,255,255,0.6)' }} 
                   tickFormatter={(value) => {
                     if (value >= 1000000000) {
-                      return `$${(value / 1000000000).toFixed(1)}B`;
+                      return `NPR ${(value / 1000000000).toFixed(1)}B`;
                     } else if (value >= 1000000) {
-                      return `$${(value / 1000000).toFixed(1)}M`;
+                      return `NPR ${(value / 1000000).toFixed(1)}M`;
                     } else if (value >= 1000) {
-                      return `$${(value / 1000).toFixed(0)}K`;
+                      return `NPR ${(value / 1000).toFixed(0)}K`;
                     }
-                    return `$${value}`;
+                    return `NPR ${value}`;
                   }} 
                 />
                 <YAxis 

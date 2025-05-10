@@ -34,13 +34,13 @@ export default function Dashboard() {
   const formatRevenue = (revenue: number): string => {
     // Always format large numbers regardless of digit count
     if (revenue >= 1000000) {
-      return `$${(revenue / 1000000).toFixed(1)}M`;
+      return `NPR ${(revenue / 1000000).toFixed(1)}M`;
     } else if (revenue >= 10000) { // Force formatting for 5+ digit numbers
-      return `$${(revenue / 1000).toFixed(1)}K`;
+      return `NPR ${(revenue / 1000).toFixed(1)}K`;
     }
     
-    // For smaller numbers, just add the dollar sign
-    return `$${revenue.toLocaleString()}`;
+    // For smaller numbers, just add the currency symbol
+    return `NPR ${revenue.toLocaleString()}`;
   };
   
   // Fetch booking data for dashboard
@@ -146,7 +146,7 @@ export default function Dashboard() {
     },
     { 
       title: 'Total Revenue', 
-      value: "$2.5M", // Hardcoded to match Analytics page
+      value: "NPR 2.5M", // Hardcoded to match Analytics page
       icon: DollarSign, 
       iconClassName: 'stat-icon-yellow',
       linkTo: '/analytics',

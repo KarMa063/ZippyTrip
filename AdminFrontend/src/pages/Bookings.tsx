@@ -321,7 +321,7 @@ export default function Bookings() {
                               {booking.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-right">${booking.amount}</td>
+                          <td className="px-6 py-4 text-right">NPR {booking.amount}</td>
                         </tr>
                       ))
                     ) : (
@@ -480,7 +480,7 @@ export default function Bookings() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="location" angle={-45} textAnchor="end" height={60} />
                         <YAxis />
-                        <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
+                        <Tooltip formatter={(value) => [`NPR ${value}`, 'Revenue']} />
                         <Bar dataKey="revenue" fill="#82ca9d" name="Revenue" />
                       </RechartsBarChart>
                     </ResponsiveContainer>

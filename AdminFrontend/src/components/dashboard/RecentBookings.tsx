@@ -112,8 +112,8 @@ export default function RecentBookings() {
                 <div className="text-right">
                   <p className="font-medium">
                     {booking.amount > 9999999 
-                      ? `$${(booking.amount / 1000000).toFixed(1)}M` 
-                      : `$${booking.amount}`}
+                      ? `NPR ${(booking.amount / 1000000).toFixed(1)}M` 
+                      : `NPR ${booking.amount}`}
                   </p>
                   <Badge variant="outline" className={getStatusColor(booking.status)}>
                     {booking.status}

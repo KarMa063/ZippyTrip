@@ -168,7 +168,7 @@ export default function BusRentals() {
                       <TableCell>{bus.route}</TableCell>
                       <TableCell>{bus.departureTime}</TableCell>
                       <TableCell>{bus.capacity} seats</TableCell>
-                      <TableCell>${bus.price}</TableCell>
+                      <TableCell>NPR {bus.price}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={getStatusColor(bus.status)}>
                           {bus.status.charAt(0).toUpperCase() + bus.status.slice(1)}
