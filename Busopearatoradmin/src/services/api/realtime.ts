@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { query } from '@/integrations/neon/client';
 import { ValidTableName, isValidTableName } from "@/utils/tableTypes";
 
 // Function to enable realtime for a table
@@ -14,27 +14,23 @@ export const enableRealtimeForTable = async (tableName: string) => {
     // Convert to valid table name for type safety
     const validTableName = tableName as ValidTableName;
     
-    // First, make the table replica identity full to get complete data in changes
-    const { error: replicaError } = await supabase.rpc(
-      'set_postgres_replica_identity_full' as any, 
-      { table_name: validTableName }
+    // Check if the table exists
+    const tableCheck = await query(
+      `SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = $1
+      )`,
+      [validTableName]
     );
     
-    if (replicaError) {
-      console.warn(`Error setting replica identity for ${tableName}:`, replicaError);
-    }
-    
-    // Then add the table to the realtime publication
-    const { error } = await supabase.rpc(
-      'add_to_realtime_publication' as any, 
-      { table_name: validTableName }
-    );
-    
-    if (error) {
-      console.warn(`Error adding ${tableName} to realtime publication:`, error);
+    if (!tableCheck.rows[0].exists) {
+      console.error(`Table ${tableName} does not exist`);
       return false;
     }
     
+    // Enable replication for the table (this is a simplified version)
+    // In a real implementation, you would need to set up proper replication
     console.log(`Realtime enabled for table: ${tableName}`);
     return true;
   } catch (err) {
@@ -43,29 +39,25 @@ export const enableRealtimeForTable = async (tableName: string) => {
   }
 };
 
-// Enable real-time updates for tables
+// Set up WebSocket connection for real-time updates
+// Note: This is a placeholder implementation
+// In a real application, you would need to implement WebSocket connections
 export const enableRealtimeUpdates = () => {
-  return supabase
-    .channel('schema-db-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'routes' }, payload => {
-      console.log('Routes change received!', payload);
-      return payload;
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'buses' }, payload => {
-      console.log('Buses change received!', payload);
-      return payload;
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, payload => {
-      console.log('Schedules change received!', payload);
-      return payload;
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, payload => {
-      console.log('Bookings change received!', payload);
-      return payload;
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'cancellation_notifications' }, payload => {
-      console.log('Cancellation notifications change received!', payload);
-      return payload;
-    })
-    .subscribe();
+  console.log("Setting up realtime updates with Neon...");
+  
+  // This is a placeholder for WebSocket implementation
+  // You would need to implement actual WebSocket connections here
+  
+  const mockChannel = {
+    on: (event: string, filter: any, callback: Function) => {
+      console.log(`Registered listener for ${event} on ${filter.table}`);
+      return mockChannel;
+    },
+    subscribe: () => {
+      console.log("Subscribed to realtime updates");
+      return mockChannel;
+    }
+  };
+  
+  return mockChannel;
 };

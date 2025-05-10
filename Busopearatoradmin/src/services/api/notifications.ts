@@ -1,4 +1,5 @@
 
+import { query } from '@/integrations/neon/client';
 import { EmailNotification, sendEmail } from '../email';
 
 export const sendTripNotification = async (
@@ -70,5 +71,34 @@ export const sendTripNotification = async (
     body: messages[type]
   };
 
-  return await sendEmail(notification);
+  try {
+    // Send the email
+    const emailSent = await sendEmail(notification);
+    
+    // Log the notification in the database
+    await query(
+      `INSERT INTO notifications (
+        recipient_email, notification_type, subject, message, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [email, type, subjects[type], messages[type], emailSent ? 'sent' : 'failed']
+    );
+    
+    return emailSent;
+  } catch (error) {
+    console.error('Error sending trip notification:', error);
+    
+    // Log the failed notification
+    try {
+      await query(
+        `INSERT INTO notifications (
+          recipient_email, notification_type, subject, message, status, error_message, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [email, type, subjects[type], messages[type], 'failed', error.message || 'Unknown error']
+      );
+    } catch (logError) {
+      console.error('Error logging notification failure:', logError);
+    }
+    
+    return false;
+  }
 };

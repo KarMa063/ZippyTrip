@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Bell } from 'lucide-react';
+import { Bell, Check, X, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -11,6 +11,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { updateBooking } from '@/services/api/bookings';
 
 type RouteDetails = {
   name: string;
@@ -210,6 +211,33 @@ const BookingNotifications = () => {
     return date.toLocaleString();
   };
 
+  const handleStatusChange = async (bookingId: string, newStatus: string) => {
+    try {
+      await updateBooking(bookingId, { status: newStatus });
+      
+      // Update local state to reflect the change
+      setNotifications(prev => 
+        prev.map(booking => 
+          booking.id === bookingId 
+            ? { ...booking, status: newStatus } 
+            : booking
+        )
+      );
+      
+      toast({
+        title: "Booking Updated",
+        description: `Booking status changed to ${newStatus}`,
+      });
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update booking status",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={handleOpen}>
       <SheetTrigger asChild>
@@ -269,6 +297,60 @@ const BookingNotifications = () => {
                       {getStatusBadge(booking.status)}
                       {getPaymentStatusBadge(booking.payment_status)}
                     </div>
+                  </div>
+                  
+                  {/* Add action buttons for handling booking changes */}
+                  <div className="flex gap-2 mt-3 pt-2 border-t border-zippy-gray">
+                    {booking.status === 'pending' && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 border-green-500 text-green-500 hover:bg-green-500/10"
+                          onClick={() => handleStatusChange(booking.id, 'confirmed')}
+                        >
+                          <Check className="h-4 w-4 mr-1" /> Confirm
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 border-red-500 text-red-500 hover:bg-red-500/10"
+                          onClick={() => handleStatusChange(booking.id, 'cancelled')}
+                        >
+                          <X className="h-4 w-4 mr-1" /> Cancel
+                        </Button>
+                      </>
+                    )}
+                    {booking.status === 'confirmed' && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 border-green-700 text-green-700 hover:bg-green-700/10"
+                          onClick={() => handleStatusChange(booking.id, 'completed')}
+                        >
+                          <Check className="h-4 w-4 mr-1" /> Check-in
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 border-red-500 text-red-500 hover:bg-red-500/10"
+                          onClick={() => handleStatusChange(booking.id, 'cancelled')}
+                        >
+                          <X className="h-4 w-4 mr-1" /> Cancel
+                        </Button>
+                      </>
+                    )}
+                    {(booking.status === 'cancelled' || booking.status === 'completed') && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                        onClick={() => handleStatusChange(booking.id, 'confirmed')}
+                      >
+                        <Clock className="h-4 w-4 mr-1" /> Reactivate
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

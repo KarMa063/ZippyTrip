@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { Bus, Calendar, Users, Search, MapPin, ArrowRight, Moon, Sun, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bus, Calendar, Users, Search, MapPin, ArrowRight, CreditCard, Luggage, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft, Check } from 'lucide-react';
 import { sendBusReminder } from './EmailController';
-import { v4 as uuidv4 } from 'uuid';
+import { useGlobalTheme } from '../components/GlobalThemeContext';
+import Navigation from './Navigation';
+import { getCurrentUser } from '../lib/supabase';
 
 interface Seat {
   id: string;
   number: string;
   isBooked: boolean;
-  type: 'window' | 'aisle' | 'sleeper';
+  type: string;
 }
 
 interface BusRoute {
@@ -21,12 +23,12 @@ interface BusRoute {
   duration: string;
   amenities: string[];
   seatsAvailable: number;
-  type: 'AC' | 'Non-AC';
+  type: string;
   seats: Seat[];
 }
 
-function BusRentalPage() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+const BusRentalPage: React.FC = () => {
+  const { isDarkMode } = useGlobalTheme();
   const [searchParams, setSearchParams] = useState({
     from: '',
     to: '',
@@ -41,70 +43,125 @@ function BusRentalPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
+  
+  const [buses, setBuses] = useState<BusRoute[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const buses: BusRoute[] = [
-    {
-      id: '1',
-      from: 'Kathmandu',
-      to: 'Pokhara',
-      departure: '08:00 AM',
-      arrival: '12:30 PM',
-      price: 1200,
-      operator: 'Sajha Yatayat',
-      duration: '4h 30m',
-      amenities: ['wifi', 'charging', 'snacks', 'water'],
-      seatsAvailable: 32,
-      type: 'AC',
-      seats: Array.from({ length: 40 }, (_, i) => ({
-        id: `seat-${i + 1}`,
-        number: `${i + 1}`,
-        isBooked: Math.random() > 0.7,
-        type: i % 2 === 0 ? 'window' : 'aisle'
-      }))
-    },
-    {
-      id: '2',
-      from: 'Kathmandu',
-      to: 'Chitwan',
-      departure: '10:30 AM',
-      arrival: '3:00 PM',
-      price: 1000,
-      operator: 'Buddha Express',
-      duration: '4h 30m',
-      amenities: ['wifi', 'charging', 'snacks', 'blanket', 'entertainment'],
-      seatsAvailable: 25,
-      type: 'AC',
-      seats: Array.from({ length: 40 }, (_, i) => ({
-        id: `seat-${i + 1}`,
-        number: `${i + 1}`,
-        isBooked: Math.random() > 0.7,
-        type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
-      }))
-    },
-    {
-      id: '3',
-      from: 'Pokhara',
-      to: 'Kathmandu',
-      departure: '11:45 PM',
-      arrival: '4:15 AM',
-      price: 1500,
-      operator: 'Deluxe Night Service',
-      duration: '4h 30m',
-      amenities: ['wifi', 'charging', 'blanket', 'pillow', 'sleeper'],
-      seatsAvailable: 18,
-      type: 'AC',
-      seats: Array.from({ length: 30 }, (_, i) => ({
-        id: `seat-${i + 1}`,
-        number: `${i + 1}`,
-        isBooked: Math.random() > 0.7,
-        type: 'sleeper'
-      }))
-    },
-  ];
+  useEffect(() => {
+    const fetchBuses = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Fetch schedules which include route information
+        const response = await fetch('http://localhost:5000/api/routes/schedules/search');
+        if (!response.ok) {
+          throw new Error('Failed to fetch buses');
+        }
+        const data = await response.json();
 
-  const handleSearch = (e: React.FormEvent) => {
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to fetch buses');
+        }
+
+        const schedules = data.schedules || [];
+        
+        const transformedBuses = schedules.map((schedule: any) => ({
+          id: schedule.id,
+          from: schedule.origin,
+          to: schedule.destination,
+          departure: new Date(schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          arrival: new Date(schedule.arrival_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          price: schedule.fare,
+          operator: schedule.route_name || 'ZippyBus Express',
+          duration: schedule.duration || calculateDuration(schedule.departure_time, schedule.arrival_time),
+          amenities: ['wifi', 'charging', 'snacks'],
+          seatsAvailable: schedule.available_seats,
+          type: 'AC',
+          seats: generateSeats(schedule.available_seats)
+        }));
+        
+        setBuses(transformedBuses);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        console.error('Error fetching buses:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBuses();
+  }, []);
+
+  // Helper function to calculate duration between two timestamps
+  const calculateDuration = (departure: string, arrival: string) => {
+    const departureTime = new Date(departure);
+    const arrivalTime = new Date(arrival);
+    const durationMs = arrivalTime.getTime() - departureTime.getTime();
+    const hours = Math.floor(durationMs / (1000 * 60 * 60));
+    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Helper function to generate seats
+  const generateSeats = (availableSeats: number) => {
+    const totalSeats = availableSeats + Math.floor(availableSeats * 0.3); // Adding some booked seats
+    return Array.from({ length: totalSeats }, (_, i) => ({
+      id: `seat-${i + 1}`,
+      number: `${i + 1}`,
+      isBooked: i >= availableSeats, // Mark seats as booked if they exceed available seats
+      type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
+    }));
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('results');
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const searchUrl = new URLSearchParams();
+      if (searchParams.from) searchUrl.append('from', searchParams.from);
+      if (searchParams.to) searchUrl.append('to', searchParams.to);
+      if (searchParams.date) searchUrl.append('date', searchParams.date);
+      
+      const response = await fetch(`http://localhost:5000/api/routes/schedules/search?${searchUrl.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch buses');
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch buses');
+      }
+      
+      const schedules = data.schedules || [];
+      
+      const transformedBuses = schedules.map((schedule: any) => ({
+        id: schedule.id,
+        from: schedule.origin,
+        to: schedule.destination,
+        departure: new Date(schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        arrival: new Date(schedule.arrival_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        price: schedule.fare,
+        operator: schedule.route_name || 'ZippyBus Express',
+        duration: schedule.duration || calculateDuration(schedule.departure_time, schedule.arrival_time),
+        amenities: ['wifi', 'charging', 'snacks'],
+        seatsAvailable: schedule.available_seats,
+        type: 'AC',
+        seats: generateSeats(schedule.available_seats)
+      }));
+      
+      setBuses(transformedBuses);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error searching buses:', err);
+    } finally {
+      setIsLoading(false);
+      setStep('results');
+    }
   };
 
   const handleBusSelection = (bus: BusRoute) => {
@@ -137,35 +194,45 @@ function BusRentalPage() {
     
     if (selectedBus) {
       try {
-        // Generate a unique ID for the ticket
-        const ticketId = uuidv4();
+        // Get the current user ID
+        const userId = await getCurrentUser();
         
-        // Create ticket object
-        const newTicket = {
-          id: ticketId,
-          busId: selectedBus.id,
-          from: selectedBus.from,
-          to: selectedBus.to,
-          departure: selectedBus.departure,
-          arrival: selectedBus.arrival,
-          date: searchParams.date,
-          operator: selectedBus.operator,
-          price: selectedBus.price,
-          seats: selectedSeats,
-          passengerName: userName,
-          busType: selectedBus.type,
-          status: 'active',
-          bookingDate: new Date().toISOString()
+        if (!userId) {
+          alert('You must be logged in to book a bus. Please sign in and try again.');
+          return;
+        }
+        
+        const userIdString = typeof userId === 'object' ? userId.user_id : userId;
+        
+        const bookingData = {
+          user_id: userIdString,
+          schedule_id: selectedBus.id,
+          seat_numbers: selectedSeats,
+          total_fare: selectedBus.price * selectedSeats.length,
+          status: 'confirmed',
+          payment_status: 'pending',
+          payment_method: 'card',
+          booking_date: new Date().toISOString(),
+          origin: selectedBus.from,     // Add origin from selectedBus
+          destination: selectedBus.to   // Add destination from selectedBus
         };
+
+        const response = await fetch('http://localhost:5000/api/bus-bookings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(bookingData),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create booking');
+        }
         
-        // Save to localStorage
-        const existingTickets = localStorage.getItem('busTickets');
-        const tickets = existingTickets ? JSON.parse(existingTickets) : [];
-        tickets.push(newTicket);
-        localStorage.setItem('busTickets', JSON.stringify(tickets));
-        
-        // Send email confirmation
-        const response = await sendBusReminder({
+        const bookingResponse = await response.json();
+        console.log('Booking created:', bookingResponse);
+
+        const emailResponse = await sendBusReminder({
           email: userEmail,
           from: selectedBus.from,
           to: selectedBus.to,
@@ -175,15 +242,13 @@ function BusRentalPage() {
           date: searchParams.date,
           passengerName: userName,
           seats: selectedSeats,
-          busType: selectedBus.type
+          busType: selectedBus.type,
         });
 
-        console.log('Email response:', response);
+        console.log('Email response:', emailResponse);
         
-        // Show confirmation regardless of actual email status
         setShowConfirmation(true);
         
-        // Reset form after 3 seconds
         setTimeout(() => {
           setShowConfirmation(false);
           setStep('search');
@@ -191,21 +256,12 @@ function BusRentalPage() {
           setSelectedSeats([]);
           setUserEmail('');
           setUserName('');
+          window.location.href = '/profile';
         }, 3000);
+      
       } catch (error) {
-        console.error('Failed to send email confirmation:', error);
-        // Still show confirmation to user even if email fails
-        setShowConfirmation(true);
-        
-        // Reset form after 3 seconds
-        setTimeout(() => {
-          setShowConfirmation(false);
-          setStep('search');
-          setSelectedBus(null);
-          setSelectedSeats([]);
-          setUserEmail('');
-          setUserName('');
-        }, 3000);
+        console.error('Booking failed:', error);
+        alert('Failed to complete booking. Please try again.');
       }
     }
   };
@@ -226,26 +282,21 @@ function BusRentalPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gradient-to-b from-green-50 to-white'}`}>
+      {/* Navigation */}
+      <Navigation />
+
       {/* Header */}
       <header className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm relative`}>
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handleBackToHome}
-                className={`mr-4 p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
-              >
-                <ArrowLeft className="h-6 w-6" />
-              </button>
-              <Bus className={`h-8 w-8 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
-              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>ZippyBus</h1>
-            </div>
+          <div className="flex items-center">
             <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-100 text-gray-600'}`}
+              onClick={handleBackToHome}
+              className={`mr-4 p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
             >
-              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              <ArrowLeft className="h-6 w-6" />
             </button>
+            <Bus className={`h-8 w-8 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>ZippyBus</h1>
           </div>
         </div>
       </header>
@@ -340,73 +391,93 @@ function BusRentalPage() {
               </button>
             </div>
 
-            <div className="grid gap-6">
-              {buses.map((bus) => (
-                <div
-                  key={bus.id}
-                  className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+              </div>
+            ) : error ? (
+              <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-red-900' : 'bg-red-100'} text-red-700`}>
+                <p>Error loading buses: {error}</p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                 >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-4">
-                        <Bus className={`h-8 w-8 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
-                        <div>
-                          <p className="font-semibold">{bus.operator}</p>
-                          <p className="text-sm text-gray-500">{bus.type}</p>
+                  Retry
+                </button>
+              </div>
+            ) : buses.length === 0 ? (
+              <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm text-center`}>
+                <p className="text-lg">No buses found for your search criteria.</p>
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {buses.map((bus) => (
+                  <div
+                    key={bus.id}
+                    className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4">
+                          <Bus className={`h-8 w-8 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+                          <div>
+                            <p className="font-semibold">{bus.operator}</p>
+                            <p className="text-sm text-gray-500">{bus.type}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex-1">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <p className="font-semibold">{bus.departure}</p>
+                            <p className="text-sm text-gray-500">{bus.from}</p>
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <p className="font-semibold">{bus.arrival}</p>
+                            <p className="text-sm text-gray-500">{bus.to}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <p className="font-semibold">{bus.duration}</p>
+                            <p className="text-sm text-gray-500">Duration</p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {bus.amenities.map((amenity, index) => (
+                              <span key={index} className="text-gray-400">
+                                {getAmenityIcon(amenity)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="flex items-center space-x-4">
                         <div>
-                          <p className="font-semibold">{bus.departure}</p>
-                          <p className="text-sm text-gray-500">{bus.from}</p>
+                          <p className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                            Rs. {bus.price}
+                          </p>
+                          <p className="text-sm text-gray-500">{bus.seatsAvailable} seats left</p>
                         </div>
-                        <ArrowRight className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="font-semibold">{bus.arrival}</p>
-                          <p className="text-sm text-gray-500">{bus.to}</p>
-                        </div>
+                        <button
+                          onClick={() => handleBusSelection(bus)}
+                          className={`px-6 py-3 rounded-lg ${
+                            isDarkMode ? 'bg-green-500 hover:bg-green-600' : 'bg-green-600 hover:bg-green-700'
+                          } text-white font-semibold`}
+                        >
+                          Select
+                        </button>
                       </div>
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <p className="font-semibold">{bus.duration}</p>
-                          <p className="text-sm text-gray-500">Duration</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {bus.amenities.map((amenity, index) => (
-                            <span key={index} className="text-gray-400">
-                              {getAmenityIcon(amenity)}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                      <div>
-                        <p className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
-                          Rs. {bus.price}
-                        </p>
-                        <p className="text-sm text-gray-500">{bus.seatsAvailable} seats left</p>
-                      </div>
-                      <button
-                        onClick={() => handleBusSelection(bus)}
-                        className={`px-6 py-3 rounded-lg ${
-                          isDarkMode ? 'bg-green-500 hover:bg-green-600' : 'bg-green-600 hover:bg-green-700'
-                        } text-white font-semibold`}
-                      >
-                        Select
-                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -545,6 +616,6 @@ function BusRentalPage() {
       </main>
     </div>
   );
-}
+};
 
 export default BusRentalPage;

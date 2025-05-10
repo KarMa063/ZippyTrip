@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Plane, Lock, Mail, Phone, Loader2, ArrowLeft } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, sendUserToBackend } from '../lib/supabase';
 
 export default function AuthForm() {
   const navigate = useNavigate();
@@ -37,8 +37,10 @@ export default function AuthForm() {
           options: { persistSession: rememberMe }, // Persist session if "Remember Me" is checked
         });
         if (error) throw error;
+        await sendUserToBackend();
         toast.success('Welcome back to ZippyTrip!');
-        navigate('/home'); //Most probably for going to home after login can only be sure after after home is assembled
+        console.log(supabase.userid)
+        navigate('/home');
       } else {
         // Signup Flow
         const { error } = await supabase.auth.signUp({
@@ -56,14 +58,10 @@ export default function AuthForm() {
         } else if (error) {
           throw error;
         } else {
-          if(1==1){
-          toast.success('Welcome to ZippyTrip! Your account has been created.');//If no id is found in db goto preferences as the user is new
-          navigate('/Preferences'); // After this go to preferences page(PASA   DONOT REMOVE BEFORE REDIRECTING)
+          await sendUserToBackend();         
+          toast.success('Welcome to ZippyTrip! Your account has been created.');
+          navigate('/Preferences');
         }
-      else{
-        toast.success('Welcome to ZippyTrip! Your account has been created.');//Treat as login and goto home if user already exists
-        navigate('/Preferences'); // After this go to home page(PASA   DONOT REMOVE THIS COMMENT BEFORE REDIRECTING)
-      }}
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -109,7 +107,7 @@ export default function AuthForm() {
     if (error) {
       toast.error('Google login failed: ' + error.message);
     } else {
-      navigate('/home'); //After this go to homepagedashboard(AHBL    This is done only need to redirect)
+      navigate('/home');
     }
     setLoading(false);
   };
