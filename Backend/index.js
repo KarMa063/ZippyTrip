@@ -47,6 +47,9 @@ app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
 
+// Import the guesthouse authentication route
+const guesthouseAuthRoutes = require('./routes/guesthouse-auth');
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -55,6 +58,9 @@ app.use((err, req, res, next) => {
     message: 'Something went wrong!'
   });
 });
+
+// Use the guesthouse authentication route
+app.use('/api/guesthouse-auth', guesthouseAuthRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;

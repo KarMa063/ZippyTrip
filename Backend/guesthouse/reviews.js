@@ -22,10 +22,22 @@ async function createReviewsTable() {
         email VARCHAR NOT NULL,
         rating NUMERIC NOT NULL,
         review TEXT NOT NULL,
+        ownerReply TEXT,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     console.log("Guesthouse reviews table created or already exists.");
+    
+    // Check if ownerReply column exists, if not add it
+    try {
+      await pool.query(`
+        ALTER TABLE guesthouse_reviews 
+        ADD COLUMN IF NOT EXISTS ownerReply TEXT;
+      `);
+      console.log("ownerReply column added or already exists.");
+    } catch (alterError) {
+      console.error("Error adding ownerReply column:", alterError);
+    }
   } catch (error) {
     console.error("Error creating guesthouse reviews table:", error);
   }
@@ -76,8 +88,9 @@ router.get('/:propertyId/reviews', async (req, res) => {
       userName: review.email.split('@')[0] || 'Anonymous',
       rating: review.rating,
       comment: review.review,
-      date: review.createdAt,
-      email: review.email
+      date: review.createdat || review.createdAt || new Date().toISOString(),
+      email: review.email,
+      ownerReply: review.ownerreply // Include owner reply in the response
     }));
 
     res.status(200).json({
@@ -86,6 +99,42 @@ router.get('/:propertyId/reviews', async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching reviews:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+// POST route to add owner reply to a review
+router.post('/:propertyId/reviews/:reviewId/reply', async (req, res) => {
+  const { propertyId, reviewId } = req.params;
+  const { ownerReply } = req.body;
+
+  try {
+    // Verify the review exists and belongs to the property
+    const reviewCheck = await pool.query(
+      'SELECT id FROM guesthouse_reviews WHERE id = $1 AND property_id = $2',
+      [reviewId, propertyId]
+    );
+
+    if (reviewCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Review not found for this property" });
+    }
+
+    // Add the owner's reply
+    const result = await pool.query(
+      `UPDATE guesthouse_reviews 
+       SET ownerReply = $1
+       WHERE id = $2 AND property_id = $3
+       RETURNING *`,
+      [ownerReply, reviewId, propertyId]
+    );
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Reply added successfully",
+      review: result.rows[0]
+    });
+  } catch (error) {
+    console.error("Error adding owner reply:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
