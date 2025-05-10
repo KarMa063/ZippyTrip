@@ -23,7 +23,7 @@ async function createRoomsTable() {
         price TEXT NOT NULL,
         available BOOLEAN DEFAULT true,
         amenities TEXT[],
-        images JSONB
+        images TEXT
       );
     `);
     console.log("Rooms table created or already exists.");
@@ -35,7 +35,7 @@ async function createRoomsTable() {
 // POST route to create a room
 router.post('/:propertyId/rooms', async (req, res) => {
   const { propertyId } = req.params;
-  const { name, capacity, price, available = true, amenities = [], images = [] } = req.body;
+  const { name, capacity, price, available = true, amenities = [], images} = req.body;
 
   try {
     // Check if the propertyId exists in the properties table
@@ -61,7 +61,7 @@ router.post('/:propertyId/rooms', async (req, res) => {
         price,
         available,
         amenities,
-        JSON.stringify(images),
+        images,
       ]
     );
 
@@ -166,7 +166,7 @@ router.get('/:propertyId/rooms/:roomId', async (req, res) => {
 // PUT route to edit a room
 router.put('/:propertyId/rooms/:roomId', async (req, res) => {
   const { propertyId, roomId } = req.params;
-  const { name, capacity, price, available, amenities = [], images = [] } = req.body;
+  const { name, capacity, price, available, amenities = [], images } = req.body;
   
   try {
     const result = await pool.query(
@@ -180,7 +180,7 @@ router.put('/:propertyId/rooms/:roomId', async (req, res) => {
         price,
         available,
         amenities,
-        JSON.stringify(images),
+        images,
         propertyId,
         roomId,
       ]
