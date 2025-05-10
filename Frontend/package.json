@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/KarMa063/ZippyTrip#readme",
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.0",
     "@supabase/supabase-js": "^2.49.3",
     "axios": "^1.8.4",
     "lucide-react": "^0.484.0",

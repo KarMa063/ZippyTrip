@@ -213,8 +213,9 @@ const BusRentalPage: React.FC = () => {
           payment_status: 'pending',
           payment_method: 'card',
           booking_date: new Date().toISOString(),
-          origin: selectedBus.from,     // Add origin from selectedBus
-          destination: selectedBus.to   // Add destination from selectedBus
+          origin: selectedBus.from,
+          destination: selectedBus.to,
+          email: userEmail              
         };
 
         const response = await fetch('http://localhost:5000/api/bus-bookings', {

@@ -47,6 +47,48 @@ export const sendBusReminder = async (details: BusDetails) => {
     }
 };
 
+interface RoomBookingDetails {
+    email: string;
+    guestName: string;
+    guestHouseName: string;
+    roomName: string;
+    checkInDate: string;
+    checkOutDate: string;
+    price: number;
+    location: string;
+    guests: number;
+}
+
+// Function to send room booking confirmation email
+export const sendRoomBookingConfirmation = async (details: RoomBookingDetails) => {
+    try {
+        console.log('Sending room booking confirmation with details:', details);
+        
+        const response = await emailjs.send(
+            "service_529qzso",
+            "template_jj4z6fk",
+            {
+                email: details.email,
+                name: details.guestName,
+                guesthouse_name: details.guestHouseName,
+                room_name: details.roomName,
+                check_in: details.checkInDate,
+                check_out: details.checkOutDate,
+                price: `Rs. ${details.price}`,
+                location: details.location,
+                guests: details.guests,
+                title: "Room Booking Confirmation"
+            },
+            "00yKrhJ5D0m_ow_w2"
+        );
+        console.log('Room booking email sent successfully:', response);
+        return response;
+    } catch (error) {
+        console.error("Error sending room booking confirmation:", error);
+        throw error;
+    }
+};
+
 // Test function to verify email sending
 export const testEmailSending = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
@@ -108,4 +150,4 @@ const EmailForm: React.FC = () => {
     );
 };
 
-export default EmailForm; 
+export default EmailForm;
