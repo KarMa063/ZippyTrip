@@ -22,6 +22,18 @@ import {
   Trash,
   Plus 
 } from "lucide-react";
+import axios from "axios";
+
+interface Booking {
+  id: number;
+  traveller_id: string;
+  room_id: number;
+  check_in: string;
+  check_out: string;
+  status: string;
+  traveller_email?: string;
+  room_name?: string;
+}
 
 interface Review {
   id: number;
@@ -41,7 +53,7 @@ const PropertyDetails = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPropertyAndRooms = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         // Fetch property details
@@ -62,15 +74,49 @@ const PropertyDetails = () => {
         if (!roomsData.success) {
           throw new Error("Failed to load rooms");
         }
+        const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/property/${propertyId}`);
+        if (!bookingsResponse.ok) {
+          throw new Error("Failed to fetch bookings");
+        }
+        const bookingsData = await bookingsResponse.json();
+
+        if (!bookingsData.success || !Array.isArray(bookingsData.bookings)) {
+          throw new Error("Failed to load bookings");
+        }
+
+        const enrichedBookings = await Promise.all(
+        bookingsData.bookings.map(async (booking: Booking) => {
+          try {
+            const [user, room] = await Promise.all([
+              axios.get(`http://localhost:5000/api/users/${booking.traveller_id}`),
+              axios.get(`http://localhost:5000/api/gproperties/${propertyId}/rooms/${booking.room_id}`),
+            ]);
+
+            return {
+              ...booking,
+              traveller_email: user.data.user.user_email,
+              room_name: room.data.room.name,
+            };
+          } catch (error) {
+            console.error(`Error enriching booking ${booking.id}:`, error);
+            return {
+              ...booking,
+              traveller_email: 'Not available',
+              room_name: 'Not available',
+            };
+          }
+        })
+      );
+
         // Fetch reviews
-      const reviewsResponse = await fetch(`http://localhost:5000/api/gproperties/${propertyId}/reviews`);
-      if (!reviewsResponse.ok) {
-        throw new Error("Failed to fetch reviews");
-      }
-      const reviewsData = await reviewsResponse.json();
-      if (!reviewsData.success) {
-        throw new Error("Failed to load reviews");
-      }
+        const reviewsResponse = await fetch(`http://localhost:5000/api/gproperties/${propertyId}/reviews`);
+        if (!reviewsResponse.ok) {
+          throw new Error("Failed to fetch reviews");
+        }
+        const reviewsData = await reviewsResponse.json();
+        if (!reviewsData.success) {
+          throw new Error("Failed to load reviews");
+        }
 
     const averageRating = 
       reviewsData.reviews.length > 0
@@ -87,24 +133,7 @@ const PropertyDetails = () => {
           occupiedRooms,
           occupancyRate,
           rooms: roomsData.rooms,
-          bookings: [
-            {
-              id: "b1",
-              guestName: "John Doe",
-              checkIn: "2025-04-12",
-              checkOut: "2025-04-15",
-              room: "Master Suite",
-              status: "Confirmed",
-            },
-            {
-              id: "b2",
-              guestName: "Jane Smith",
-              checkIn: "2025-04-18",
-              checkOut: "2025-04-25",
-              room: "Guest Room 2",
-              status: "Pending",
-            },
-          ],
+          bookings: enrichedBookings,
           reviews: reviewsData.reviews, 
           averageRating: Number(averageRating.toFixed(1)),
           totalReviews: reviewsData.reviews.length,
@@ -116,7 +145,7 @@ const PropertyDetails = () => {
         setLoading(false);
       }
     };
-    fetchPropertyAndRooms();
+    fetchData();
   }, [propertyId]);
 
   const handleDeleteRoom = async (roomId: number) => {
@@ -339,7 +368,7 @@ const PropertyDetails = () => {
         <TabsContent value="bookings" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Bookings</h2>
-           </div>
+          </div>
           <Card>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -353,19 +382,33 @@ const PropertyDetails = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {property.bookings.map((booking: any) => (
-                    <tr key={booking.id} className="border-b hover:bg-accent/20 transition-colors">
-                      <td className="p-4 font-medium">{booking.guestName}</td>
-                      <td className="p-4 text-sm">{booking.room}</td>
-                      <td className="p-4 text-sm">{booking.checkIn}</td>
-                      <td className="p-4 text-sm">{booking.checkOut}</td>
-                      <td className="p-4">
-                        <Badge variant={booking.status === "Confirmed" ? "success" : "outline"}>
-                          {booking.status}
-                        </Badge>
+                  {property.bookings.length > 0 ? (
+                    property.bookings.map((booking: Booking) => (
+                      <tr key={booking.id} className="border-b hover:bg-accent/20 transition-colors">
+                        <td className="p-4 font-medium">{booking.traveller_email || 'Not available'}</td>
+                        <td className="p-4 text-sm">{booking.room_name || 'Not available'}</td>
+                        <td className="p-4 text-sm">{new Date(booking.check_in).toLocaleDateString()}</td>
+                        <td className="p-4 text-sm">{new Date(booking.check_out).toLocaleDateString()}</td>
+                        <td className="p-4">
+                          <Badge variant={
+                            booking.status === "confirmed" ? "success" : 
+                            booking.status === "pending" ? "outline" :
+                            booking.status === "cancelled" ? "destructive" :
+                            booking.status === "declined" ? "destructive" :
+                            "secondary"
+                          }>
+                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                        No bookings found
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>

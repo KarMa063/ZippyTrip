@@ -165,6 +165,20 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/property/:propertyId', async (req, res) => {
+  const { propertyId } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM gbookings WHERE property_id = $1 ORDER BY check_in ASC, check_out ASC',
+      [propertyId]
+    );
+    res.json({ success: true, bookings: result.rows });
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch bookings' });
+  }
+});
+
 // Get single booking
 router.get('/:id', async (req, res) => {
   const bookingId = req.params.id;
