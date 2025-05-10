@@ -157,7 +157,7 @@ const PropertyDetails = () => {
           ...prev,
           reviews: prev.reviews.map((review: Review) =>
             review.id === reviewId
-              ? { ...review, response: replyText[reviewId] }
+              ? { ...review, ownerReply: replyText[reviewId] }
               : review
           ),
         }));

@@ -146,7 +146,7 @@ const GDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {properties.map((property) => (
+              {properties.slice(0, 4).map((property) => (
                 <div
                   key={property.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
@@ -195,7 +195,7 @@ const GDashboard = () => {
               </thead>
               <tbody>
                 {bookings.length > 0 ? (
-                  bookings.map((booking) => (
+                  bookings.slice(0, 6).map((booking) => (
                     <tr key={booking.id} className="border-b text-sm">
                       <td className="py-3 pr-4">{booking.property_name}</td>
                       <td className="py-3 pr-4">{booking.traveller_email}</td>
