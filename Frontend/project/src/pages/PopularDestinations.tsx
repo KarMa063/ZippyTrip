@@ -14,7 +14,13 @@ const PopularDestinations: React.FC = () => {
       try {
         setLoading(true);
         const data = await getPopularAttractions(6); // Get top 6 attractions
-        setAttractions(data);
+        // Ensure all ratings and prices are numbers
+        const sanitizedData = data.map(attraction => ({
+          ...attraction,
+          rating: typeof attraction.rating === 'number' ? attraction.rating : parseFloat(attraction.rating) || 0,
+          price: typeof attraction.price === 'number' ? attraction.price : parseFloat(attraction.price) || 0
+        }));
+        setAttractions(sanitizedData);
         setError(null);
       } catch (err) {
         console.error('Failed to fetch attractions:', err);
