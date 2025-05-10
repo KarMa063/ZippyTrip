@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { Ticket, Search, MapPin, Edit, Trash2, Eye, Plus } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Ticket, Search, MapPin, Edit, Trash2, Eye, Plus, Activity } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,7 @@ export function Attractions() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [numberTwoCount, setNumberTwoCount] = useState(0);
   
   // Form state for add/edit
   const [formData, setFormData] = useState({
@@ -74,12 +75,32 @@ export function Attractions() {
       setLoading(true);
       const data = await getAllAttractions();
       setAttractions(data);
+      
+      // Count occurrences of number 2
+      countNumberTwoOccurrences(data);
     } catch (error) {
       console.error("Failed to fetch attractions:", error);
       toast.error("Failed to load attractions");
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Count occurrences of number 2 in attractions data
+  const countNumberTwoOccurrences = (attractions: Attraction[]) => {
+    let count = 0;
+    
+    attractions.forEach(attraction => {
+      // Check if any property equals 2
+      if (attraction.id === 2) count++;
+      if (attraction.category === '2') count++;
+      if (attraction.price === 2) count++;
+      if (attraction.rating === 2) count++;
+      if (attraction.location === '2') count++;
+      if (attraction.name === '2') count++;
+    });
+    
+    setNumberTwoCount(count);
   };
   
   // Handle search
