@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Login function
   const login = async (username: string, password: string): Promise<boolean> => {
+    // Check if credentials match the admin credentials
     if (username === "admin" && password === "zippytrip123") {
       localStorage.setItem("isAuthenticated", "true");
       setIsAuthenticated(true);

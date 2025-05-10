@@ -74,26 +74,35 @@ const Login = () => {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    const success = login(username, password);
-
-    if (success) {
-      toast({
-        title: "Login successful",
-        description: "Welcome to the ZippyTrip Bus Operator Dashboard!",
-        //variant: "default",
-      });
-      navigate("/");
-    } else {
+    try {
+      const success = await login(username, password);
+      
+      if (success) {
+        toast({
+          title: "Login successful",
+          description: "Welcome to the ZippyTrip Bus Operator Dashboard!",
+        });
+        navigate("/");
+      } else {
+        setLoginAttempts(prev => prev + 1);
+        setLoginError(true);
+        toast({
+          variant: "destructive",
+          title: "Authentication Failed",
+          description: "Wrong username or password. Please try again.",
+        });
+      }
+    } catch (error) {
       setLoginAttempts(prev => prev + 1);
       setLoginError(true);
       toast({
         variant: "destructive",
-        title: "Authentication Failed",
-        description: "Wrong username or password. Please try again.",
+        title: "Login Error",
+        description: "An error occurred during login. Please try again.",
       });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   // Format time as HH:MM:SS
