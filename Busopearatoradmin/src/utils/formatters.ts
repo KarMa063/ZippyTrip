@@ -1,4 +1,4 @@
-// ... existing code ...
+
 
 /**
  * Format a number as Nepali Rupees
@@ -31,4 +31,3 @@ export const formatNepaliRupees = (
 
 // Add an alias for backward compatibility
 export const formatNPR = formatNepaliRupees;
-// ... existing code ...

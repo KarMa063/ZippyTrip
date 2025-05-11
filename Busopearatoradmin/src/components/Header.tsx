@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getUserProfile, UserProfile } from "@/services/profile";
 import { RouteNotification, fetchRouteNotifications } from "@/services/api/uiNotifications";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -133,14 +133,17 @@ const Header = () => {
             <DropdownMenuSeparator />
             <div className="max-h-80 overflow-auto">
               {notifications.length > 0 ? (
+                // Group notifications by route_id to avoid duplicates
                 notifications.map((notification) => (
                   <DropdownMenuItem 
                     key={notification.id} 
                     className="p-4 cursor-pointer"
-                    onClick={() => navigate(`/routes/${notification.id}`)}
+                    onClick={() => navigate(`/routes/${notification.route_id || notification.id}`)}
                   >
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">Route update required</p>
+                      <p className="text-sm font-medium">
+                        {notification.message || "New bus added"}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {notification.name}
                       </p>

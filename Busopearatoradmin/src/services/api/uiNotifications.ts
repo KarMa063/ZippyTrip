@@ -6,6 +6,8 @@ export type RouteNotification = {
   name: string;
   created_at: string;
   read: boolean;
+  route_id?: string; // Add route_id to identify unique routes
+  message?: string; // Add message field for notification content
 };
 
 /**
@@ -16,13 +18,15 @@ export type RouteNotification = {
 export const fetchRouteNotifications = async (limit = 5): Promise<RouteNotification[]> => {
   try {
     // Query to get route updates that need attention - joining through schedules table
+    // Modified to select distinct routes to avoid duplicates and removed r.status which doesn't exist
     const result = await query(`
-      SELECT 
-        r.id,
-        name,
-        status,
-        s.updated_at,
-        b.id as booking_id
+      SELECT DISTINCT ON (r.id)
+        r.id as route_id,
+        r.name,
+        b.id as booking_id,
+        b.updated_at,
+        r.origin,
+        r.destination
       FROM 
         routes r
       JOIN 
@@ -33,16 +37,18 @@ export const fetchRouteNotifications = async (limit = 5): Promise<RouteNotificat
         b.status IN ('pending', 'updated', 'needs_review')
         OR b.updated_at > NOW() - INTERVAL '24 hours'
       ORDER BY 
-        b.updated_at DESC
+        r.id, b.updated_at DESC
       LIMIT $1
     `, [limit]);
     
-    // Transform the database results into notification format
+    // Transform the database results into notification format with better messages
     return result.rows.map(row => ({
       id: row.booking_id,
-      name: row.name || `Route #${row.id.substring(0, 6)}`,
+      name: row.name || `Route #${row.route_id?.substring(0, 6)}`,
       created_at: row.updated_at,
-      read: false
+      read: false,
+      route_id: row.route_id,
+      message: `New bus added for route ${row.origin} to ${row.destination}`
     }));
   } catch (error) {
     console.error('Error fetching route notifications:', error);
