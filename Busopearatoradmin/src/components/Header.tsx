@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Bell, Search, User, LogOut } from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +15,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getUserProfile, UserProfile } from "@/services/profile";
-import { RouteNotification, fetchRouteNotifications,  } from "@/services/api/uiNotifications";
+import { RouteNotification, fetchRouteNotifications } from "@/services/api/uiNotifications";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -102,17 +102,21 @@ const Header = () => {
 
   return (
     <header className="border-b border-zippy-gray p-4 flex items-center justify-between bg-zippy-darkGray">
-      <div className="flex items-center md:w-72">
-        <div className="relative w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="w-full bg-zippy-gray pl-8 border-none focus-visible:ring-1 focus-visible:ring-zippy-purple"
-          />
-        </div>
-      </div>
+      {/* Removed search bar */}
+      <div className="flex-1"></div>
+      
       <div className="flex items-center space-x-4">
+        {/* Booking Notifications - Direct link to booking page */}
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="relative bg-zippy-gray border-none"
+          onClick={() => navigate('/booking-alerts')}
+        >
+          <span className="font-bold text-lg">B</span>
+        </Button>
+        
+        {/* Route Notifications */}
         <DropdownMenu onOpenChange={handleNotificationOpen}>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="relative bg-zippy-gray border-none">

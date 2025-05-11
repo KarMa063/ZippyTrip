@@ -208,7 +208,7 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="fare">Fare ($)</Label>
+            <Label htmlFor="fare">Fare (NPR)</Label>
             <Input
               id="fare"
               type="number"

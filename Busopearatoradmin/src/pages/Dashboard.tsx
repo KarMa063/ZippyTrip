@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronRight, DollarSign, MapPin, Route as RouteIcon, Users, Bus, ArrowUp, Calendar, Clock, UserPlus } from 'lucide-react';
+import { ChevronRight, DollarSign, MapPin, Route as RouteIcon,  Bus,  Calendar, Clock, UserPlus } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +8,6 @@ import { fetchSchedules } from '@/services/api/schedules';
 import { fetchDashboardStats } from '@/services/analytics';
 import { formatDistanceToNow, format, addDays, isSameDay } from 'date-fns';
 import { query } from '@/integrations/neon/client';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 
 // Define types for our data
@@ -415,7 +414,7 @@ const Dashboard = () => {
                 <div className="flex bg-zippy-darkGray/50 p-2 overflow-x-auto no-scrollbar border-b border-zippy-gray/20">
                   {getNextSevenDays().map((day) => (
                     <Button
-                      key={format(day, 'yyyy-MM-dd')} // Use formatted date as key instead of index
+                      key={format(day, 'yyyy-MM-dd')} 
                       variant="ghost"
                       className={`${
                         isSameDay(day, selectedDay) 
@@ -443,7 +442,7 @@ const Dashboard = () => {
                     <div className="space-y-3">
                       {getSchedulesForSelectedDay().map((schedule) => (
                         <div 
-                          key={schedule.id} // Ensure schedule.id is defined and unique
+                          key={schedule.id}
                           className="bg-zippy-darkGray/70 rounded-lg cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 overflow-hidden flex backdrop-blur-sm border border-zippy-gray/20 shadow-md"
                           onClick={() => navigate(`/schedule?id=${schedule.id}`)}
                         >
@@ -493,55 +492,62 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Right Column - 1/3 width - REPLACED RECENT ACTIVITY WITH SCHEDULE */}
+          {/* Right Column - 1/3 width */}
           <div className="space-y-6">
-            {/* Schedule Section - Replacing Recent Activity */}
+            {/* Popular Routes Section */}
             <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp h-full backdrop-blur-sm bg-opacity-80 shadow-lg`} style={{
             animationDelay: '600ms'
           }}>
               <CardContent className="p-6">
-                <h2 className="text-2xl font-bold mb-4 gold-stroke">Routes</h2>
-                <div className="space-y-4">
-                  {isLoading ? (
-                    <div className="flex justify-center p-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zippy-purple"></div>
-                    </div>
-                  ) : routes.length > 0 ? (
-                    routes.map(route => (
+                <h2 className="text-2xl font-bold mb-6 gold-stroke">Routes</h2>
+                
+                {isLoading ? (
+                  <div className="flex justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zippy-purple"></div>
+                  </div>
+                ) : routes.length > 0 ? (
+                  <div className="space-y-4">
+                    {routes.slice(0, 5).map((route) => (
                       <div 
-                        key={route.id} 
-                        className="p-3 bg-zippy-darkGray/70 rounded-lg border border-zippy-gray/20 hover:bg-zippy-gray/30 transition-all duration-300 cursor-pointer backdrop-blur-sm shadow-md"
+                        key={route.id}
+                        className="bg-zippy-darkGray/70 rounded-lg p-3 cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 border border-zippy-gray/20 shadow-md"
                         onClick={() => navigate(`/routes/${route.id}`)}
                       >
-                        <div className="flex items-center space-x-3">
-                          <div className="bg-zippy-purple rounded-full p-2 shadow-md">
-                            <RouteIcon className="h-4 w-4 text-white" />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="bg-zippy-purple rounded-full p-2 shadow-md">
+                              <RouteIcon className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-white">{route.name}</h3>
+                              <p className="text-sm text-gray-400">{route.distance} km</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-medium text-white">{route.name}</h3>
-                            <p className="text-sm text-gray-400 flex items-center">
-                              <MapPin className="h-3 w-3 mr-1 inline" /> {route.origin} to {route.destination}
-                            </p>
-                          </div>
+                          <Badge className={`${getRouteStatusColor(route.status || 'active')} text-white px-2 py-0.5 text-xs rounded-md`}>
+                            {(route.status || 'Active').charAt(0).toUpperCase() + (route.status || 'active').slice(1)}
+                          </Badge>
                         </div>
-                        <div className="mt-2 flex justify-between items-center">
-                          <span className="text-sm text-gray-400">
-                            {route.distance ? `${route.distance} km` : 'Distance not set'}
-                           </span>
+                        <div className="mt-2 flex items-center text-sm text-gray-400">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          <span>{route.origin} to {route.destination}</span>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center p-12 text-gray-400 bg-zippy-darkGray/40 rounded-lg border border-zippy-gray/20 backdrop-blur-sm">
-                      <RouteIcon className="h-16 w-16 mx-auto mb-4 text-zippy-purple opacity-40" />
-                      <p className="text-lg font-medium text-white">No routes found.</p>
-                      <p className="text-sm mt-2 text-gray-400">Discover comfortable and unique accommodations around the world.</p>
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 px-4 bg-zippy-darkGray/40 rounded-lg border border-zippy-gray/20">
+                    <RouteIcon className="h-12 w-12 mx-auto mb-4 text-zippy-purple opacity-40" />
+                    <p className="text-lg font-medium text-white">No routes available</p>
+                    <p className="text-sm mt-2 text-gray-400">Add routes to see them here</p>
+                  </div>
+                )}
+                
+                <div className="mt-4 text-center">
+                  <Button variant="outline" className="bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white" onClick={() => navigate('/routes')}>
+                    <span>View All Routes</span>
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
-                <Button variant="outline" className="w-full mt-6 bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white" onClick={() => navigate('/routes')}>
-                  View All Routes
-                </Button>
               </CardContent>
             </Card>
           </div>
