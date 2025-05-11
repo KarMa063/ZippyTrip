@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext"; // Import Auth context
 
 const SecurityForm = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ const SecurityForm = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { updatePassword } = useAuth(); // Get updatePassword function from auth context
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -65,25 +67,36 @@ const SecurityForm = () => {
     setIsSubmitting(true);
 
     try {
-      // Here we'd typically submit the form data to an API
-      // For this example, we'll simulate the API call with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the updatePassword function from auth context
+      const success = await updatePassword(
+        formData.currentPassword,
+        formData.newPassword
+      );
 
-      // Reset the form
-      setFormData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
+      if (success) {
+        // Reset the form on success
+        setFormData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
 
-      toast({
-        title: "Password updated",
-        description: "Your password has been updated successfully.",
-      });
+        toast({
+          title: "Password updated",
+          description: "Your password has been updated successfully. You can now login with your new password.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Current password is incorrect or there was an error updating your password.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
+      console.error("Password update error:", error);
       toast({
         title: "Error",
-        description: "There was an error updating your password.",
+        description: "There was an error updating your password. Please try again.",
         variant: "destructive"
       });
     } finally {

@@ -38,15 +38,18 @@ const Schedule = () => {
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null); 
   const [scheduleData, setScheduleData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAllSchedules, setShowAllSchedules] = useState(true); // New state to toggle between all and date-specific
   
   const formattedDate = date ? format(date, "yyyy-MM-dd") : undefined;
   
-  // Fetch schedules when date changes
+  // Fetch schedules when date changes or showAllSchedules changes
   useEffect(() => {
     const getSchedules = async () => {
       setLoading(true);
       try {
-        const data = await fetchSchedules(formattedDate);
+        // If showAllSchedules is true, pass null to fetch all schedules
+        // Otherwise, pass the formatted date to fetch schedules for that date
+        const data = await fetchSchedules(showAllSchedules ? null : formattedDate);
         console.log("API Response:", data);
         setScheduleData(data || []);
       } catch (error) {
@@ -63,7 +66,7 @@ const Schedule = () => {
     };
     
     getSchedules();
-  }, [formattedDate, toast]);
+  }, [formattedDate, showAllSchedules, toast]);
   
   // Filter schedules based on search query and status
   const filteredSchedules = scheduleData.filter(schedule => {
@@ -173,14 +176,32 @@ const Schedule = () => {
       
       <Card>
         <CardContent className="p-6">
-          <ScheduleFilters 
-            date={date}
-            setDate={setDate}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-          />
+          <div className="flex justify-between items-center mb-4">
+            <ScheduleFilters 
+              date={date}
+              setDate={setDate}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+            />
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                className={`${showAllSchedules ? 'bg-zippy-purple text-white' : 'bg-zippy-gray'}`}
+                onClick={() => setShowAllSchedules(true)}
+              >
+                Show All Schedules
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAllSchedules(false)}
+                className={`${!showAllSchedules ? 'bg-zippy-purple text-white' : 'bg-zippy-gray'}`}
+              >
+                Show Selected Date Only
+              </Button>
+            </div>
+          </div>
           
           <div className="mt-6">
             <ScheduleTable 

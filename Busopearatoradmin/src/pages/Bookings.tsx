@@ -82,13 +82,21 @@ const Bookings = () => {
 
   const filteredBookings = bookings
     ? bookings.filter((booking) => {
-        const matchesSearch = 
-          booking.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          booking.schedules?.routes?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          booking.schedules?.routes?.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          booking.schedules?.routes?.destination.toLowerCase().includes(searchTerm.toLowerCase());
+        // Add null checks to prevent accessing properties of null/undefined objects
+        const bookingId = booking?.id ? booking.id.toLowerCase() : '';
+        const routeName = booking?.schedules?.routes?.name ? booking.schedules.routes.name.toLowerCase() : '';
+        const routeOrigin = booking?.schedules?.routes?.origin ? booking.schedules.routes.origin.toLowerCase() : '';
+        const routeDestination = booking?.schedules?.routes?.destination ? booking.schedules.routes.destination.toLowerCase() : '';
         
-        const matchesStatus = statusFilter === "all" || booking.status === statusFilter;
+        const searchTermLower = searchTerm.toLowerCase();
+        
+        const matchesSearch = 
+          bookingId.includes(searchTermLower) ||
+          routeName.includes(searchTermLower) ||
+          routeOrigin.includes(searchTermLower) ||
+          routeDestination.includes(searchTermLower);
+        
+        const matchesStatus = statusFilter === "all" || booking?.status === statusFilter;
         
         return matchesSearch && matchesStatus;
       })
@@ -288,37 +296,47 @@ const Bookings = () => {
               <TableBody>
                 {filteredBookings.length > 0 ? (
                   filteredBookings.map((booking) => (
-                    <TableRow key={booking.id} className="border-b border-zippy-gray">
-                      <TableCell className="font-medium">{booking.id.substring(0, 8)}</TableCell>
+                    <TableRow key={booking?.id || 'unknown'} className="border-b border-zippy-gray">
+                      <TableCell className="font-medium">
+                        {booking?.id ? booking.id.substring(0, 8) : 'N/A'}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span>{booking.schedules?.routes?.name}</span>
+                          <span>{booking?.schedules?.routes?.name || 'Unknown'}</span>
                           <span className="text-xs text-muted-foreground">
-                            {booking.schedules?.routes?.origin} → {booking.schedules?.routes?.destination}
+                            {booking?.schedules?.routes?.origin || 'Unknown'} → {booking?.schedules?.routes?.destination || 'Unknown'}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-xs">Booked: {formatDate(booking.booking_date)}</span>
-                          <span className="text-xs">Departure: {formatDate(booking.schedules?.departure_time)}</span>
+                          <span className="text-xs">Booked: {booking?.booking_date ? formatDate(booking.booking_date) : 'Unknown'}</span>
+                          <span className="text-xs">Departure: {booking?.schedules?.departure_time ? formatDate(booking.schedules.departure_time) : 'Unknown'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span>User ID: {booking.user_id.substring(0, 8)}</span>
+                        <span>User ID: {booking?.user_id ? booking.user_id.substring(0, 8) : 'Unknown'}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs">{booking.seat_numbers.join(", ")}</span>
+                        <span className="text-xs">
+                          {Array.isArray(booking?.seat_numbers) 
+                            ? booking.seat_numbers.join(", ")
+                            : typeof booking?.seat_numbers === 'string' 
+                              ? booking.seat_numbers
+                              : 'N/A'}
+                        </span>
                         <span className="text-xs text-muted-foreground block">
-                          {booking.seat_numbers.length} {booking.seat_numbers.length === 1 ? 'seat' : 'seats'}
+                          {Array.isArray(booking?.seat_numbers) 
+                            ? `${booking.seat_numbers.length} ${booking.seat_numbers.length === 1 ? 'seat' : 'seats'}`
+                            : '0 seats'}
                         </span>
                       </TableCell>
-                      <TableCell>{formatNPR(booking.total_fare)}</TableCell>
-                      <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                      <TableCell>{booking?.total_fare ? formatNPR(booking.total_fare) : 'N/A'}</TableCell>
+                      <TableCell>{getStatusBadge(booking?.status)}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          {getPaymentStatusBadge(booking.payment_status)}
-                          {booking.payment_method && (
+                          {getPaymentStatusBadge(booking?.payment_status)}
+                          {booking?.payment_method && (
                             <span className="text-xs text-muted-foreground">
                               via {booking.payment_method}
                             </span>

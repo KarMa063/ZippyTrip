@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Bell, AlertTriangle, Check, X, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +30,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { updateBooking } from '@/services/api/bookings';
 import { sendTripNotification } from '@/services/api/notifications';
+import { query } from '@/integrations/neon/client';
 
 type BookingAlert = {
   id: string;
@@ -54,64 +54,86 @@ const BookingAlertsPage = () => {
   useEffect(() => {
     fetchBookingAlerts();
     
-    // Subscribe to real-time booking updates
-    const channel = supabase
-      .channel('booking-alerts-page')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'bookings',
-        },
-        async (payload) => {
-          fetchBookingAlerts();
-        }
-      )
-      .subscribe();
-
+    // Set up polling for new bookings instead of real-time subscription
+    const pollingInterval = setInterval(() => {
+      fetchBookingAlerts();
+    }, 30000); // Poll every 30 seconds
+    
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(pollingInterval);
     };
   }, []);
 
   const fetchBookingAlerts = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          schedules (
-            departure_time,
-            arrival_time,
-            routes (
-              name,
-              origin,
-              destination
-            )
-          ),
-          user_profiles (
-            email
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      
+      // Use Neon DB query with proper table aliases
+      const result = await query(`
+        SELECT 
+          b.id,
+          b.user_id,
+          b.schedule_id,
+          b.booking_date,
+          b.total_fare,
+          b.seat_numbers,
+          b.status,
+          payment_method,
+          payment_status,
+          b.created_at,
+          b.updated_at,
+          s.departure_time,
+          r.name,
+          r.origin,
+          r.destination
+        FROM 
+          bookings b
+        LEFT JOIN 
+          schedules s ON b.schedule_id = s.id
+        LEFT JOIN 
+          routes r ON s.route_id = r.id
+        ORDER BY 
+          b.created_at DESC
+        LIMIT 50
+      `);
 
-      if (error) throw error;
+      if (!result || !result.rows) {
+        throw new Error('Failed to fetch booking alerts');
+      }
 
-      // Create booking alerts from data
-      const bookingAlerts: BookingAlert[] = (data || []).map((booking: any) => ({
-        id: booking.id,
-        routeName: booking.schedules?.routes?.name || 'Unknown Route',
-        origin: booking.schedules?.routes?.origin || 'Unknown',
-        destination: booking.schedules?.routes?.destination || 'Unknown',
-        departureTime: booking.schedules?.departure_time || '',
-        passengerEmail: booking.user_profiles?.email || booking.user_id || '',
-        seatNumbers: booking.seat_numbers || [],
-        status: booking.status || 'pending',
-        created_at: booking.created_at
-      }));
+      // Create booking alerts from data with proper handling of seat_numbers
+      const bookingAlerts: BookingAlert[] = result.rows.map((booking: any) => {
+        // Handle seat_numbers which might be in different formats
+        let seatNumbersArray: string[] = [];
+        if (booking.seat_numbers) {
+          if (Array.isArray(booking.seat_numbers)) {
+            seatNumbersArray = booking.seat_numbers;
+          } else if (typeof booking.seat_numbers === 'string') {
+            try {
+              // Try to parse if it's a JSON string
+              const parsed = JSON.parse(booking.seat_numbers);
+              seatNumbersArray = Array.isArray(parsed) ? parsed : [booking.seat_numbers];
+            } catch (e) {
+              // If parsing fails, treat as a comma-separated string
+              seatNumbersArray = booking.seat_numbers.split(',');
+            }
+          } else {
+            seatNumbersArray = [String(booking.seat_numbers)];
+          }
+        }
+
+        return {
+          id: booking.id || '',
+          routeName: booking.route_name || 'Unknown Route',
+          origin: booking.origin || 'Unknown',
+          destination: booking.destination || 'Unknown',
+          departureTime: booking.departure_time || '',
+          passengerEmail: booking.user_id || 'Unknown User',
+          seatNumbers: seatNumbersArray,
+          status: booking.status || 'pending',
+          created_at: booking.created_at || new Date().toISOString()
+        };
+      });
 
       setAlerts(bookingAlerts);
     } catch (error) {
@@ -264,7 +286,7 @@ const BookingAlertsPage = () => {
                   <TableHead>Seats</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
+                
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -303,8 +325,8 @@ const BookingAlertsPage = () => {
                               setIsDialogOpen(true);
                             }}
                           >
-                            <AlertTriangle className="h-4 w-4 mr-1" />
-                            Respond
+                            
+                            
                           </Button>
                         </div>
                       </TableCell>
