@@ -1,21 +1,26 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const http = require('http');
 const { router: guestHousePropertiesRouter, propertyTableExists } = require('./guesthouse/properties');
 const { router: guestHouseRoomsRouter, createRoomsTable } = require('./guesthouse/rooms');
 const { router: bookingsRoutes, bookingsTableExists } = require('./guesthouse/bookings');
 const { router: reviewsRouter, createReviewsTable } = require('./guesthouse/reviews');
-const { router: chatRouter, createChatMessagesTable } = require('./guesthouse/chat');
+const { router: chatRouter, createChatMessagesTable, setupWebSocketServer } = require('./guesthouse/chat');
 const { router: busRoutesRouter, createRoutesTable } = require('./routes/busRoutes');
 const { router: busBookingsRouter, createBookingsTable } = require('./routes/bookingRoutes');
 const { router: preferencesRouter, preferencesTableExists } = require('./routes/preferences');
 const { router: usersRouter, usersTableExists } = require('./routes/users');
+const cancellationsRouter = require('./routes/cancellations');
 const { Pool } = require('pg');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+
+// Create HTTP server
+const server = http.createServer(app);
 
 // Configure PostgreSQL connection
 const pool = new Pool({
@@ -29,7 +34,6 @@ bookingsTableExists();
 createReviewsTable();
 preferencesTableExists();
 usersTableExists();
-// Initialize tables
 createChatMessagesTable();
 
 // Middleware
@@ -40,19 +44,32 @@ app.use(express.json());
 app.use('/api/gproperties', guestHousePropertiesRouter);
 app.use('/api/gproperties', guestHouseRoomsRouter);
 app.use('/api/gproperties', reviewsRouter);
-app.use('/api/messages', chatRouter);
+app.use('/api/gproperties', chatRouter);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/routes', busRoutesRouter);
 app.use('/api/bus-bookings', busBookingsRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/preferences', preferencesRouter);
 
 // Health check route
 app.get('/', (req, res) => {
-  res.json({ message: 'Server is running' });
+  res.json({ message: 'ZippyTrip Backend API is running' });
 });
 
 // Import the guesthouse authentication route
 const guesthouseAuthRoutes = require('./routes/guesthouse-auth');
+
+// Import the guesthouse cancellations router
+const guesthouseCancellationsRouter = require('./routes/guesthouse-cancellations');
+
+// Use the cancellations router
+app.use('/api/cancellations', cancellationsRouter);
+
+// Use the guesthouse cancellations router
+app.use('/api/guesthouse-cancellations', guesthouseCancellationsRouter);
+
+// Use the guesthouse authentication route
+app.use('/api/guesthouse-auth', guesthouseAuthRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -63,13 +80,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Use the guesthouse authentication route
-app.use('/api/guesthouse-auth', guesthouseAuthRoutes);
-
-
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, async () => {
+// Change app.listen to server.listen for WebSocket support
+server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   
   // Initialize tables
