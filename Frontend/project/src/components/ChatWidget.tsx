@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, X } from 'lucide-react';
+import { getCurrentUser } from '../lib/supabase';
 
 interface Message {
   text: string;
@@ -14,80 +15,93 @@ interface ChatWidgetProps {
 
 const ChatWidget: React.FC<ChatWidgetProps> = ({ guestHouseId, ownerId }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Create WebSocket connection
-    const socket = new WebSocket(`ws://localhost:5000/chat/${guestHouseId}`);
-    
-    socket.onopen = () => {
-      console.log('Connected to chat server');
-      // Send initial connection message
-      socket.send(JSON.stringify({
-        type: 'connect',
-        guestHouseId,
-        ownerId,
-        userId: localStorage.getItem('userId')
-      }));
-    };
-
-    socket.onmessage = (event) => {
-      try {
-        const receivedMessage = JSON.parse(event.data);
-        if (receivedMessage.type !== 'connect') {
-          setMessages(prev => [...prev, receivedMessage]);
-        }
-      } catch (error) {
-        console.error('Error parsing message:', error);
+    const fetchUserId = async () => {
+      const userData = await getCurrentUser();
+      if (userData?.user_id) {
+        setUserId(userData.user_id);
+        localStorage.setItem('userId', userData.user_id);
       }
     };
+    fetchUserId();
+  }, []);
 
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+  useEffect(() => {
+    if (isOpen && userId && ownerId) {
+      fetchMessages();
+    }
+  }, [isOpen, userId, ownerId]);
 
-    socket.onclose = () => {
-      console.log('WebSocket connection closed');
-      // Attempt to reconnect after a delay
-      setTimeout(() => {
-        if (isOpen) {  // Only reconnect if chat is still open
-          console.log('Attempting to reconnect...');
-          setWs(null);  // Reset ws state to trigger useEffect
-        }
-      }, 3000);
-    };
-
-    setWs(socket);
-
-    return () => {
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.close();
+  const fetchMessages = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/gproperties/${guestHouseId}/chat?travellerId=${userId}&ownerId=${ownerId}`
+      );
+      const data = await response.json();
+      if (data.success) {
+        const formattedMessages = data.messages.map((msg: any) => ({
+          text: msg.message,
+          sender: msg.sender_type === 'traveller' ? 'user' : 'owner',
+          timestamp: new Date(msg.created_at)
+        }));
+        setMessages(formattedMessages);
       }
-    };
-  }, [guestHouseId, isOpen]);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
 
-  const sendMessage = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !ws) return;
+    if (!newMessage.trim() || !userId || !ownerId) return;
 
-    const newMessage = {
-      text: message,
-      sender: 'user',
-      timestamp: new Date(),
-      guestHouseId,
-      ownerId,
-      userId: localStorage.getItem('userId') // Add user identification
+    setIsLoading(true);
+    const messageData = {
+      traveller_id: userId,
+      owner_id: ownerId,
+      message: newMessage,
+      sender_type: 'traveller' as const
     };
+
+    console.log('Sending message with data:', messageData);
 
     try {
-      ws.send(JSON.stringify(newMessage));
-      setMessages(prev => [...prev, newMessage]);
-      setMessage('');
+      const response = await fetch(
+        `http://localhost:5000/api/gproperties/${guestHouseId}/chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(messageData),
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        setMessages(prev => [
+          ...prev,
+          {
+            text: data.chatMessage.message,
+            sender: data.chatMessage.sender_type === 'traveller' ? 'user' : 'owner',
+            timestamp: new Date(data.chatMessage.created_at)
+          }
+        ]);
+        setNewMessage('');
+      } else {
+        console.error('Failed to send message:', data);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -98,6 +112,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ guestHouseId, ownerId }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+  console.log('userId:', userId, 'isLoading:', isLoading, 'newMessage:', newMessage);
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -118,49 +133,63 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ guestHouseId, ownerId }) => {
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[70%] rounded-lg p-3 ${
-                    msg.sender === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  <p>{msg.text}</p>
-                  <p className="text-xs mt-1 opacity-70">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </p>
-                </div>
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-500 mt-4">
+                No messages yet. Start a conversation!
               </div>
-            ))}
+            ) : (
+              messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[70%] rounded-lg p-3 ${
+                      msg.sender === 'user'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    <p>{msg.text}</p>
+                    <p className="text-xs mt-1 opacity-70">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={sendMessage} className="p-4 border-t">
+          <form onSubmit={handleSubmit} className="p-4 border-t">
             <div className="flex gap-2">
               <input
                 type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type a message..."
                 className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
               />
               <button
                 type="submit"
-                className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                disabled={!userId || isLoading || !newMessage.trim()}
               >
                 <Send className="h-5 w-5" />
-              </button>
-            </div>
+              </button>       
+            </div>     
+            {!userId && (
+              <p className="text-xs text-red-500 mt-1">
+                Please log in to send messages
+              </p>
+            )}
           </form>
         </div>
       )}
     </div>
   );
 };
+
 
 export default ChatWidget;

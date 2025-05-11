@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { Ticket, Search, MapPin, Edit, Trash2, Eye, Plus } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Ticket, Search, MapPin, Edit, Trash2, Eye, Plus, Activity } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,7 @@ export function Attractions() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [numberTwoCount, setNumberTwoCount] = useState(0);
   
   // Form state for add/edit
   const [formData, setFormData] = useState({
@@ -74,12 +75,32 @@ export function Attractions() {
       setLoading(true);
       const data = await getAllAttractions();
       setAttractions(data);
+      
+      // Count occurrences of number 2
+      countNumberTwoOccurrences(data);
     } catch (error) {
       console.error("Failed to fetch attractions:", error);
       toast.error("Failed to load attractions");
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Count occurrences of number 2 in attractions data
+  const countNumberTwoOccurrences = (attractions: Attraction[]) => {
+    let count = 0;
+    
+    attractions.forEach(attraction => {
+      // Check if any property equals 2
+      if (attraction.id === 2) count++;
+      if (attraction.category === '2') count++;
+      if (attraction.price === 2) count++;
+      if (attraction.rating === 2) count++;
+      if (attraction.location === '2') count++;
+      if (attraction.name === '2') count++;
+    });
+    
+    setNumberTwoCount(count);
   };
   
   // Handle search
@@ -138,9 +159,11 @@ export function Attractions() {
   // Handle form input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Directly update the state without complex processing
     setFormData(prev => ({
       ...prev,
-      [name]: name === "price" || name === "rating" ? parseFloat(value) : value
+      [name]: value
     }));
   };
   
@@ -156,7 +179,14 @@ export function Attractions() {
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createAttraction(formData);
+      // Convert numeric fields at submission time
+      const submissionData = {
+        ...formData,
+        price: typeof formData.price === 'string' ? parseFloat(formData.price) || 0 : formData.price,
+        rating: typeof formData.rating === 'string' ? parseFloat(formData.rating) || 0 : formData.rating
+      };
+      
+      await createAttraction(submissionData);
       toast.success("Attraction added successfully");
       setIsAddDialogOpen(false);
       fetchAttractions(); // Refresh the list
@@ -183,7 +213,14 @@ export function Attractions() {
     if (!selectedAttraction) return;
     
     try {
-      await updateAttraction(selectedAttraction.id, formData);
+      // Convert numeric fields at submission time
+      const submissionData = {
+        ...formData,
+        price: typeof formData.price === 'string' ? parseFloat(formData.price) || 0 : formData.price,
+        rating: typeof formData.rating === 'string' ? parseFloat(formData.rating) || 0 : formData.rating
+      };
+      
+      await updateAttraction(selectedAttraction.id, submissionData);
       toast.success("Attraction updated successfully");
       setIsEditDialogOpen(false);
       fetchAttractions(); // Refresh the list
@@ -219,6 +256,7 @@ export function Attractions() {
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
+            autoComplete="off"
           />
         </div>
         
@@ -231,6 +269,7 @@ export function Attractions() {
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
+            autoComplete="off"
           />
         </div>
         
@@ -243,21 +282,23 @@ export function Attractions() {
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
+            autoComplete="off"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="price">Price ($)</Label>
+          <Label htmlFor="price">Price (NPR)</Label>
           <Input 
             id="price" 
             name="price" 
             type="number" 
             min="0" 
             step="0.01" 
-            value={formData.price} 
+            value={formData.price || ''} 
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
+            autoComplete="off"
           />
         </div>
         
@@ -270,10 +311,11 @@ export function Attractions() {
             min="0" 
             max="5" 
             step="0.1" 
-            value={formData.rating} 
+            value={formData.rating || ''} 
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
+            autoComplete="off"
           />
         </div>
         
@@ -302,6 +344,7 @@ export function Attractions() {
             value={formData.image} 
             onChange={handleInputChange} 
             className="bg-zippy-dark"
+            autoComplete="off"
           />
         </div>
       </div>
@@ -315,6 +358,7 @@ export function Attractions() {
           onChange={handleInputChange} 
           rows={4} 
           className="bg-zippy-dark"
+          autoComplete="off"
         />
       </div>
       
@@ -418,7 +462,7 @@ export function Attractions() {
                       <TableCell className="font-medium">{attraction.name}</TableCell>
                       <TableCell>{attraction.location}</TableCell>
                       <TableCell>{attraction.category}</TableCell>
-                      <TableCell>${attraction.price}</TableCell>
+                      <TableCell>NPR {attraction.price}</TableCell>
                       <TableCell>{attraction.rating}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={getStatusColor(attraction.status)}>
@@ -479,7 +523,7 @@ export function Attractions() {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <h3 className="text-xl font-semibold">{attraction.name}</h3>
-                    <span>${attraction.price}</span>
+                    <span>NPR {attraction.price}</span>
                   </div>
                   <div className="flex items-center text-gray-400 gap-1 text-sm">
                     <MapPin size={16} />

@@ -164,7 +164,7 @@ export default function Stays() {
                       <TableCell className="font-medium">{hotel.id}</TableCell>
                       <TableCell>{hotel.name}</TableCell>
                       <TableCell>{hotel.location}</TableCell>
-                      <TableCell>${hotel.price}</TableCell>
+                      <TableCell>NPR {hotel.price}</TableCell>
                       <TableCell>{hotel.rating}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={getStatusColor(hotel.status)}>
