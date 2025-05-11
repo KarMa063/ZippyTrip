@@ -231,7 +231,7 @@ const EditScheduleModal = ({ isOpen, onClose, schedule, onSuccess }: EditSchedul
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="fare">Fare (NPR)</Label>
+            <Label htmlFor="fare">Fare (रू)</Label>
             <Input
               id="fare"
               type="number"

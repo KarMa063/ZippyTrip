@@ -84,16 +84,21 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
       const selectedBus = buses.find(bus => bus.id === busId);
       const availableSeats = selectedBus ? selectedBus.capacity : 0;
       
+      // Ensure driver_id is properly formatted (might be an issue if it's not a string)
+      const driverIdValue = driverId.toString();
+      
       const scheduleData = {
         route_id: routeId,
         bus_id: busId,
-        driver_id: driverId, // Add driver ID
+        driver_id: driverIdValue,
         departure_time: departureDateTime.toISOString(),
         arrival_time: arrivalDateTime.toISOString(),
         fare: parseFloat(fare),
         available_seats: availableSeats,
         is_active: true
       };
+      
+      console.log("Creating schedule with data:", scheduleData);
       
       await createSchedule(scheduleData);
       
@@ -208,7 +213,7 @@ const AddScheduleModal = ({ isOpen, onClose, onSuccess }: AddScheduleModalProps)
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="fare">Fare ($)</Label>
+            <Label htmlFor="fare">Fare (रू)</Label>
             <Input
               id="fare"
               type="number"

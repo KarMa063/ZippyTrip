@@ -13,8 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Loader2, Search, Calendar } from "lucide-react";
-import { formatNPR } from "@/utils/formatters";
-import axios from 'axios';
+import { formatNepaliRupees } from "@/utils/formatters";
+import { query } from "@/integrations/neon/client";
 
 const CancellationManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,10 +23,46 @@ const CancellationManagement = () => {
     queryKey: ['cancelled-bookings'],
     queryFn: async () => {
       try {
-        const response = await axios.get('http://localhost:3001/api/cancellations');
-        return response.data;
+        // Query cancelled bookings from Neon DB
+        const result = await query(`
+          SELECT 
+            b.*,
+            s.departure_time,
+            s.arrival_time,
+            r.name as route_name,
+            r.origin as route_origin,
+            r.destination as route_destination
+          FROM 
+            bookings b
+          LEFT JOIN 
+            schedules s ON b.schedule_id = s.id
+          LEFT JOIN 
+            routes r ON s.route_id = r.id
+          WHERE 
+            b.status = 'cancelled'
+          ORDER BY 
+            b.updated_at DESC
+        `);
+        
+        if (!result || !result.rows) throw new Error("Failed to fetch cancellations");
+        
+        // Transform the data to match the expected structure
+        const transformedData = result.rows.map(booking => ({
+          ...booking,
+          schedules: {
+            departure_time: booking.departure_time,
+            arrival_time: booking.arrival_time,
+            routes: {
+              name: booking.route_name,
+              origin: booking.route_origin,
+              destination: booking.route_destination
+            }
+          }
+        }));
+        
+        return transformedData || [];
       } catch (error) {
-        console.error("API error:", error);
+        console.error("Neon DB error:", error);
         return []; // Return empty array if API fails
       }
     },
@@ -132,7 +168,7 @@ const CancellationManagement = () => {
                           {booking.seat_numbers.length} {booking.seat_numbers.length === 1 ? 'seat' : 'seats'}
                         </span>
                       </TableCell>
-                      <TableCell>{formatNPR(booking.total_fare)}</TableCell>
+                      <TableCell>{formatNepaliRupees(booking.total_fare)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={booking.payment_status === 'refunded' ? 'outline' : 'destructive'}

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Bell, Search, User, LogOut } from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +15,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getUserProfile, UserProfile } from "@/services/profile";
-import { RouteNotification, fetchRouteNotifications,  } from "@/services/api/uiNotifications";
+import { RouteNotification, fetchRouteNotifications } from "@/services/api/uiNotifications";
+import "./header.css"; // Import custom CSS for animations
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -102,41 +102,48 @@ const Header = () => {
 
   return (
     <header className="border-b border-zippy-gray p-4 flex items-center justify-between bg-zippy-darkGray">
-      <div className="flex items-center md:w-72">
-        <div className="relative w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="w-full bg-zippy-gray pl-8 border-none focus-visible:ring-1 focus-visible:ring-zippy-purple"
-          />
-        </div>
-      </div>
+      {/* Removed search bar */}
+      <div className="flex-1"></div>
+      
       <div className="flex items-center space-x-4">
+        {/* Booking Notifications - Direct link to booking page */}
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="relative bg-zippy-gray border-none pulse-animation hover-float"
+          onClick={() => navigate('/booking-alerts')}
+        >
+          <span className="font-bold text-lg hover-glow">B</span>
+        </Button>
+        
+        {/* Route Notifications */}
         <DropdownMenu onOpenChange={handleNotificationOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="relative bg-zippy-gray border-none">
-              <Bell className="h-5 w-5" />
+            <Button variant="outline" size="icon" className="relative bg-zippy-gray border-none hover-rotate">
+              <Bell className="h-5 w-5 hover-shake" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-zippy-purple text-[10px] flex items-center justify-center text-white">
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-zippy-purple text-[10px] flex items-center justify-center text-white notification-badge">
                   {unreadCount}
                 </span>
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 bg-zippy-darkGray border-zippy-gray">
+          <DropdownMenuContent align="end" className="w-80 bg-zippy-darkGray border-zippy-gray dropdown-animation">
             <DropdownMenuLabel>Notifications</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="max-h-80 overflow-auto">
               {notifications.length > 0 ? (
+                // Group notifications by route_id to avoid duplicates
                 notifications.map((notification) => (
                   <DropdownMenuItem 
                     key={notification.id} 
-                    className="p-4 cursor-pointer"
-                    onClick={() => navigate(`/routes/${notification.id}`)}
+                    className="p-4 cursor-pointer notification-item"
+                    onClick={() => navigate(`/routes/${notification.route_id || notification.id}`)}
                   >
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">Route update required</p>
+                      <p className="text-sm font-medium">
+                        {notification.message || "New bus added"}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {notification.name}
                       </p>
@@ -155,32 +162,32 @@ const Header = () => {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full avatar-pulse">
+              <Avatar className="avatar-rotate">
                 {profile?.avatar_url ? (
                   <AvatarImage src={profile.avatar_url} alt="Profile" className="object-cover" />
                 ) : (
-                  <AvatarFallback className="bg-zippy-purple text-white">{userInitials}</AvatarFallback>
+                  <AvatarFallback className="bg-zippy-purple text-white avatar-glow">{userInitials}</AvatarFallback>
                 )}
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-zippy-darkGray border-zippy-gray">
+          <DropdownMenuContent align="end" className="w-56 bg-zippy-darkGray border-zippy-gray dropdown-animation">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
-              className="cursor-pointer"
+              className="cursor-pointer menu-item-hover"
               onClick={() => navigate("/settings")}
             >
-              <User className="mr-2 h-4 w-4" />
+              <User className="mr-2 h-4 w-4 icon-spin" />
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
-              className="cursor-pointer text-destructive focus:text-destructive"
+              className="cursor-pointer text-destructive focus:text-destructive menu-item-hover"
               onClick={handleLogout}
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="mr-2 h-4 w-4 icon-bounce" />
               <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

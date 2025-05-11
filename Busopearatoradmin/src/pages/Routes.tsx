@@ -79,6 +79,49 @@ const Routes = () => {
     }
   };
 
+  // Add this new function to handle CSV export
+  const handleExportCSV = () => {
+    // Create CSV header
+    const headers = ['Route ID', 'Name', 'Origin', 'Destination', 'Duration (min)', 'Distance (km)', 'Status'];
+    
+    // Convert route data to CSV rows
+    const csvRows = [
+      headers.join(','), // Add header row
+      ...routesData.map(route => [
+        route.id,
+        `"${route.name.replace(/"/g, '""')}"`, // Escape quotes in CSV
+        `"${route.origin.replace(/"/g, '""')}"`,
+        `"${route.destination.replace(/"/g, '""')}"`,
+        route.duration || '',
+        route.distance || '',
+        route.is_active ? 'Active' : 'Inactive'
+      ].join(','))
+    ];
+    
+    // Combine rows into a single CSV string
+    const csvString = csvRows.join('\n');
+    
+    // Create a Blob with the CSV data
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    
+    // Create a download link and trigger the download
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bus-routes-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Export successful",
+      description: "Routes data has been exported to CSV.",
+    });
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -87,7 +130,11 @@ const Routes = () => {
           <p className="text-muted-foreground mt-1">Manage all your bus routes and schedules</p>
         </div>
         <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <Button variant="outline" className="bg-zippy-darkGray border-zippy-gray">
+          <Button 
+            variant="outline" 
+            className="bg-zippy-darkGray border-zippy-gray"
+            onClick={handleExportCSV}
+          >
             <FileDown className="mr-2 h-4 w-4" />
             Export
           </Button>

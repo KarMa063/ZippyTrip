@@ -13,7 +13,8 @@ import {
   Bus,
   Users,
   CheckCircle2,
-  BarChart
+  BarChart,
+  FileDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -164,6 +165,53 @@ const RouteDetail = () => {
     return `${hours}h ${mins}m`;
   };
 
+  // Add this new function to handle CSV export for a single route
+  const handleExportCSV = () => {
+    if (!routeData) return;
+    
+    // Create CSV header
+    const headers = ['Route ID', 'Name', 'Origin', 'Destination', 'Duration (min)', 'Distance (km)', 'Status', 'Created At', 'Updated At'];
+    
+    // Convert route data to CSV row
+    const csvRows = [
+      headers.join(','), // Add header row
+      [
+        routeData.id,
+        `"${routeData.name.replace(/"/g, '""')}"`, // Escape quotes in CSV
+        `"${routeData.origin.replace(/"/g, '""')}"`,
+        `"${routeData.destination.replace(/"/g, '""')}"`,
+        routeData.duration || '',
+        routeData.distance || '',
+        routeData.is_active ? 'Active' : 'Inactive',
+        routeData.created_at,
+        routeData.updated_at
+      ].join(',')
+    ];
+    
+    // Combine rows into a single CSV string
+    const csvString = csvRows.join('\n');
+    
+    // Create a Blob with the CSV data
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    
+    // Create a download link and trigger the download
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `route-${routeData.id.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Export successful",
+      description: "Route data has been exported to CSV.",
+    });
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -191,6 +239,14 @@ const RouteDetail = () => {
           </div>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-2">
+          <Button 
+            variant="outline" 
+            className="bg-zippy-darkGray border-zippy-gray"
+            onClick={handleExportCSV}
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Export
+          </Button>
           <Button variant="outline" className="bg-zippy-darkGray border-zippy-gray">
             <Printer className="mr-2 h-4 w-4" />
             Print
