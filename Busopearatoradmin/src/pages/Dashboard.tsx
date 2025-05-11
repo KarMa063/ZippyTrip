@@ -37,6 +37,9 @@ type ActivityItem = {
   user_id?: string;
 };
 
+// Add this import at the top
+import "./dashboard.css"; // Import custom CSS for animations
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loaded, setLoaded] = useState(false);
@@ -381,30 +384,41 @@ const Dashboard = () => {
           {/* Left Column - 2/3 width */}
           <div className="lg:col-span-2 space-y-6">
             {/* Quick Access Section */}
-            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp backdrop-blur-sm bg-opacity-80 shadow-lg`} style={{
+            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp backdrop-blur-sm bg-opacity-80 shadow-lg card-hover-effect`} style={{
             animationDelay: '400ms'
           }}>
               <CardContent className="p-6">
-                <h2 className="text-2xl font-bold mb-6 gold-stroke">Quick Actions</h2>
+                <h2 className="text-2xl font-bold mb-6 gold-stroke rainbow-text">Quick Actions</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {quickActions.map((action, index) => <Button key={index} variant="outline" className="bg-zippy-darkGray/70 border-zippy-gray/20 h-auto py-4 flex flex-col items-center justify-center hover:bg-zippy-gray/30 transition-all duration-300 shadow-md" onClick={() => navigate(action.path)}>
-                      <div className="bg-zippy-purple text-white rounded-full p-2 mb-2 shadow-md">
+                  {quickActions.map((action, index) => (
+                    <Button 
+                      key={index} 
+                      variant="outline" 
+                      className="bg-zippy-darkGray/70 border-zippy-gray/20 h-auto py-4 flex flex-col items-center justify-center hover:bg-zippy-gray/30 transition-all duration-300 shadow-md action-button"
+                      onClick={() => navigate(action.path)}
+                    >
+                      <div className="bg-zippy-purple text-white rounded-full p-2 mb-2 shadow-md action-icon">
                         {action.icon}
                       </div>
-                      <span className="text-white">{action.title}</span>
-                    </Button>)}
+                      <span className="text-white action-text">{action.title}</span>
+                    </Button>
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Upcoming Schedules Section */}
-            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp overflow-hidden backdrop-blur-sm bg-opacity-80 shadow-lg`} style={{
+            // In the Upcoming Schedules section
+            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp overflow-hidden backdrop-blur-sm bg-opacity-80 shadow-lg card-hover-effect`} style={{
             animationDelay: '500ms'
           }}>
               <CardContent className="p-0">
                 <div className="flex justify-between items-center p-6 border-b border-zippy-gray/30">
-                  <h2 className="text-2xl font-bold gold-stroke">Upcoming Schedules</h2>
-                  <Button variant="outline" className="bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white" onClick={() => navigate('/schedule')}>
+                  <h2 className="text-2xl font-bold gold-stroke rainbow-text">Upcoming Schedules</h2>
+                  <Button 
+                    variant="outline" 
+                    className="bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white view-all-button"
+                    onClick={() => navigate('/schedule')}
+                  >
                     <span>View All</span>
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -443,7 +457,7 @@ const Dashboard = () => {
                       {getSchedulesForSelectedDay().map((schedule) => (
                         <div 
                           key={schedule.id}
-                          className="bg-zippy-darkGray/70 rounded-lg cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 overflow-hidden flex backdrop-blur-sm border border-zippy-gray/20 shadow-md"
+                          className="bg-zippy-darkGray/70 rounded-lg cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 overflow-hidden flex backdrop-blur-sm border border-zippy-gray/20 shadow-md schedule-item"
                           onClick={() => navigate(`/schedule?id=${schedule.id}`)}
                         >
                           {/* Status indicator */}
