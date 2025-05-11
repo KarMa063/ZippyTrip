@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getUserProfile, UserProfile } from "@/services/profile";
 import { RouteNotification, fetchRouteNotifications } from "@/services/api/uiNotifications";
-
+import "./header.css"; // Import custom CSS for animations
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -110,25 +110,25 @@ const Header = () => {
         <Button 
           variant="outline" 
           size="icon" 
-          className="relative bg-zippy-gray border-none"
+          className="relative bg-zippy-gray border-none pulse-animation hover-float"
           onClick={() => navigate('/booking-alerts')}
         >
-          <span className="font-bold text-lg">B</span>
+          <span className="font-bold text-lg hover-glow">B</span>
         </Button>
         
         {/* Route Notifications */}
         <DropdownMenu onOpenChange={handleNotificationOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="relative bg-zippy-gray border-none">
-              <Bell className="h-5 w-5" />
+            <Button variant="outline" size="icon" className="relative bg-zippy-gray border-none hover-rotate">
+              <Bell className="h-5 w-5 hover-shake" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-zippy-purple text-[10px] flex items-center justify-center text-white">
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-zippy-purple text-[10px] flex items-center justify-center text-white notification-badge">
                   {unreadCount}
                 </span>
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 bg-zippy-darkGray border-zippy-gray">
+          <DropdownMenuContent align="end" className="w-80 bg-zippy-darkGray border-zippy-gray dropdown-animation">
             <DropdownMenuLabel>Notifications</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="max-h-80 overflow-auto">
@@ -137,7 +137,7 @@ const Header = () => {
                 notifications.map((notification) => (
                   <DropdownMenuItem 
                     key={notification.id} 
-                    className="p-4 cursor-pointer"
+                    className="p-4 cursor-pointer notification-item"
                     onClick={() => navigate(`/routes/${notification.route_id || notification.id}`)}
                   >
                     <div className="flex flex-col space-y-1">
@@ -162,32 +162,32 @@ const Header = () => {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full avatar-pulse">
+              <Avatar className="avatar-rotate">
                 {profile?.avatar_url ? (
                   <AvatarImage src={profile.avatar_url} alt="Profile" className="object-cover" />
                 ) : (
-                  <AvatarFallback className="bg-zippy-purple text-white">{userInitials}</AvatarFallback>
+                  <AvatarFallback className="bg-zippy-purple text-white avatar-glow">{userInitials}</AvatarFallback>
                 )}
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-zippy-darkGray border-zippy-gray">
+          <DropdownMenuContent align="end" className="w-56 bg-zippy-darkGray border-zippy-gray dropdown-animation">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
-              className="cursor-pointer"
+              className="cursor-pointer menu-item-hover"
               onClick={() => navigate("/settings")}
             >
-              <User className="mr-2 h-4 w-4" />
+              <User className="mr-2 h-4 w-4 icon-spin" />
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
-              className="cursor-pointer text-destructive focus:text-destructive"
+              className="cursor-pointer text-destructive focus:text-destructive menu-item-hover"
               onClick={handleLogout}
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="mr-2 h-4 w-4 icon-bounce" />
               <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
