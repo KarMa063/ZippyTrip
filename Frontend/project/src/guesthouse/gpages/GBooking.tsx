@@ -27,7 +27,6 @@ interface Booking {
   check_in: string;
   check_out: string;
   status: string;
-  total_price?: number;
   checkin_status: 'not_checked_in' | 'checked_in' | 'checked_out';
   traveller_email?: string;
   property_name?: string;
@@ -62,8 +61,7 @@ const GBookings = () => {
                 ...booking,
                 traveller_email: user.data.user.user_email,
                 property_name: property.data.property.name,
-                room_name: room.data.room?.name || 'Standard Room',
-                total_price: booking.total_price
+                room_name: room.data.room?.name || 'Standard Room'
               };
             } catch (error) {
               console.error(`Error enriching booking ${booking.id}:`, error);
@@ -71,8 +69,7 @@ const GBookings = () => {
                 ...booking,
                 traveller_email: 'Not available',
                 property_name: 'Not available',
-                room_name: 'Not available',
-                total_price: booking.total_price || 0
+                room_name: 'Not available'
               };
             }
           })
@@ -134,12 +131,7 @@ const GBookings = () => {
 
       if (response.data.success) {
         setBookings(bookings.map(booking => 
-          booking.id === selectedBooking.id ? {
-            ...response.data.booking,
-            traveller_email: selectedBooking.traveller_email,
-            property_name: selectedBooking.property_name,
-            room_name: selectedBooking.room_name
-          } : booking
+          booking.id === selectedBooking.id ? response.data.booking : booking
         ));
         toast.success(message);
       }
@@ -158,8 +150,10 @@ const GBookings = () => {
     const checkOutDate = new Date(booking.check_out);
     
     if (activeTab === "current") {
+      // Show bookings that are not yet checked out or check-out date is in the future
       return booking.checkin_status !== 'checked_out' && checkOutDate >= today;
     } else {
+      // Show bookings that are checked out or check-out date has passed
       return booking.checkin_status === 'checked_out' || checkOutDate < today;
     }
   });
@@ -223,7 +217,6 @@ const GBookings = () => {
                       <th className="p-2">Check-out</th>
                       <th className="p-2">Status</th>
                       <th className="p-2">Check-in Status</th>
-                      <th className="p-2">Price</th>
                       <th className="p-2">Actions</th>
                     </tr>
                   </thead>
@@ -269,13 +262,6 @@ const GBookings = () => {
                             {booking.checkin_status === 'checked_in' ? 'Checked In' :
                             booking.checkin_status === 'checked_out' ? 'Checked Out' : 'Not Checked In'}
                           </span>
-                        </td>
-                        <td className="p-2 text-xs">
-                          {booking.status === 'confirmed' ? (
-                            `Rs. ${booking.total_price?.toLocaleString() || 'N/A'}`
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
                         </td>
                         <td className="p-2">
                           <div className="flex gap-2">
@@ -387,7 +373,6 @@ const GBookings = () => {
                       <th className="p-2">Check-out</th>
                       <th className="p-2">Status</th>
                       <th className="p-2">Check-in Status</th>
-                      <th className="p-2">Price</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -434,18 +419,11 @@ const GBookings = () => {
                               booking.checkin_status === 'checked_out' ? 'Checked Out' : 'Not Checked In'}
                             </span>
                           </td>
-                          <td className="p-2 text-xs">
-                            {booking.status === 'confirmed' ? (
-                              `Rs. ${booking.total_price?.toLocaleString() || 'N/A'}`
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="p-4 text-center text-muted-foreground">
+                        <td colSpan={6} className="p-4 text-center text-muted-foreground">
                           No previous bookings found
                         </td>
                       </tr>
@@ -479,9 +457,6 @@ const GBookings = () => {
                 <p><span className="font-medium">Check-in Date:</span> {new Date(selectedBooking.check_in).toLocaleDateString()}</p>
                 <p><span className="font-medium">Check-out Date:</span> {new Date(selectedBooking.check_out).toLocaleDateString()}</p>
                 <p><span className="font-medium">Current Status:</span> {selectedBooking.status.charAt(0).toUpperCase() + selectedBooking.status.slice(1)}</p>
-                {selectedBooking.status === 'confirmed' && selectedBooking.total_price && (
-                  <p><span className="font-medium">Total Price:</span> Rs. {selectedBooking.total_price.toLocaleString()}</p>
-                )}
                 <p><span className="font-medium">Check-in Status:</span> {selectedBooking.checkin_status === 'checked_in' ? 'Checked In' :
                    selectedBooking.checkin_status === 'checked_out' ? 'Checked Out' : 'Not Checked In'}</p>
               </div>
