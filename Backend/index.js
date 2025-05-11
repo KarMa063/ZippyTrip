@@ -40,7 +40,7 @@ app.use(express.json());
 app.use('/api/gproperties', guestHousePropertiesRouter);
 app.use('/api/gproperties', guestHouseRoomsRouter);
 app.use('/api/gproperties', reviewsRouter);
-app.use('/api/gproperties', chatRouter);
+app.use('/api/messages', chatRouter);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/routes', busRoutesRouter);
 app.use('/api/bus-bookings', busBookingsRouter);

@@ -26,10 +26,35 @@ interface Booking {
   property_name?: string;
 }
 
+// Add these interfaces
+interface Message {
+  id: number;
+  property_id: number;
+  traveller_id: string;
+  owner_id: string;
+  message: string;
+  sender_type: 'owner' | 'traveller';
+  created_at: string;
+  is_read: boolean;
+}
+
+interface Conversation {
+  property_id: number;
+  traveller_id: string;
+  traveller_email: string;
+  property_name: string;
+  last_message: string;
+  last_message_time: string;
+  is_read: boolean;
+  sent_by_me: boolean;
+}
+
 const GDashboard = () => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(true);
 
   // Mock data for dashboard
   const stats = [
@@ -101,10 +126,85 @@ const GDashboard = () => {
         console.error('Error fetching bookings:', error);
       }
     };
+    const fetchMessages = async () => {
+      try {
+        setMessagesLoading(true);
+        const response = await axios.get('http://localhost:5000/api/messages');
+        const messagesData = response.data.messages;
+
+        // Group messages by conversation (property_id + traveller_id)
+        const groupedConversations: Record<string, Message[]> = {};
+        messagesData.forEach((msg: Message) => {
+          const key = `${msg.property_id}_${msg.traveller_id}`;
+          groupedConversations[key] = groupedConversations[key] || [];
+          groupedConversations[key].push(msg);
+        });
+
+        // Create conversation objects with last message info
+        const conversationList = await Promise.all(
+          Object.entries(groupedConversations).map(async ([key, messages]) => {
+            const firstMsg = messages[0];
+            const lastMsg = messages[messages.length - 1];
+            
+            try {
+              const [userResponse, propertyResponse] = await Promise.all([
+                axios.get(`http://localhost:5000/api/users/${firstMsg.traveller_id}`),
+                axios.get(`http://localhost:5000/api/gproperties/${firstMsg.property_id}`)
+              ]);
+
+              return {
+                property_id: firstMsg.property_id,
+                traveller_id: firstMsg.traveller_id,
+                traveller_email: userResponse.data.user?.user_email || 'Unknown',
+                property_name: propertyResponse.data.property?.name || 'Unknown Property',
+                last_message: lastMsg.message,
+                last_message_time: lastMsg.created_at,
+                is_read: lastMsg.is_read,
+                sent_by_me: lastMsg.sender_type === 'owner'
+              };
+            } catch (error) {
+              console.error(`Error enriching conversation ${key}:`, error);
+              return {
+                property_id: firstMsg.property_id,
+                traveller_id: firstMsg.traveller_id,
+                traveller_email: 'Not available',
+                property_name: 'Not available',
+                last_message: lastMsg.message,
+                last_message_time: lastMsg.created_at,
+                is_read: lastMsg.is_read,
+                sent_by_me: lastMsg.sender_type === 'owner'
+              };
+            }
+          })
+        );
+
+        setConversations(conversationList);
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      } finally {
+        setMessagesLoading(false);
+      }
+    };
 
     fetchBookings();
     fetchProperties();
+    fetchMessages();
   }, []);
+
+  // Format time display
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 48) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -239,80 +339,125 @@ const GDashboard = () => {
               <TabsTrigger value="sent">Sent by You</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="all" className="space-y-4">
-              {recentMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                  onClick={() => navigate("/messages")}
-                >
-                  <MessageSquare className="h-5 w-5 mt-1 text-primary" />
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-medium text-sm">{message.guest}</h4>
-                      <span className="text-xs text-muted-foreground">{message.time}</span>
+            {messagesLoading ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <>
+                <TabsContent value="all" className="space-y-4">
+                  {conversations.length > 0 ? (
+                    conversations.slice(0, 5).map((conversation) => (
+                      <div
+                        key={`${conversation.property_id}_${conversation.traveller_id}`}
+                        className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                        onClick={() => navigate(`/gmessages`)}
+                      >
+                        <MessageSquare className="h-5 w-5 mt-1 text-primary" />
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-medium text-sm">
+                              {conversation.traveller_email} ({conversation.property_name})
+                            </h4>
+                            <span className="text-xs text-muted-foreground">
+                              {formatTime(conversation.last_message_time)}
+                            </span>
+                          </div>
+                          <p
+                            className={`text-sm ${
+                              !conversation.is_read ? "font-medium" : "text-muted-foreground"
+                            }`}
+                          >
+                            {conversation.sent_by_me && "You: "}
+                            {conversation.last_message}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No messages found
                     </div>
-                    <p
-                      className={`text-sm ${
-                        !message.isRead ? "font-medium" : "text-muted-foreground"
-                      }`}
-                    >
-                      {message.sentByMe && "You: "}
-                      {message.message}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => navigate("/messages")}
-              >
-                View All Messages
-              </Button>
-            </TabsContent>
-
-            <TabsContent value="unread" className="space-y-4">
-              {recentMessages
-                .filter((m) => !m.isRead)
-                .map((message) => (
-                  <div
-                    key={message.id}
-                    className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                  )}
+                  <Button
+                    variant="outline"
+                    className="w-full"
                     onClick={() => navigate("/messages")}
                   >
-                    <MessageSquare className="h-5 w-5 mt-1 text-primary" />
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-medium text-sm">{message.guest}</h4>
-                        <span className="text-xs text-muted-foreground">{message.time}</span>
-                      </div>
-                      <p className="text-sm font-medium">{message.message}</p>
-                    </div>
-                  </div>
-                ))}
-            </TabsContent>
+                    View All Messages
+                  </Button>
+                </TabsContent>
 
-            <TabsContent value="sent" className="space-y-4">
-              {recentMessages
-                .filter((m) => m.sentByMe)
-                .map((message) => (
-                  <div
-                    key={message.id}
-                    className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                    onClick={() => navigate("/messages")}
-                  >
-                    <MessageSquare className="h-5 w-5 mt-1 text-primary" />
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-medium text-sm">{message.guest}</h4>
-                        <span className="text-xs text-muted-foreground">{message.time}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">You: {message.message}</p>
+                <TabsContent value="unread" className="space-y-4">
+                  {conversations.filter(c => !c.is_read).length > 0 ? (
+                    conversations
+                      .filter(c => !c.is_read)
+                      .slice(0, 5)
+                      .map((conversation) => (
+                        <div
+                          key={`${conversation.property_id}_${conversation.traveller_id}`}
+                          className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/gmessages`)}
+                        >
+                          <MessageSquare className="h-5 w-5 mt-1 text-primary" />
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center">
+                              <h4 className="font-medium text-sm">
+                                {conversation.traveller_email} ({conversation.property_name})
+                              </h4>
+                              <span className="text-xs text-muted-foreground">
+                                {formatTime(conversation.last_message_time)}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium">
+                              {conversation.sent_by_me && "You: "}
+                              {conversation.last_message}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No unread messages
                     </div>
-                  </div>
-                ))}
-            </TabsContent>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="sent" className="space-y-4">
+                  {conversations.filter(c => c.sent_by_me).length > 0 ? (
+                    conversations
+                      .filter(c => c.sent_by_me)
+                      .slice(0, 5)
+                      .map((conversation) => (
+                        <div
+                          key={`${conversation.property_id}_${conversation.traveller_id}`}
+                          className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/gmessages`)}
+                        >
+                          <MessageSquare className="h-5 w-5 mt-1 text-primary" />
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center">
+                              <h4 className="font-medium text-sm">
+                                {conversation.traveller_email} ({conversation.property_name})
+                              </h4>
+                              <span className="text-xs text-muted-foreground">
+                                {formatTime(conversation.last_message_time)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              You: {conversation.last_message}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No sent messages
+                    </div>
+                  )}
+                </TabsContent>
+              </>
+            )}
           </Tabs>
         </CardContent>
       </Card>
