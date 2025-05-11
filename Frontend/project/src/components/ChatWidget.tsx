@@ -42,7 +42,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ guestHouseId, ownerId }) => {
   const fetchMessages = async () => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/gproperties/${guestHouseId}/chat?travellerId=${userId}&ownerId=${ownerId}`
+        `http://localhost:5000/api/messages/${guestHouseId}/chat?travellerId=${userId}&ownerId=${ownerId}`
       );
       const data = await response.json();
       if (data.success) {
@@ -74,7 +74,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ guestHouseId, ownerId }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/gproperties/${guestHouseId}/chat`,
+        `http://localhost:5000/api/messages/${guestHouseId}/chat`,
         {
           method: 'POST',
           headers: {

@@ -90,7 +90,7 @@ router.get('/:propertyId/reviews', async (req, res) => {
       comment: review.review,
       date: review.createdat || review.createdAt || new Date().toISOString(),
       email: review.email,
-      ownerReply: review.ownerreply // Include owner reply in the response
+      ownerReply: review.ownerReply 
     }));
 
     res.status(200).json({

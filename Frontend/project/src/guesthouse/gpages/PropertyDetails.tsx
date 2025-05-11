@@ -1,27 +1,23 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "../gcomponents/button";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
-} from "../gcomponents/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../gcomponents/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../gcomponents/tabs";
 import { Badge } from "../gcomponents/badge";
 import { Separator } from "../gcomponents/separator";
-import { 
-  CalendarDays, 
-  Star, 
-  BedDouble, 
-  UserCheck, 
-  BarChart, 
-  MessageSquare,
-  ArrowLeft, 
-  Edit,
-  Trash,
-  Plus 
-} from "lucide-react";
+import { CalendarDays, Star, BedDouble, UserCheck, BarChart, MessageSquare, ArrowLeft, Edit, Trash, Plus } from "lucide-react";
+import axios from "axios";
+
+interface Booking {
+  id: number;
+  traveller_id: string;
+  room_id: number;
+  check_in: string;
+  check_out: string;
+  status: string;
+  traveller_email?: string;
+  room_name?: string;
+}
 
 interface Review {
   id: number;
@@ -31,6 +27,7 @@ interface Review {
   date: string;
   user_id?: string;
   email?: string;
+  ownerReply?: string;
 }
 
 const PropertyDetails = () => {
@@ -39,84 +36,80 @@ const PropertyDetails = () => {
   const [property, setProperty] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("rooms");
   const [loading, setLoading] = useState(true);
+  const [replyText, setReplyText] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
-    const fetchPropertyAndRooms = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        // Fetch property details
-        const propertyResponse = await fetch(`http://localhost:5000/api/gproperties/${propertyId}`);
-        if (!propertyResponse.ok) {
-          throw new Error("Failed to fetch property");
-        }
-        const propertyData = await propertyResponse.json();
-        if (!propertyData.success || !propertyData.property) {
-          throw new Error("Property not found");
-        }
-        // Fetch rooms for this property
-        const roomsResponse = await fetch(`http://localhost:5000/api/gproperties/${propertyId}/rooms`);
-        if (!roomsResponse.ok) {
-          throw new Error("Failed to fetch rooms");
-        }
-        const roomsData = await roomsResponse.json();
-        if (!roomsData.success) {
-          throw new Error("Failed to load rooms");
-        }
-        // Fetch reviews
-      const reviewsResponse = await fetch(`http://localhost:5000/api/gproperties/${propertyId}/reviews`);
-      if (!reviewsResponse.ok) {
-        throw new Error("Failed to fetch reviews");
-      }
-      const reviewsData = await reviewsResponse.json();
-      if (!reviewsData.success) {
-        throw new Error("Failed to load reviews");
-      }
+        const [propertyRes, roomsRes, bookingsRes, reviewsRes] = await Promise.all([
+          fetch(`http://localhost:5000/api/gproperties/${propertyId}`),
+          fetch(`http://localhost:5000/api/gproperties/${propertyId}/rooms`),
+          fetch(`http://localhost:5000/api/bookings/property/${propertyId}`),
+          fetch(`http://localhost:5000/api/gproperties/${propertyId}/reviews`)
+        ]);
 
-    const averageRating = 
-      reviewsData.reviews.length > 0
-        ? reviewsData.reviews.reduce((total: number, review: Review) => total + Number(review.rating), 0) / reviewsData.reviews.length
-        : 0;
-        // Calculate occupancy stats
+        if (!propertyRes.ok || !roomsRes.ok || !bookingsRes.ok || !reviewsRes.ok) {
+          throw new Error("Failed to fetch data");
+        }
+
+        const [propertyData, roomsData, bookingsData, reviewsData] = await Promise.all([
+          propertyRes.json(),
+          roomsRes.json(),
+          bookingsRes.json(),
+          reviewsRes.json()
+        ]);
+
+        // Enrich bookings data
+        const enrichedBookings = await Promise.all(
+          bookingsData.bookings.map(async (booking: Booking) => {
+            try {
+              const [user, room] = await Promise.all([
+                axios.get(`http://localhost:5000/api/users/${booking.traveller_id}`),
+                axios.get(`http://localhost:5000/api/gproperties/${propertyId}/rooms/${booking.room_id}`),
+              ]);
+              return {
+                ...booking,
+                traveller_email: user.data.user.user_email,
+                room_name: room.data.room.name,
+              };
+            } catch (error) {
+              console.error(`Error enriching booking ${booking.id}:`, error);
+              return {
+                ...booking,
+                traveller_email: 'Not available',
+                room_name: 'Not available',
+              };
+            }
+          })
+        );
+
+        // Calculate stats
         const totalRooms = roomsData.rooms.length;
         const occupiedRooms = roomsData.rooms.filter((room: any) => !room.available).length;
         const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
-        // Combine property and rooms data
-        const combinedData = {
+        const averageRating = reviewsData.reviews.length > 0
+          ? reviewsData.reviews.reduce((total: number, review: Review) => total + Number(review.rating), 0) / reviewsData.reviews.length
+          : 0;
+
+        setProperty({
           ...propertyData.property,
-          totalRooms,
+          totalRooms: totalRooms,
           occupiedRooms,
           occupancyRate,
           rooms: roomsData.rooms,
-          bookings: [
-            {
-              id: "b1",
-              guestName: "John Doe",
-              checkIn: "2025-04-12",
-              checkOut: "2025-04-15",
-              room: "Master Suite",
-              status: "Confirmed",
-            },
-            {
-              id: "b2",
-              guestName: "Jane Smith",
-              checkIn: "2025-04-18",
-              checkOut: "2025-04-25",
-              room: "Guest Room 2",
-              status: "Pending",
-            },
-          ],
-          reviews: reviewsData.reviews, 
+          bookings: enrichedBookings,
+          reviews: reviewsData.reviews,
           averageRating: Number(averageRating.toFixed(1)),
           totalReviews: reviewsData.reviews.length,
-        };
-        setProperty(combinedData);
+        });
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchPropertyAndRooms();
+    fetchData();
   }, [propertyId]);
 
   const handleDeleteRoom = async (roomId: number) => {
@@ -132,25 +125,50 @@ const PropertyDetails = () => {
         throw new Error(data.message || "Failed to delete room");
       }
   
-      // Update UI after successful deletion
       setProperty((prev: any) => ({
         ...prev,
         rooms: prev.rooms.filter((room: any) => room.id !== roomId),
         totalRooms: prev.totalRooms - 1,
         occupiedRooms: prev.rooms.filter((room: any) => !room.available && room.id !== roomId).length,
         occupancyRate: prev.totalRooms - 1 > 0
-          ? Math.round(
-              (prev.rooms.filter((room: any) => !room.available && room.id !== roomId).length /
-                (prev.totalRooms - 1)) * 100
-            )
+          ? Math.round((prev.rooms.filter((room: any) => !room.available && room.id !== roomId).length / (prev.totalRooms - 1)) * 100)
           : 0,
       }));
     } catch (error) {
       console.error("Delete failed:", error);
       alert("Could not delete room.");
     }
-  };  
-  
+  };
+
+  const handleReplySubmit = async (reviewId: number) => {
+    if (!replyText[reviewId] || replyText[reviewId].trim() === '') {
+      alert("Reply cannot be empty");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `http://localhost:5000/api/gproperties/${propertyId}/reviews/${reviewId}/reply`,
+        { ownerReply: replyText[reviewId] }
+      );
+
+      if (response.data.success) {
+        setProperty((prev: any) => ({
+          ...prev,
+          reviews: prev.reviews.map((review: Review) =>
+            review.id === reviewId
+              ? { ...review, ownerReply: replyText[reviewId] }
+              : review
+          ),
+        }));
+        setReplyText({ ...replyText, [reviewId]: '' });
+      }
+    } catch (error) {
+      console.error("Error submitting reply:", error);
+      alert("Failed to submit reply");
+    }
+  };
+
   const renderStars = (rating: number) => (
     <div className="flex items-center">
       {[...Array(5)].map((_, i) => (
@@ -164,21 +182,12 @@ const PropertyDetails = () => {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p>Loading property details...</p>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-96"><p>Loading...</p></div>;
   }
 
   if (!property) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p>Property not found</p>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-96"><p>Property not found</p></div>;
   }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -339,7 +348,7 @@ const PropertyDetails = () => {
         <TabsContent value="bookings" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Bookings</h2>
-           </div>
+          </div>
           <Card>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -353,92 +362,96 @@ const PropertyDetails = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {property.bookings.map((booking: any) => (
-                    <tr key={booking.id} className="border-b hover:bg-accent/20 transition-colors">
-                      <td className="p-4 font-medium">{booking.guestName}</td>
-                      <td className="p-4 text-sm">{booking.room}</td>
-                      <td className="p-4 text-sm">{booking.checkIn}</td>
-                      <td className="p-4 text-sm">{booking.checkOut}</td>
-                      <td className="p-4">
-                        <Badge variant={booking.status === "Confirmed" ? "success" : "outline"}>
-                          {booking.status}
-                        </Badge>
+                  {property.bookings.length > 0 ? (
+                    property.bookings.map((booking: Booking) => (
+                      <tr key={booking.id} className="border-b hover:bg-accent/20 transition-colors">
+                        <td className="p-4 font-medium">{booking.traveller_email || 'Not available'}</td>
+                        <td className="p-4 text-sm">{booking.room_name || 'Not available'}</td>
+                        <td className="p-4 text-sm">{new Date(booking.check_in).toLocaleDateString()}</td>
+                        <td className="p-4 text-sm">{new Date(booking.check_out).toLocaleDateString()}</td>
+                        <td className="p-4">
+                          <Badge variant={
+                            booking.status === "confirmed" ? "success" : 
+                            booking.status === "pending" ? "outline" :
+                            booking.status === "cancelled" ? "destructive" :
+                            booking.status === "declined" ? "destructive" :
+                            "secondary"
+                          }>
+                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                        No bookings found
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
           </Card>
         </TabsContent>
 
-        <TabsContent value="reviews" className="space-y-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Guest Reviews</h2>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Average Rating:</span>
-              {renderStars(property.averageRating)} {/* Average rating stars */}
-              <span className="ml-1 text-sm text-muted-foreground">
-                ({property.totalReviews} reviews)
-              </span>
-            </div>
+       <TabsContent value="reviews">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Guest Reviews</h2>
+          <div className="flex items-center gap-2">
+            <span>Average Rating:</span>
+            {renderStars(property.averageRating)}
+            <span className="text-sm text-muted-foreground">({property.totalReviews})</span>
           </div>
+        </div>
 
-          <div className="space-y-4">
-            {property.reviews && property.reviews.length > 0 ? (
-              property.reviews.map((review: Review) => (
-                <Card key={review.id}>
-                  <CardContent className="p-5 space-y-3">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="font-medium">{review.userName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(review.date).toLocaleDateString()}
-                        </div>
+        <div className="space-y-4">
+          {property.reviews?.length > 0 ? (
+            property.reviews.map((review: Review) => (
+              <Card key={review.id}>
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium">{review.userName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(review.date).toLocaleDateString()}
                       </div>
-                      {renderStars(review.rating)} {/* Display stars for each review */}
                     </div>
-                    <p className="mt-2">{review.comment}</p>
+                    {renderStars(review.rating)}
+                  </div>
+                  <p>{review.comment}</p>
 
-                    {/* Commented out response section for guesthouse owner */}
-                    {/* {review.response && (
-                      <div className="mt-3 pl-4 border-l-2 border-muted text-sm text-muted-foreground">
-                        <p className="font-medium">Owner's Response:</p>
-                        <p>{review.response}</p>
-                      </div>
-                    )} */}
-
-                    {/* Respond to review if no response exists */}
-                    {/* {!review.response && (
-                      <div className="mt-4 space-y-2">
-                        <textarea
-                          rows={2}
-                          placeholder="Write a response..."
-                          className="w-full rounded p-2 text-sm bg-background text-foreground border border-input placeholder:text-muted-foreground"
-                          onChange={(e) => review.tempResponse = e.target.value}
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            const updatedReviews = property.reviews.map((r: Review) =>
-                              r.id === review.id ? { ...r, response: review.tempResponse } : r
-                            );
-                            setProperty({ ...property, reviews: updatedReviews });
-                          }}
-                        >
-                          Respond
-                        </Button>
-                      </div>
-                    )} */}
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <p>No reviews available.</p>
-            )}
-          </div>
-        </TabsContent>
-
+                  {/* Owner response section*/}
+                  {review.ownerReply ? (
+                    <div className="mt-3 pl-4 border-l-2 border-muted">
+                      <p className="font-medium">Owner's Response:</p>
+                      <p>{review.ownerReply}</p>
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-2">
+                      <textarea
+                        rows={2}
+                        placeholder="Write a response..."
+                        className="w-full p-2 text-sm border rounded"
+                        value={replyText[review.id] || ''}
+                        onChange={(e) => setReplyText({ ...replyText, [review.id]: e.target.value })}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleReplySubmit(review.id)}
+                      >
+                        Submit Response
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <p>No reviews available.</p>
+          )}
+        </div>
+      </TabsContent>
       </Tabs>
     </div>
   );
