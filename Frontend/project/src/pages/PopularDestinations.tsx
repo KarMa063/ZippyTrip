@@ -173,7 +173,7 @@ const PopularDestinations: React.FC = () => {
                 <div className={`mt-2 text-sm font-medium ${
                   isDarkMode ? 'text-blue-400' : 'text-blue-600'
                 }`}>
-                  ${attraction.price.toFixed(2)}
+                  Rs {attraction.price.toFixed(2)}
                 </div>
               </div>
             </div>
