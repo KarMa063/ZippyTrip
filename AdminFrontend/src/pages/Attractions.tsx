@@ -256,7 +256,6 @@ export function Attractions() {
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
-            autoComplete="off"
           />
         </div>
         
@@ -269,7 +268,6 @@ export function Attractions() {
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
-            autoComplete="off"
           />
         </div>
         
@@ -282,7 +280,6 @@ export function Attractions() {
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
-            autoComplete="off"
           />
         </div>
         
@@ -298,7 +295,6 @@ export function Attractions() {
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
-            autoComplete="off"
           />
         </div>
         
@@ -315,7 +311,6 @@ export function Attractions() {
             onChange={handleInputChange} 
             required 
             className="bg-zippy-dark"
-            autoComplete="off"
           />
         </div>
         
@@ -344,7 +339,6 @@ export function Attractions() {
             value={formData.image} 
             onChange={handleInputChange} 
             className="bg-zippy-dark"
-            autoComplete="off"
           />
         </div>
       </div>
@@ -358,7 +352,6 @@ export function Attractions() {
           onChange={handleInputChange} 
           rows={4} 
           className="bg-zippy-dark"
-          autoComplete="off"
         />
       </div>
       
@@ -411,6 +404,83 @@ export function Attractions() {
         </div>
       </div>
       
+      {/* Add the View Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="bg-zippy-darker text-white border-white/[0.03] max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>View Attraction</DialogTitle>
+          </DialogHeader>
+          {selectedAttraction && (
+            <div className="space-y-4">
+              <div className="aspect-video rounded-lg overflow-hidden">
+                <img 
+                  src={selectedAttraction.image} 
+                  alt={selectedAttraction.name} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400">Name</h3>
+                  <p className="mt-1">{selectedAttraction.name}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400">Location</h3>
+                  <p className="mt-1">{selectedAttraction.location}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400">Category</h3>
+                  <p className="mt-1">{selectedAttraction.category}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400">Price</h3>
+                  <p className="mt-1">NPR {selectedAttraction.price}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400">Rating</h3>
+                  <p className="mt-1">{selectedAttraction.rating} / 5</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400">Status</h3>
+                  <Badge variant="outline" className={getStatusColor(selectedAttraction.status)}>
+                    {selectedAttraction.status.charAt(0).toUpperCase() + selectedAttraction.status.slice(1)}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-400">Description</h3>
+                <p className="mt-1">{selectedAttraction.description || "No description available."}</p>
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleEditAttraction(selectedAttraction)}
+                >
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+                <DialogClose asChild>
+                  <Button>Close</Button>
+                </DialogClose>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add the Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="bg-zippy-darker text-white border-white/[0.03] max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Edit Attraction</DialogTitle>
+          </DialogHeader>
+          <AttractionForm isEdit onSubmit={handleEditSubmit} />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Rest of your component */}
       <div className="flex flex-col sm:flex-row gap-4 p-4 bg-zippy-darker rounded-lg">
         <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
