@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getUserProfile, UserProfile } from "@/services/profile";
+import { RouteNotification, fetchRouteNotifications,  } from "@/services/api/uiNotifications";
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -23,6 +24,8 @@ const Header = () => {
   const { toast } = useToast();
   const { theme } = useTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [notifications, setNotifications] = useState<RouteNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -37,6 +40,36 @@ const Header = () => {
     fetchUserProfile();
   }, [user]);
 
+  // Fetch notifications on component mount
+  useEffect(() => {
+    const loadNotifications = async () => {
+      const routeNotifications = await fetchRouteNotifications();
+      setNotifications(routeNotifications);
+      setUnreadCount(routeNotifications.filter(n => !n.read).length);
+    };
+
+    loadNotifications();
+    
+    // Remove the polling interval - we don't want to check every minute
+    // const intervalId = setInterval(loadNotifications, 60000);
+    
+    // return () => clearInterval(intervalId);
+  }, []);
+
+  // Add a function to handle notification dropdown open
+  const handleNotificationOpen = (open: boolean) => {
+    if (open) {
+      // Refresh notifications when dropdown is opened
+      const loadNotifications = async () => {
+        const routeNotifications = await fetchRouteNotifications();
+        setNotifications(routeNotifications);
+        setUnreadCount(routeNotifications.filter(n => !n.read).length);
+      };
+      
+      loadNotifications();
+    }
+  };
+
   const handleLogout = () => {
     logout();
     toast({
@@ -49,6 +82,23 @@ const Header = () => {
   const userInitials = profile ? 
     `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() : 
     user?.email?.[0]?.toUpperCase() || 'U';
+
+  
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
+  };
 
   return (
     <header className="border-b border-zippy-gray p-4 flex items-center justify-between bg-zippy-darkGray">
@@ -63,30 +113,42 @@ const Header = () => {
         </div>
       </div>
       <div className="flex items-center space-x-4">
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={handleNotificationOpen}>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="relative bg-zippy-gray border-none">
               <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-zippy-purple text-[10px] flex items-center justify-center text-white">
-                3
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-zippy-purple text-[10px] flex items-center justify-center text-white">
+                  {unreadCount}
+                </span>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80 bg-zippy-darkGray border-zippy-gray">
             <DropdownMenuLabel>Notifications</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="max-h-80 overflow-auto">
-              {[1, 2, 3].map((i) => (
-                <DropdownMenuItem key={i} className="p-4 cursor-pointer">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">Route update required</p>
-                    <p className="text-xs text-muted-foreground">
-                      Route #BD{i}025 needs schedule adjustment
-                    </p>
-                    <p className="text-xs text-muted-foreground">10 minute{i} ago</p>
-                  </div>
-                </DropdownMenuItem>
-              ))}
+              {notifications.length > 0 ? (
+                notifications.map((notification) => (
+                  <DropdownMenuItem 
+                    key={notification.id} 
+                    className="p-4 cursor-pointer"
+                    onClick={() => navigate(`/routes/${notification.id}`)}
+                  >
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">Route update required</p>
+                      <p className="text-xs text-muted-foreground">
+                        {notification.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{formatTimeAgo(notification.created_at)}</p>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No new notifications
+                </div>
+              )}
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
