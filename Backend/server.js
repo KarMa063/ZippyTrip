@@ -24,11 +24,14 @@ app.get('/', (req, res) => {
   res.send('ZippyTrip Backend API is running');
 });
 
-// Use the cancellations router
+// Import the guesthouse cancellations router
+const guesthouseCancellationsRouter = require('./routes/guesthouse-cancellations');
+
 app.use('/api/cancellations', cancellationsRouter);
 
+app.use('/api/guesthouse-cancellations', guesthouseCancellationsRouter);
+
 // Start server
-// Change app.listen to server.listen
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

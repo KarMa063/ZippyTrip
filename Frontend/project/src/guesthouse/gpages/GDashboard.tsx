@@ -13,8 +13,8 @@ interface Property {
   address: string;
   email: string;
   phoneNumber: string;
-  images: string[]; // Array of image URLs or paths
-  rooms: any[]; // You can define the rooms type more specifically
+  images: string[];
+  rooms: any[];
 }
 
 interface Booking {
@@ -56,7 +56,6 @@ const GDashboard = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
 
-  // Mock data for dashboard
   const stats = [
     { title: "Total Properties", value: properties.length.toString(), icon: <Home className="h-5 w-5 text-blue-500" /> },
     { 
