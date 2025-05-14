@@ -112,7 +112,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ guestHouseId, ownerId }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-  console.log('userId:', userId, 'isLoading:', isLoading, 'newMessage:', newMessage);
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
