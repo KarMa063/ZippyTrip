@@ -60,10 +60,7 @@ const GLogin = () => {
         return;
       }
       
-      // For demo purposes, we're using a timeout to simulate API call
-      // In a real app, you would make an API call to your backend
       setTimeout(() => {
-        // Store authentication info in localStorage
         localStorage.setItem('guesthouseOwner', JSON.stringify({
           email: data.email,
           role: "guesthouse_owner"
@@ -83,7 +80,7 @@ const GLogin = () => {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <header className="border-b bg-card shadow z-40">
         <div className="flex h-16 items-center px-6">
-          <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+          <Link to="/home" className="flex items-center gap-2 font-bold text-lg">
             <div className="text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-blue-600">
               ZippyTrip
             </div>

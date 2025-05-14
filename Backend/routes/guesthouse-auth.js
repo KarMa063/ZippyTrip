@@ -26,10 +26,6 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // If email is allowed, proceed with authentication
-    // This would typically involve checking credentials against a database
-    // For now, we'll just return success since we've already verified the email
-    
     res.status(200).json({
       success: true,
       message: "Login successful",

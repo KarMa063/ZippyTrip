@@ -3,14 +3,16 @@ const router = express.Router();
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
 
+// Load environment variables
 dotenv.config();
 
+// Initialize PostgreSQL client with connection string
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
 });
 
-// POST endpoint to handle guesthouse booking cancellations
+// Route to cancel a guesthouse booking
 router.post('/cancel', async (req, res) => {
   try {
     const { id } = req.body;
