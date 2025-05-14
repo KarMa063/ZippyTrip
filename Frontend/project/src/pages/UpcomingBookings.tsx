@@ -30,6 +30,7 @@ interface GuestHouseBooking {
   checkOut: string;
   guests: number;
   price: number;
+  total_price: number;
   status: 'active' | 'cancelled';
   bookingDate: string;
   location: string;
@@ -55,10 +56,12 @@ const UpcomingBookings: React.FC = () => {
           return;
         }
         const userIdString = typeof userId === 'object' ? userId.user_id : userId;
+        
         // Fetch bus bookings
         const busResponse = await axios.get(`http://localhost:5000/api/bus-bookings`, {
           params: { user_id: userIdString }
         });
+        
         if (busResponse.data.success) {
           const transformedTickets = busResponse.data.bookings
             .filter((booking: any) => {
@@ -83,10 +86,12 @@ const UpcomingBookings: React.FC = () => {
             }));
           setTickets(transformedTickets);
         }
+
         // Fetch guesthouse bookings
         const guesthouseResponse = await axios.get(`http://localhost:5000/api/bookings`, {
           params: { traveller_id: userIdString }
         });
+        
         if (guesthouseResponse.data.success) {
           const bookingsWithDetails = await Promise.all(
             guesthouseResponse.data.bookings
@@ -115,6 +120,7 @@ const UpcomingBookings: React.FC = () => {
                 }
               })
           );
+
           const transformedGuestHouseBookings = bookingsWithDetails.map(({ booking, property, room }) => ({
             id: String(booking.id),
             guestHouseId: booking.property_id,
@@ -124,13 +130,15 @@ const UpcomingBookings: React.FC = () => {
             checkOut: booking.check_out,
             guests: room?.capacity || booking.capacity || 1,
             price: room ? parseFloat(room.price) : 0,
+            total_price: booking.total_price || 0,
             status: booking.status === 'cancelled' ? 'cancelled' : 'active',
             bookingDate: booking.created_at || new Date().toISOString(),
             location: property?.address || 'Unknown Location'
           }));
           setGuestHouseBookings(transformedGuestHouseBookings);
         }
-        // Set default tab to the first available
+
+        // Set default tab
         if (busResponse?.data?.success && busResponse.data.bookings.length > 0) {
           setActiveTab('bus');
         } else if (guesthouseResponse?.data?.success && guesthouseResponse.data.bookings.length > 0) {
@@ -204,6 +212,7 @@ const UpcomingBookings: React.FC = () => {
           <Home className="h-5 w-5 mr-2" /> Guesthouse Bookings
         </button>
       </div>
+      
       {/* Bus Tickets */}
       {activeTab === 'bus' && tickets.length > 0 && (
         <div className="mb-8">
@@ -267,6 +276,7 @@ const UpcomingBookings: React.FC = () => {
           </div>
         </div>
       )}
+      
       {/* Guesthouse Bookings */}
       {activeTab === 'guesthouse' && guestHouseBookings.length > 0 && (
         <div>
@@ -285,7 +295,9 @@ const UpcomingBookings: React.FC = () => {
                     <h4 className="text-lg font-bold">{booking.guestHouseName}</h4>
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{booking.roomType} • Booking ID: <span className="font-mono text-blue-500">{booking.id.substring(0, 8)}</span></p>
                   </div>
-                  <div className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>Rs. {booking.price}</div>
+                  <div className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                    NRs. {booking.total_price}
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2 mb-4">
                   <MapPin className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
@@ -316,4 +328,4 @@ const UpcomingBookings: React.FC = () => {
   );
 };
 
-export default UpcomingBookings; 
+export default UpcomingBookings;

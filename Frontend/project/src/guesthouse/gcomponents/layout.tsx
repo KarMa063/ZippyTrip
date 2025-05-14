@@ -69,7 +69,7 @@ export function Layout() {
         <div className="flex h-16 items-center px-4 md:px-6">
           <Link to="/gdashboard" className="flex items-center gap-2 font-bold text-lg">
             <div className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-600">
-              ZippyTrip
+              ZippyStay
             </div>
           </Link>
 

@@ -31,6 +31,7 @@ interface GuestHouseBooking {
   checkOut: string;
   guests: number;
   price: number;
+  total_price: number;
   status: 'active' | 'cancelled';
   bookingDate: string;
   location: string;
@@ -41,10 +42,6 @@ function toLocalDateString(date: string) {
 }
 
 const todayStr = new Date().toLocaleDateString('en-CA');
-
-const isFuture = (date: string) => toLocalDateString(date) > todayStr;
-const isPast = (date: string) => toLocalDateString(date) < todayStr;
-const isToday = (date: string) => toLocalDateString(date) === todayStr;
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -148,21 +145,20 @@ const Profile: React.FC = () => {
             // Wait for all room detail requests to complete
             const bookingsWithDetails = await Promise.all(roomDetailsPromises);
             
-            const transformedGuestHouseBookings = bookingsWithDetails.map(({ booking, property, room }) => {
-              return {
-                id: booking.id,
-                guestHouseId: booking.property_id,
-                guestHouseName: property?.name || booking.property_name || 'ZippyStay Guesthouse',
-                roomType: room?.name || booking.room_name || 'Standard Room',
-                checkIn: booking.check_in,
-                checkOut: booking.check_out,
-                guests: room?.capacity || booking.capacity || 1,
-                price: room ? parseFloat(room.price) : 0,
-                status: (booking.status === 'cancelled' ? 'cancelled' : 'active') as 'active' | 'cancelled',
-                bookingDate: booking.created_at || new Date().toISOString(),
-                location: property?.address || 'Unknown Location'
-              };
-            });
+            const transformedGuestHouseBookings = bookingsWithDetails.map(({ booking, property, room }) => ({
+              id: String(booking.id),
+              guestHouseId: booking.property_id,
+              guestHouseName: property?.name || booking.property_name || 'ZippyStay Guesthouse',
+              roomType: room?.name || booking.room_name || 'Standard Room',
+              checkIn: booking.check_in,
+              checkOut: booking.check_out,
+              guests: room?.capacity || booking.capacity || 1,
+              price: room ? parseFloat(room.price) : 0,
+              total_price: booking.total_price || 0,
+              status: booking.status === 'cancelled' ? 'cancelled' : 'active',
+              bookingDate: booking.created_at || new Date().toISOString(),
+              location: property?.address || 'Unknown Location'
+            }));
             
             setGuestHouseBookings(transformedGuestHouseBookings);
           }
@@ -858,7 +854,7 @@ const Profile: React.FC = () => {
                               </p>
                             </div>
                             <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
-                              Rs. {booking.price}
+                              NRs. {booking.total_price}
                             </div>
                           </div>
 

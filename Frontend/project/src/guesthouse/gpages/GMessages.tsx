@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaPaperPlane, FaArrowLeft, FaUser } from 'react-icons/fa';
 import axios from 'axios';
 
@@ -178,6 +178,27 @@ function GMessages() {
 
   const isConversationView = !!selectedConversation;
 
+  // Function to format date and time
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Check if the date is today
+    if (date.toDateString() === today.toDateString()) {
+      return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    // Check if the date is yesterday
+    else if (date.toDateString() === yesterday.toDateString()) {
+      return `Yesterday at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    // Otherwise, show full date and time
+    else {
+      return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -258,36 +279,53 @@ function GMessages() {
             style={{ maxHeight: 'calc(100vh - 300px)' }}
           >
             <div className="space-y-6 max-w-3xl mx-auto pb-4">
-              {selectedConversation.messages.map((message, index) => (
-                <div 
-                  key={message.id} 
-                  className={`flex ${message.sender_type === 'owner' ? 'justify-end' : 'justify-start'}`}
-                  style={{ marginBottom: index < selectedConversation.messages.length - 1 ? '0.25rem' : '0' }}
-                >
-                  {message.sender_type !== 'owner' && (
-                    <div className="h-8 w-8 rounded-full mr-2 bg-muted text-primary flex items-center justify-center">
-                      <FaUser className="h-4 w-4" />
+              {selectedConversation.messages.map((message, index) => {
+                // Check if we need to show a date separator
+                const showDateSeparator = index === 0 || 
+                  new Date(message.created_at).toDateString() !== 
+                  new Date(selectedConversation.messages[index - 1].created_at).toDateString();
+                
+                return (
+                  <React.Fragment key={message.id}>
+                    {showDateSeparator && (
+                      <div className="text-center text-xs text-gray-500 my-2">
+                        {new Date(message.created_at).toLocaleDateString([], { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </div>
+                    )}
+                    <div 
+                      className={`flex ${message.sender_type === 'owner' ? 'justify-end' : 'justify-start'}`}
+                      style={{ marginBottom: index < selectedConversation.messages.length - 1 ? '0.25rem' : '0' }}
+                    >
+                      {message.sender_type !== 'owner' && (
+                        <div className="h-8 w-8 rounded-full mr-2 bg-muted text-primary flex items-center justify-center">
+                          <FaUser className="h-4 w-4" />
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[80%] sm:max-w-[65%] px-3 py-2 rounded-lg shadow-sm ${message.sender_type === 'owner'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-secondary text-secondary-foreground'}`}
+                        style={{ fontSize: '0.875rem' }}
+                      >
+                        <div className="text-sm">
+                          {message.sender_type === 'owner' ? `You: ${message.message}` : message.message}
+                        </div>
+                        <div className="text-xs opacity-70 text-right mt-1">
+                          {formatDateTime(message.created_at)}
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  <div
-                    className={`max-w-[80%] sm:max-w-[65%] px-3 py-2 rounded-lg shadow-sm ${message.sender_type === 'owner'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-secondary text-secondary-foreground'}`}
-                    style={{ fontSize: '0.875rem' }} // Make font size smaller
-                  >
-                    <div className="text-sm">
-                      {message.sender_type === 'owner' ? `You: ${message.message}` : message.message}
-                    </div>
-                    <div className="text-xs opacity-70 text-right mt-1">
-                      {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  </React.Fragment>
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
           </div>
-
 
           <div className="border-t p-4">
             <div className="flex gap-2 max-w-3xl mx-auto">
@@ -340,8 +378,7 @@ function GMessages() {
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-sm text-gray-400">
-                      {new Date(conversation.messages[conversation.messages.length - 1].created_at)
-                        .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {formatDateTime(conversation.messages[conversation.messages.length - 1].created_at)}
                     </span>
                     {conversation.unreadCount > 0 && (
                       <span className="bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center mt-1">

@@ -23,7 +23,8 @@ async function bookingsTableExists() {
         check_in DATE NOT NULL,
         check_out DATE NOT NULL,
         status TEXT DEFAULT 'pending',
-        checkin_status TEXT DEFAULT 'not_checked_in'
+        checkin_status TEXT DEFAULT 'not_checked_in',
+        total_price TEXT NOT NULL
       );
     `);
     console.log("Bookings table checked/created successfully.");
@@ -31,6 +32,178 @@ async function bookingsTableExists() {
     console.error("Error checking or creating the bookings table:", error);
   }
 }
+
+// Helper function to calculate number of nights
+function calculateNights(checkIn, checkOut) {
+  const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+  const firstDate = new Date(checkIn);
+  const secondDate = new Date(checkOut);
+  return Math.round(Math.abs((firstDate - secondDate) / oneDay));
+}
+
+// Create new booking with total price calculation
+router.post('/', async (req, res) => {
+  const { traveller_id, property_id, room_id, check_in, check_out } = req.body;
+
+  try {
+    const checkInDate = new Date(check_in);
+    const checkOutDate = new Date(check_out);
+    
+    if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid date format' });
+    }
+    
+    if (checkInDate >= checkOutDate) {
+      return res.status(400).json({ success: false, message: 'Check-out date must be after check-in date' });
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (checkInDate < today) {
+      return res.status(400).json({ success: false, message: 'Check-in date cannot be in the past' });
+    }
+    
+    // Get room price
+    const roomResult = await pool.query(
+      'SELECT price FROM rooms WHERE id = $1 AND property_id = $2',
+      [room_id, property_id]
+    );
+    
+    if (roomResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Room not found' });
+    }
+    
+    const roomPrice = parseFloat(roomResult.rows[0].price);
+    if (isNaN(roomPrice) || roomPrice <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid room price' });
+    }
+    
+    // Calculate total price
+    const nights = calculateNights(check_in, check_out);
+    const totalPrice = nights * roomPrice;
+    
+    const overlapCheck = await pool.query(
+      `SELECT * FROM gbookings 
+       WHERE room_id = $1 
+       AND status != 'cancelled'
+       AND (
+         (check_in <= $2 AND check_out > $2) OR
+         (check_in < $3 AND check_out >= $3) OR
+         (check_in >= $2 AND check_out <= $3)
+       )`,
+      [room_id, check_in, check_out]
+    );
+    
+    if (overlapCheck.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Room is already booked for the selected dates' 
+      });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const bookingResult = await client.query(
+        `INSERT INTO gbookings 
+          (traveller_id, property_id, room_id, check_in, check_out, total_price)
+         VALUES ($1, $2, $3, $4, $5, $6) 
+         RETURNING *`,
+        [traveller_id, property_id, room_id, check_in, check_out, totalPrice]
+      );
+      
+      await client.query('COMMIT');
+      
+      res.status(201).json({ success: true, booking: bookingResult.rows[0] });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    res.status(500).json({ success: false, message: 'Failed to create booking' });
+  }
+});
+
+// Get all bookings with detailed information
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT g.*, r.price as room_price, r.name as room_name
+       FROM gbookings g
+       JOIN rooms r ON g.room_id = r.id AND g.property_id = r.property_id
+       ORDER BY g.check_in ASC, g.check_out ASC`
+    );
+    
+    const bookings = result.rows.map(booking => {
+      const nights = calculateNights(booking.check_in, booking.check_out);
+      return {
+        ...booking,
+        nights: nights,
+        price_per_night: parseFloat(booking.room_price),
+        total_price: parseFloat(booking.total_price)
+      };
+    });
+    
+    res.json({ success: true, bookings });
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch bookings' });
+  }
+});
+
+router.get('/property/:propertyId', async (req, res) => {
+  const { propertyId } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM gbookings WHERE property_id = $1 ORDER BY check_in ASC, check_out ASC',
+      [propertyId]
+    );
+    res.json({ success: true, bookings: result.rows });
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch bookings' });
+  }
+});
+
+// Get booking with detailed information including room price
+router.get('/:id', async (req, res) => {
+  const bookingId = req.params.id;
+  try {
+    const result = await pool.query(
+      `SELECT g.*, r.price as room_price, r.name as room_name
+       FROM gbookings g
+       JOIN rooms r ON g.room_id = r.id AND g.property_id = r.property_id
+       WHERE g.id = $1`,
+      [bookingId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const booking = result.rows[0];
+    const nights = calculateNights(booking.check_in, booking.check_out);
+    
+    res.json({ 
+      success: true, 
+      booking: {
+        ...booking,
+        nights: nights,
+        price_per_night: parseFloat(booking.room_price),
+        total_price: parseFloat(booking.total_price)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching booking:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch booking' });
+  }
+});
 
 // Check room availability
 router.get('/check-availability', async (req, res) => {
@@ -83,116 +256,6 @@ router.get('/check-availability', async (req, res) => {
       success: false, 
       message: 'Failed to check availability' 
     });
-  }
-});
-
-// Create new booking
-router.post('/', async (req, res) => {
-  const { traveller_id, property_id, room_id, check_in, check_out } = req.body;
-
-  try {
-    const checkInDate = new Date(check_in);
-    const checkOutDate = new Date(check_out);
-    
-    if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
-      return res.status(400).json({ success: false, message: 'Invalid date format' });
-    }
-    
-    if (checkInDate >= checkOutDate) {
-      return res.status(400).json({ success: false, message: 'Check-out date must be after check-in date' });
-    }
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (checkInDate < today) {
-      return res.status(400).json({ success: false, message: 'Check-in date cannot be in the past' });
-    }
-    
-    const overlapCheck = await pool.query(
-      `SELECT * FROM gbookings 
-       WHERE room_id = $1 
-       AND status != 'cancelled'
-       AND (
-         (check_in <= $2 AND check_out > $2) OR
-         (check_in < $3 AND check_out >= $3) OR
-         (check_in >= $2 AND check_out <= $3)
-       )`,
-      [room_id, check_in, check_out]
-    );
-    
-    if (overlapCheck.rows.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Room is already booked for the selected dates' 
-      });
-    }
-    
-    const client = await pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-      
-      const bookingResult = await client.query(
-        `INSERT INTO gbookings (traveller_id, property_id, room_id, check_in, check_out)
-        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [traveller_id, property_id, room_id, check_in, check_out]
-      );
-      
-      await client.query('COMMIT');
-      
-      res.status(201).json({ success: true, booking: bookingResult.rows[0] });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Error creating booking:', error);
-    res.status(500).json({ success: false, message: 'Failed to create booking' });
-  }
-});
-
-// Get all bookings
-router.get('/', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM gbookings ORDER BY check_in ASC, check_out ASC');
-    res.json({ success: true, bookings: result.rows });
-  } catch (error) {
-    console.error('Error fetching bookings:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch bookings' });
-  }
-});
-
-router.get('/property/:propertyId', async (req, res) => {
-  const { propertyId } = req.params;
-  try {
-    const result = await pool.query(
-      'SELECT * FROM gbookings WHERE property_id = $1 ORDER BY check_in ASC, check_out ASC',
-      [propertyId]
-    );
-    res.json({ success: true, bookings: result.rows });
-  } catch (error) {
-    console.error('Error fetching bookings:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch bookings' });
-  }
-});
-
-// Get single booking
-router.get('/:id', async (req, res) => {
-  const bookingId = req.params.id;
-  try {
-    const result = await pool.query('SELECT * FROM gbookings WHERE id = $1', [bookingId]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Booking not found' });
-    }
-
-    res.json({ success: true, booking: result.rows[0] });
-  } catch (error) {
-    console.error('Error fetching booking:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch booking' });
   }
 });
 

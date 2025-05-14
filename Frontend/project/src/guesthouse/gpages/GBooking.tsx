@@ -31,9 +31,10 @@ interface Booking {
   traveller_email?: string;
   property_name?: string;
   room_name?: string;
+  total_price: string;
 }
 
-const GBookings = () => {
+const GBooking = () => {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [actionDialog, setActionDialog] = useState<{ open: boolean, type: string }>({ open: false, type: '' });
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -56,12 +57,12 @@ const GBookings = () => {
                 axios.get(`http://localhost:5000/api/gproperties/${booking.property_id}`),
                 axios.get(`http://localhost:5000/api/gproperties/${booking.property_id}/rooms/${booking.room_id}`)
               ]);
-              
+                            
               return {
                 ...booking,
                 traveller_email: user.data.user.user_email,
                 property_name: property.data.property.name,
-                room_name: room.data.room?.name || 'Standard Room'
+                room_name: room.data.room?.name || 'Standard Room',
               };
             } catch (error) {
               console.error(`Error enriching booking ${booking.id}:`, error);
@@ -69,7 +70,7 @@ const GBookings = () => {
                 ...booking,
                 traveller_email: 'Not available',
                 property_name: 'Not available',
-                room_name: 'Not available'
+                room_name: 'Not available',
               };
             }
           })
@@ -144,29 +145,24 @@ const GBookings = () => {
     setSelectedBooking(null);
   };
 
-  // Filter bookings based on active tab
   const filteredBookings = bookings.filter(booking => {
     const today = new Date();
     const checkOutDate = new Date(booking.check_out);
     
     if (activeTab === "current") {
-      // Show bookings that are not yet checked out or check-out date is in the future
       return booking.checkin_status !== 'checked_out' && checkOutDate >= today && booking.status !== 'cancelled';
     } else if (activeTab === "previous") {
-      // Show bookings that are checked out or check-out date has passed
       return (booking.checkin_status === 'checked_out' || checkOutDate < today) && booking.status !== 'cancelled';
     } else if (activeTab === "cancelled") {
-      // Show only cancelled bookings
       return booking.status === 'cancelled';
     }
     return true;
   });
 
-  // Apply additional status filter for current and previous tabs
   const statusFilteredBookings = statusFilter === "all"
     ? filteredBookings
     : activeTab === "cancelled" 
-      ? filteredBookings // Don't apply status filter to cancelled tab
+      ? filteredBookings
       : filteredBookings.filter(booking => booking.status.toLowerCase() === statusFilter.toLowerCase());
 
   if (loading) {
@@ -221,6 +217,7 @@ const GBookings = () => {
                       <th className="p-2">Guest Email</th>
                       <th className="p-2">Check-in</th>
                       <th className="p-2">Check-out</th>
+                      <th className="p-2">Total Price</th>
                       <th className="p-2">Status</th>
                       <th className="p-2">Check-in Status</th>
                       <th className="p-2">Actions</th>
@@ -243,6 +240,9 @@ const GBookings = () => {
                         </td>
                         <td className="p-2 text-xs">
                           {new Date(booking.check_out).toLocaleDateString()}
+                        </td>
+                        <td className="p-2 text-xs font-medium">
+                          {booking.total_price ? `NRs. ${parseFloat(booking.total_price).toFixed(2)}` : 'N/A'}
                         </td>
                         <td className="p-2 text-xs">
                           <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
@@ -376,6 +376,7 @@ const GBookings = () => {
                       <th className="p-2">Guest Email</th>
                       <th className="p-2">Check-in</th>
                       <th className="p-2">Check-out</th>
+                      <th className="p-2">Total Price</th>
                       <th className="p-2">Status</th>
                       <th className="p-2">Check-in Status</th>
                     </tr>
@@ -398,6 +399,9 @@ const GBookings = () => {
                           </td>
                           <td className="p-2 text-xs">
                             {new Date(booking.check_out).toLocaleDateString()}
+                          </td>
+                          <td className="p-2 text-xs font-medium">
+                            {booking.total_price ? `NRs. ${parseFloat(booking.total_price).toFixed(2)}` : 'N/A'}
                           </td>
                           <td className="p-2 text-xs">
                             <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
@@ -428,7 +432,7 @@ const GBookings = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                        <td colSpan={9} className="p-4 text-center text-muted-foreground">
                           No previous bookings found
                         </td>
                       </tr>
@@ -454,6 +458,7 @@ const GBookings = () => {
                       <th className="p-2">Guest Email</th>
                       <th className="p-2">Check-in</th>
                       <th className="p-2">Check-out</th>
+                      <th className="p-2">Total Price</th>
                       <th className="p-2">Status</th>
                       <th className="p-2">Check-in Status</th>
                     </tr>
@@ -476,6 +481,9 @@ const GBookings = () => {
                           </td>
                           <td className="p-2 text-xs">
                             {new Date(booking.check_out).toLocaleDateString()}
+                          </td>
+                          <td className="p-2 text-xs font-medium">
+                            {booking.total_price ? `NRs. ${parseFloat(booking.total_price).toFixed(2)}` : 'N/A'}
                           </td>
                           <td className="p-2 text-xs">
                             <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
@@ -502,7 +510,7 @@ const GBookings = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                        <td colSpan={9} className="p-4 text-center text-muted-foreground">
                           No cancelled bookings found
                         </td>
                       </tr>
@@ -515,7 +523,6 @@ const GBookings = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Action Dialog */}
       <Dialog open={actionDialog.open} onOpenChange={(open) => setActionDialog({ ...actionDialog, open })}>
         <DialogContent>
           <DialogHeader>
@@ -535,6 +542,7 @@ const GBookings = () => {
                 <p><span className="font-medium">Room:</span> {selectedBooking.room_name || 'Not available'}</p>
                 <p><span className="font-medium">Check-in Date:</span> {new Date(selectedBooking.check_in).toLocaleDateString()}</p>
                 <p><span className="font-medium">Check-out Date:</span> {new Date(selectedBooking.check_out).toLocaleDateString()}</p>
+                <p><span className="font-medium">Total Price:</span> {selectedBooking.total_price ? `NRs. ${parseFloat(selectedBooking.total_price).toFixed(2)}` : 'N/A'}</p>
                 <p><span className="font-medium">Current Status:</span> {selectedBooking.status.charAt(0).toUpperCase() + selectedBooking.status.slice(1)}</p>
                 <p><span className="font-medium">Check-in Status:</span> {selectedBooking.checkin_status === 'checked_in' ? 'Checked In' :
                    selectedBooking.checkin_status === 'checked_out' ? 'Checked Out' : 'Not Checked In'}</p>
@@ -567,4 +575,4 @@ const GBookings = () => {
   );
 };
 
-export default GBookings;
+export default GBooking;
