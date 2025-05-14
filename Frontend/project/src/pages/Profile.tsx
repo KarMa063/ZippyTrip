@@ -36,6 +36,15 @@ interface GuestHouseBooking {
   location: string;
 }
 
+function toLocalDateString(date: string) {
+  return new Date(date).toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+}
+
+const todayStr = new Date().toLocaleDateString('en-CA');
+
+const isFuture = (date: string) => toLocalDateString(date) > todayStr;
+const isPast = (date: string) => toLocalDateString(date) < todayStr;
+const isToday = (date: string) => toLocalDateString(date) === todayStr;
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -51,6 +60,7 @@ const Profile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bus' | 'guesthouse'>(
     location.state?.activeTab === 'guesthouse' ? 'guesthouse' : 'bus'
   );
+  const [bookingTab, setBookingTab] = useState<'current' | 'past' | 'cancelled'>('current');
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -85,9 +95,9 @@ const Profile: React.FC = () => {
               busId: booking.schedule_id || booking.route_id,
               from: booking.origin || '',
               to: booking.destination || '',
-              departure: '08:00 AM',
-              arrival: '10:00 AM',
-              date: new Date(booking.booking_date).toISOString().split('T')[0],
+              departure: booking.departure_time || '08:00 AM',
+              arrival: booking.arrival_time || '10:00 AM',
+              date: booking.travel_date || new Date(booking.booking_date).toISOString().split('T')[0],
               operator: 'ZippyBus Express',
               price: booking.total_fare,
               seats: seatNumbers,
@@ -148,7 +158,7 @@ const Profile: React.FC = () => {
                 checkOut: booking.check_out,
                 guests: room?.capacity || booking.capacity || 1,
                 price: room ? parseFloat(room.price) : 0,
-                status: booking.status === 'cancelled' ? 'cancelled' : 'active',
+                status: (booking.status === 'cancelled' ? 'cancelled' : 'active') as 'active' | 'cancelled',
                 bookingDate: booking.created_at || new Date().toISOString(),
                 location: property?.address || 'Unknown Location'
               };
@@ -200,6 +210,18 @@ const Profile: React.FC = () => {
           );
           
           setTickets(updatedTickets);
+
+          // Insert into cancelled_bookings
+          const cancelledBooking = response.data.booking;
+          await axios.post('http://localhost:5000/api/cancellations/cancel', {
+            route_details: `${cancelledBooking.from} to ${cancelledBooking.to}`,
+            travel_date: cancelledBooking.date,
+            user_id: cancelledBooking.passengerName,
+            seat_count: cancelledBooking.seats.length,
+            amount: cancelledBooking.price,
+            refund_status: 'pending',
+            cancelled_at: new Date().toISOString()
+          }, { timeout: 5000 });
         } else {
           console.error('Backend cancellation failed:', response.data.message);
           alert('Failed to cancel ticket: ' + response.data.message);
@@ -248,6 +270,23 @@ const Profile: React.FC = () => {
     };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
+
+  // Helper functions to classify bookings
+  const isFuture = (date: string) => new Date(date) > new Date();
+  const isPast = (date: string) => new Date(date) < new Date();
+
+  const currentTickets = tickets.filter(ticket => ticket.status === 'active' && isFuture(ticket.date));
+  const pastTickets = tickets.filter(ticket => ticket.status === 'active' && isPast(ticket.date));
+  const cancelledTickets = tickets.filter(ticket => ticket.status === 'cancelled');
+
+  const currentGuesthouse = guestHouseBookings.filter(booking => booking.status === 'active' && isFuture(booking.checkIn));
+  const pastGuesthouse = guestHouseBookings.filter(booking => booking.status === 'active' && isPast(booking.checkOut));
+  const cancelledGuesthouse = guestHouseBookings.filter(booking => booking.status === 'cancelled');
+
+  // Booking counts for selected type
+  const currentCount = activeTab === 'bus' ? currentTickets.length : currentGuesthouse.length;
+  const pastCount = activeTab === 'bus' ? pastTickets.length : pastGuesthouse.length;
+  const cancelledCount = activeTab === 'bus' ? cancelledTickets.length : cancelledGuesthouse.length;
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -316,274 +355,794 @@ const Profile: React.FC = () => {
               </button>
             </div>
 
+            {/* Booking Tabs */}
+            <div className={`flex border-b mb-6 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <button
+                onClick={() => setBookingTab('current')}
+                className={`py-3 px-6 font-medium flex items-center ${
+                  bookingTab === 'current'
+                    ? isDarkMode
+                      ? 'border-b-2 border-blue-500 text-blue-400'
+                      : 'border-b-2 border-blue-600 text-blue-600'
+                    : isDarkMode
+                      ? 'text-gray-400 hover:text-gray-300'
+                      : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Current Bookings <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200">{currentCount}</span>
+              </button>
+              <button
+                onClick={() => setBookingTab('past')}
+                className={`py-3 px-6 font-medium flex items-center ${
+                  bookingTab === 'past'
+                    ? isDarkMode
+                      ? 'border-b-2 border-blue-500 text-blue-400'
+                      : 'border-b-2 border-blue-600 text-blue-600'
+                    : isDarkMode
+                      ? 'text-gray-400 hover:text-gray-300'
+                      : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Past Bookings <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{pastCount}</span>
+              </button>
+              <button
+                onClick={() => setBookingTab('cancelled')}
+                className={`py-3 px-6 font-medium flex items-center ${
+                  bookingTab === 'cancelled'
+                    ? isDarkMode
+                      ? 'border-b-2 border-blue-500 text-blue-400'
+                      : 'border-b-2 border-blue-600 text-blue-600'
+                    : isDarkMode
+                      ? 'text-gray-400 hover:text-gray-300'
+                      : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Cancelled Bookings <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-200">{cancelledCount}</span>
+              </button>
+            </div>
+
             {/* Bus Tickets Section */}
             {activeTab === 'bus' && (
-              tickets.length === 0 ? (
-                <div className={`text-center p-12 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
-                  <div className="flex justify-center mb-4">
-                    <div className={`p-4 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <Bus className="h-8 w-8 text-gray-400" />
-                    </div>
-                  </div>
-                  <h2 className="text-xl font-semibold mb-2">No Bus Tickets Found</h2>
-                  <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
-                    You haven't booked any bus tickets yet.
-                  </p>
-                  <button
-                    onClick={() => navigate('/bus')}
-                    className={`px-4 py-2 rounded-lg transition duration-200 ${
-                      isDarkMode
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    Book a Bus Ticket
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {tickets.map((ticket) => (
-                    <div 
-                      key={ticket.id} 
-                      className={`rounded-lg shadow-md overflow-hidden ${
-                        isDarkMode ? 'bg-gray-800' : 'bg-white'
-                      } ${
-                        ticket.status === 'cancelled' ? 'opacity-75' : ''
-                      }`}
-                    >
-                      {ticket.status === 'cancelled' && (
-                        <div className={`px-4 py-2 flex items-center ${
-                          isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-500 text-white'
-                        }`}>
-                          <AlertTriangle className="h-5 w-5 mr-2" />
-                          <span>This ticket has been cancelled</span>
-                        </div>
-                      )}
-                      <div className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h2 className="text-xl font-bold">{ticket.operator}</h2>
-                            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              {ticket.busType} • Booking ID: {ticket.id.substring(0, 8)}
-                            </p>
-                          </div>
-                          <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
-                            Rs. {ticket.price}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col md:flex-row md:justify-between mb-6">
-                          <div className="flex items-start space-x-3 mb-4 md:mb-0">
-                            <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
-                            <div>
-                              <p className="font-medium">Travel Date</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {formatDate(ticket.date)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start space-x-3 mb-4 md:mb-0">
-                            <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
-                            <div>
-                              <p className="font-medium">Departure Time</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {ticket.departure}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start space-x-3">
-                            <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
-                            <div>
-                              <p className="font-medium">Arrival Time</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {ticket.arrival}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex-1">
-                            <div className="text-lg font-semibold">{ticket.from}</div>
-                            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Origin</div>
-                          </div>
-                          <div className="flex-1 flex justify-center">
-                            <div className={`w-20 h-0.5 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} relative`}>
-                              <Bus className={`absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-                            </div>
-                          </div>
-                          <div className="flex-1 text-right">
-                            <div className="text-lg font-semibold">{ticket.to}</div>
-                            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Destination</div>
-                          </div>
-                        </div>
-
-                        <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pt-4`}>
-                          <div className="flex flex-col md:flex-row md:justify-between">
-                            <div className="mb-4 md:mb-0">
-                              <p className="font-medium">Passenger</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {ticket.passengerName}
-                              </p>
-                            </div>
-                            <div className="mb-4 md:mb-0">
-                              <p className="font-medium">Seat Numbers</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {ticket.seats.map(seat => seat.split('-')[1]).join(', ')}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium">Booking Date</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {formatDate(ticket.bookingDate)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {ticket.status === 'active' && (
-                          <div className="mt-6 flex justify-end">
-                            <button
-                              onClick={() => handleCancelTicket(ticket.id, 'bus')}
-                              className={`px-4 py-2 rounded-lg transition duration-200 ${
-                                isDarkMode
-                                  ? 'bg-red-700 text-white hover:bg-red-800'
-                                  : 'bg-red-600 text-white hover:bg-red-700'
-                              }`}
-                            >
-                              Cancel Ticket
-                            </button>
-                          </div>
-                        )}
+              bookingTab === 'current' ? (
+                currentTickets.length === 0 ? (
+                  <div className={`text-center p-12 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
+                    <div className="flex justify-center mb-4">
+                      <div className={`p-4 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <Bus className="h-8 w-8 text-gray-400" />
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <h2 className="text-xl font-semibold mb-2">No Bus Tickets Found</h2>
+                    <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
+                      You haven't booked any bus tickets yet.
+                    </p>
+                    <button
+                      onClick={() => navigate('/bus')}
+                      className={`px-4 py-2 rounded-lg transition duration-200 ${
+                        isDarkMode
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Book a Bus Ticket
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {currentTickets.map((ticket) => (
+                      <div 
+                        key={ticket.id} 
+                        className={`rounded-lg shadow-md overflow-hidden ${
+                          isDarkMode ? 'bg-gray-800' : 'bg-white'
+                        } ${
+                          ticket.status === 'cancelled' ? 'opacity-75' : ''
+                        }`}
+                      >
+                        {ticket.status === 'cancelled' && (
+                          <div className={`px-4 py-2 flex items-center ${
+                            isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-500 text-white'
+                          }`}>
+                            <AlertTriangle className="h-5 w-5 mr-2" />
+                            <span>This ticket has been cancelled</span>
+                          </div>
+                        )}
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h2 className="text-xl font-bold">{ticket.operator}</h2>
+                              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {ticket.busType} • Booking ID: {ticket.id.substring(0, 8)}
+                              </p>
+                            </div>
+                            <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                              Rs. {ticket.price}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col md:flex-row md:justify-between mb-6">
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Travel Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(ticket.date)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Departure Time</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.departure}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3">
+                              <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Arrival Time</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.arrival}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mb-6">
+                            <div className="flex-1">
+                              <div className="text-lg font-semibold">{ticket.from}</div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Origin</div>
+                            </div>
+                            <div className="flex-1 flex justify-center">
+                              <div className={`w-20 h-0.5 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} relative`}>
+                                <Bus className={`absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+                              </div>
+                            </div>
+                            <div className="flex-1 text-right">
+                              <div className="text-lg font-semibold">{ticket.to}</div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Destination</div>
+                            </div>
+                          </div>
+
+                          <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pt-4`}>
+                            <div className="flex flex-col md:flex-row md:justify-between">
+                              <div className="mb-4 md:mb-0">
+                                <p className="font-medium">Passenger</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.passengerName}
+                                </p>
+                              </div>
+                              <div className="mb-4 md:mb-0">
+                                <p className="font-medium">Seat Numbers</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.seats.map(seat => seat.split('-')[1]).join(', ')}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="font-medium">Booking Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(ticket.bookingDate)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {ticket.status === 'active' && (
+                            <div className="mt-6 flex justify-end">
+                              <button
+                                onClick={() => handleCancelTicket(ticket.id, 'bus')}
+                                className={`px-4 py-2 rounded-lg transition duration-200 ${
+                                  isDarkMode
+                                    ? 'bg-red-700 text-white hover:bg-red-800'
+                                    : 'bg-red-600 text-white hover:bg-red-700'
+                                }`}
+                              >
+                                Cancel Ticket
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : bookingTab === 'past' ? (
+                pastTickets.length === 0 ? (
+                  <div className={`text-center p-12 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
+                    <div className="flex justify-center mb-4">
+                      <div className={`p-4 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <Bus className="h-8 w-8 text-gray-400" />
+                      </div>
+                    </div>
+                    <h2 className="text-xl font-semibold mb-2">No Bus Tickets Found</h2>
+                    <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
+                      You haven't booked any bus tickets yet.
+                    </p>
+                    <button
+                      onClick={() => navigate('/bus')}
+                      className={`px-4 py-2 rounded-lg transition duration-200 ${
+                        isDarkMode
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Book a Bus Ticket
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {pastTickets.map((ticket) => (
+                      <div 
+                        key={ticket.id} 
+                        className={`rounded-lg shadow-md overflow-hidden ${
+                          isDarkMode ? 'bg-gray-800' : 'bg-white'
+                        } ${
+                          ticket.status === 'cancelled' ? 'opacity-75' : ''
+                        }`}
+                      >
+                        {ticket.status === 'cancelled' && (
+                          <div className={`px-4 py-2 flex items-center ${
+                            isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-500 text-white'
+                          }`}>
+                            <AlertTriangle className="h-5 w-5 mr-2" />
+                            <span>This ticket has been cancelled</span>
+                          </div>
+                        )}
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h2 className="text-xl font-bold">{ticket.operator}</h2>
+                              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {ticket.busType} • Booking ID: {ticket.id.substring(0, 8)}
+                              </p>
+                            </div>
+                            <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                              Rs. {ticket.price}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col md:flex-row md:justify-between mb-6">
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Travel Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(ticket.date)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Departure Time</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.departure}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3">
+                              <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Arrival Time</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.arrival}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mb-6">
+                            <div className="flex-1">
+                              <div className="text-lg font-semibold">{ticket.from}</div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Origin</div>
+                            </div>
+                            <div className="flex-1 flex justify-center">
+                              <div className={`w-20 h-0.5 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} relative`}>
+                                <Bus className={`absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+                              </div>
+                            </div>
+                            <div className="flex-1 text-right">
+                              <div className="text-lg font-semibold">{ticket.to}</div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Destination</div>
+                            </div>
+                          </div>
+
+                          <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pt-4`}>
+                            <div className="flex flex-col md:flex-row md:justify-between">
+                              <div className="mb-4 md:mb-0">
+                                <p className="font-medium">Passenger</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.passengerName}
+                                </p>
+                              </div>
+                              <div className="mb-4 md:mb-0">
+                                <p className="font-medium">Seat Numbers</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.seats.map(seat => seat.split('-')[1]).join(', ')}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="font-medium">Booking Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(ticket.bookingDate)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                cancelledTickets.length === 0 ? (
+                  <div className={`text-center p-12 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
+                    <div className="flex justify-center mb-4">
+                      <div className={`p-4 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <Bus className="h-8 w-8 text-gray-400" />
+                      </div>
+                    </div>
+                    <h2 className="text-xl font-semibold mb-2">No Bus Tickets Found</h2>
+                    <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
+                      You haven't booked any bus tickets yet.
+                    </p>
+                    <button
+                      onClick={() => navigate('/bus')}
+                      className={`px-4 py-2 rounded-lg transition duration-200 ${
+                        isDarkMode
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Book a Bus Ticket
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {cancelledTickets.map((ticket) => (
+                      <div 
+                        key={ticket.id} 
+                        className={`rounded-lg shadow-md overflow-hidden ${
+                          isDarkMode ? 'bg-gray-800' : 'bg-white'
+                        } ${
+                          ticket.status === 'cancelled' ? 'opacity-75' : ''
+                        }`}
+                      >
+                        {ticket.status === 'cancelled' && (
+                          <div className={`px-4 py-2 flex items-center ${
+                            isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-500 text-white'
+                          }`}>
+                            <AlertTriangle className="h-5 w-5 mr-2" />
+                            <span>This ticket has been cancelled</span>
+                          </div>
+                        )}
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h2 className="text-xl font-bold">{ticket.operator}</h2>
+                              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {ticket.busType} • Booking ID: {ticket.id.substring(0, 8)}
+                              </p>
+                            </div>
+                            <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                              Rs. {ticket.price}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col md:flex-row md:justify-between mb-6">
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Travel Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(ticket.date)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Departure Time</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.departure}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3">
+                              <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Arrival Time</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.arrival}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mb-6">
+                            <div className="flex-1">
+                              <div className="text-lg font-semibold">{ticket.from}</div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Origin</div>
+                            </div>
+                            <div className="flex-1 flex justify-center">
+                              <div className={`w-20 h-0.5 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} relative`}>
+                                <Bus className={`absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+                              </div>
+                            </div>
+                            <div className="flex-1 text-right">
+                              <div className="text-lg font-semibold">{ticket.to}</div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Destination</div>
+                            </div>
+                          </div>
+
+                          <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pt-4`}>
+                            <div className="flex flex-col md:flex-row md:justify-between">
+                              <div className="mb-4 md:mb-0">
+                                <p className="font-medium">Passenger</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.passengerName}
+                                </p>
+                              </div>
+                              <div className="mb-4 md:mb-0">
+                                <p className="font-medium">Seat Numbers</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ticket.seats.map(seat => seat.split('-')[1]).join(', ')}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="font-medium">Booking Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(ticket.bookingDate)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
               )
             )}
 
             {/* Guesthouse Bookings Section */}
             {activeTab === 'guesthouse' && (
-              guestHouseBookings.length === 0 ? (
-                <div className={`text-center p-12 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
-                  <div className="flex justify-center mb-4">
-                    <div className={`p-4 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <Home className="h-8 w-8 text-gray-400" />
-                    </div>
-                  </div>
-                  <h2 className="text-xl font-semibold mb-2">No Guesthouse Bookings Found</h2>
-                  <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
-                    You haven't booked any guesthouse rooms yet.
-                  </p>
-                  <button
-                    onClick={() => navigate('/guesthouses')}
-                    className={`px-4 py-2 rounded-lg transition duration-200 ${
-                      isDarkMode
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    Book a Guesthouse
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {guestHouseBookings.map((booking) => (
-                    <div 
-                      key={booking.id} 
-                      className={`rounded-lg shadow-md overflow-hidden ${
-                        isDarkMode ? 'bg-gray-800' : 'bg-white'
-                      } ${
-                        booking.status === 'cancelled' ? 'opacity-75' : ''
-                      }`}
-                    >
-                      {booking.status === 'cancelled' && (
-                        <div className={`px-4 py-2 flex items-center ${
-                          isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-500 text-white'
-                        }`}>
-                          <AlertTriangle className="h-5 w-5 mr-2" />
-                          <span>This booking has been cancelled</span>
-                        </div>
-                      )}
-                      <div className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h2 className="text-xl font-bold">{booking.guestHouseName}</h2>
-                            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              {booking.roomType} • Booking ID: {String(booking.id).substring(0, 8)}
-                            </p>
-                          </div>
-                          <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
-                            Rs. {booking.price}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col md:flex-row md:justify-between mb-6">
-                          <div className="flex items-start space-x-3 mb-4 md:mb-0">
-                            <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
-                            <div>
-                              <p className="font-medium">Check-in Date</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {formatDate(booking.checkIn)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start space-x-3 mb-4 md:mb-0">
-                            <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
-                            <div>
-                              <p className="font-medium">Check-out Date</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {formatDate(booking.checkOut)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start space-x-3">
-                            <Bed className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
-                            <div>
-                              <p className="font-medium">Guests</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {booking.guests}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex-1">
-                            <div className="text-lg font-semibold">{booking.location}</div>
-                            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Location</div>
-                          </div>
-                        </div>
-
-                        <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pt-4`}>
-                          <div className="flex flex-col md:flex-row md:justify-between">
-                            <div>
-                              <p className="font-medium">Booking Date</p>
-                              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {formatDate(booking.bookingDate)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {booking.status === 'active' && (
-                          <div className="mt-6 flex justify-end">
-                            <button
-                              onClick={() => handleCancelTicket(booking.id, 'guesthouse')}
-                              className={`px-4 py-2 rounded-lg transition duration-200 ${
-                                isDarkMode
-                                  ? 'bg-red-700 text-white hover:bg-red-800'
-                                  : 'bg-red-600 text-white hover:bg-red-700'
-                              }`}
-                            >
-                              Cancel Booking
-                            </button>
-                          </div>
-                        )}
+              bookingTab === 'current' ? (
+                currentGuesthouse.length === 0 ? (
+                  <div className={`text-center p-12 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
+                    <div className="flex justify-center mb-4">
+                      <div className={`p-4 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <Home className="h-8 w-8 text-gray-400" />
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <h2 className="text-xl font-semibold mb-2">No Guesthouse Bookings Found</h2>
+                    <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
+                      You haven't booked any guesthouse rooms yet.
+                    </p>
+                    <button
+                      onClick={() => navigate('/guesthouses')}
+                      className={`px-4 py-2 rounded-lg transition duration-200 ${
+                        isDarkMode
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Book a Guesthouse
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {currentGuesthouse.map((booking) => (
+                      <div 
+                        key={booking.id} 
+                        className={`rounded-lg shadow-md overflow-hidden ${
+                          isDarkMode ? 'bg-gray-800' : 'bg-white'
+                        } ${
+                          booking.status === 'cancelled' ? 'opacity-75' : ''
+                        }`}
+                      >
+                        {booking.status === 'cancelled' && (
+                          <div className={`px-4 py-2 flex items-center ${
+                            isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-500 text-white'
+                          }`}>
+                            <AlertTriangle className="h-5 w-5 mr-2" />
+                            <span>This booking has been cancelled</span>
+                          </div>
+                        )}
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h2 className="text-xl font-bold">{booking.guestHouseName}</h2>
+                              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {booking.roomType} • Booking ID: {String(booking.id).substring(0, 8)}
+                              </p>
+                            </div>
+                            <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                              Rs. {booking.price}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col md:flex-row md:justify-between mb-6">
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Check-in Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(booking.checkIn)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Check-out Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(booking.checkOut)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3">
+                              <Bed className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Guests</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {booking.guests}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mb-6">
+                            <div className="flex-1">
+                              <div className="text-lg font-semibold">{booking.location}</div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Location</div>
+                            </div>
+                          </div>
+
+                          <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pt-4`}>
+                            <div className="flex flex-col md:flex-row md:justify-between">
+                              <div>
+                                <p className="font-medium">Booking Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(booking.bookingDate)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {booking.status === 'active' && (
+                            <div className="mt-6 flex justify-end">
+                              <button
+                                onClick={() => handleCancelTicket(booking.id, 'guesthouse')}
+                                className={`px-4 py-2 rounded-lg transition duration-200 ${
+                                  isDarkMode
+                                    ? 'bg-red-700 text-white hover:bg-red-800'
+                                    : 'bg-red-600 text-white hover:bg-red-700'
+                                }`}
+                              >
+                                Cancel Booking
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : bookingTab === 'past' ? (
+                pastGuesthouse.length === 0 ? (
+                  <div className={`text-center p-12 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
+                    <div className="flex justify-center mb-4">
+                      <div className={`p-4 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <Home className="h-8 w-8 text-gray-400" />
+                      </div>
+                    </div>
+                    <h2 className="text-xl font-semibold mb-2">No Guesthouse Bookings Found</h2>
+                    <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
+                      You haven't booked any guesthouse rooms yet.
+                    </p>
+                    <button
+                      onClick={() => navigate('/guesthouses')}
+                      className={`px-4 py-2 rounded-lg transition duration-200 ${
+                        isDarkMode
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Book a Guesthouse
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {pastGuesthouse.map((booking) => (
+                      <div 
+                        key={booking.id} 
+                        className={`rounded-lg shadow-md overflow-hidden ${
+                          isDarkMode ? 'bg-gray-800' : 'bg-white'
+                        } ${
+                          booking.status === 'cancelled' ? 'opacity-75' : ''
+                        }`}
+                      >
+                        {booking.status === 'cancelled' && (
+                          <div className={`px-4 py-2 flex items-center ${
+                            isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-500 text-white'
+                          }`}>
+                            <AlertTriangle className="h-5 w-5 mr-2" />
+                            <span>This booking has been cancelled</span>
+                          </div>
+                        )}
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h2 className="text-xl font-bold">{booking.guestHouseName}</h2>
+                              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {booking.roomType} • Booking ID: {String(booking.id).substring(0, 8)}
+                              </p>
+                            </div>
+                            <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                              Rs. {booking.price}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col md:flex-row md:justify-between mb-6">
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Check-in Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(booking.checkIn)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Check-out Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(booking.checkOut)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3">
+                              <Bed className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Guests</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {booking.guests}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mb-6">
+                            <div className="flex-1">
+                              <div className="text-lg font-semibold">{booking.location}</div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Location</div>
+                            </div>
+                          </div>
+
+                          <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pt-4`}>
+                            <div className="flex flex-col md:flex-row md:justify-between">
+                              <div>
+                                <p className="font-medium">Booking Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(booking.bookingDate)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                cancelledGuesthouse.length === 0 ? (
+                  <div className={`text-center p-12 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
+                    <div className="flex justify-center mb-4">
+                      <div className={`p-4 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <Home className="h-8 w-8 text-gray-400" />
+                      </div>
+                    </div>
+                    <h2 className="text-xl font-semibold mb-2">No Guesthouse Bookings Found</h2>
+                    <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
+                      You haven't booked any guesthouse rooms yet.
+                    </p>
+                    <button
+                      onClick={() => navigate('/guesthouses')}
+                      className={`px-4 py-2 rounded-lg transition duration-200 ${
+                        isDarkMode
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Book a Guesthouse
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {cancelledGuesthouse.map((booking) => (
+                      <div 
+                        key={booking.id} 
+                        className={`rounded-lg shadow-md overflow-hidden ${
+                          isDarkMode ? 'bg-gray-800' : 'bg-white'
+                        } ${
+                          booking.status === 'cancelled' ? 'opacity-75' : ''
+                        }`}
+                      >
+                        {booking.status === 'cancelled' && (
+                          <div className={`px-4 py-2 flex items-center ${
+                            isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-500 text-white'
+                          }`}>
+                            <AlertTriangle className="h-5 w-5 mr-2" />
+                            <span>This booking has been cancelled</span>
+                          </div>
+                        )}
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h2 className="text-xl font-bold">{booking.guestHouseName}</h2>
+                              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {booking.roomType} • Booking ID: {String(booking.id).substring(0, 8)}
+                              </p>
+                            </div>
+                            <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                              Rs. {booking.price}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col md:flex-row md:justify-between mb-6">
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Check-in Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(booking.checkIn)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3 mb-4 md:mb-0">
+                              <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Check-out Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(booking.checkOut)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3">
+                              <Bed className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`} />
+                              <div>
+                                <p className="font-medium">Guests</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {booking.guests}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mb-6">
+                            <div className="flex-1">
+                              <div className="text-lg font-semibold">{booking.location}</div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Location</div>
+                            </div>
+                          </div>
+
+                          <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pt-4`}>
+                            <div className="flex flex-col md:flex-row md:justify-between">
+                              <div>
+                                <p className="font-medium">Booking Date</p>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {formatDate(booking.bookingDate)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
               )
             )}
           </>

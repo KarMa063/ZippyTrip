@@ -64,16 +64,6 @@ router.post('/:propertyId/chat', async (req, res) => {
   }
 });
 
-router.get('/', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM guesthouse_chat_messages');
-    res.status(200).json({ success: true, messages: result.rows });
-  } catch (error) {
-    console.error("Error fetching chat messages:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-});
-
 // Get conversation history
 router.get('/:propertyId/chat', async (req, res) => {
   const { propertyId } = req.params;
