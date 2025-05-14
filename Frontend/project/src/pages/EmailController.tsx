@@ -1,7 +1,7 @@
 import emailjs from '@emailjs/browser';
 import React from "react";
 
-emailjs.init("00yKrhJ5D0m_ow_w2");
+emailjs.init("PiBgwjGtX3mA0xO-H");
 
 interface BusDetails {
     email: string;
@@ -22,8 +22,8 @@ export const sendBusReminder = async (details: BusDetails) => {
         console.log('Sending bus reminder with details:', details);
         
         const response = await emailjs.send(
-            "service_529qzso",
-            "template_5z01v4p",
+            "service_9qg79tj",
+            "template_vq12jp5",
             {
                 email: details.email,
                 name: details.passengerName,
@@ -37,7 +37,7 @@ export const sendBusReminder = async (details: BusDetails) => {
                 seats: details.seats.join(", "),
                 title: "Bus Booking Confirmation"
             },
-            "00yKrhJ5D0m_ow_w2"
+            "PiBgwjGtX3mA0xO-H"
         );
         console.log('Email sent successfully:', response);
         return response;
@@ -65,8 +65,8 @@ export const sendRoomBookingConfirmation = async (details: RoomBookingDetails) =
         console.log('Sending room booking confirmation with details:', details);
         
         const response = await emailjs.send(
-            "service_529qzso",
-            "template_jj4z6fk",
+            "service_9qg79tj",
+            "template_1tg2m59",
             {
                 email: details.email,
                 name: details.guestName,
@@ -79,7 +79,7 @@ export const sendRoomBookingConfirmation = async (details: RoomBookingDetails) =
                 guests: details.guests,
                 title: "Room Booking Confirmation"
             },
-            "00yKrhJ5D0m_ow_w2"
+            "PiBgwjGtX3mA0xO-H"
         );
         console.log('Room booking email sent successfully:', response);
         return response;
@@ -89,39 +89,15 @@ export const sendRoomBookingConfirmation = async (details: RoomBookingDetails) =
     }
 };
 
-// Test function to verify email sending
-export const testEmailSending = async (email: string): Promise<{ success: boolean; message: string }> => {
-    try {
-        const templateParams = {
-            email: email,  
-            name: "Test User", 
-            title: "Test Email",
-            message: "This is a test email to verify the email sending functionality is working correctly."
-        };
-
-        await emailjs.send(
-            "service_529qzso",
-            "template_jj4z6fk",
-            templateParams,
-            "00yKrhJ5D0m_ow_w2"
-        );
-        return { success: true, message: "Test email sent successfully!" };
-    } catch (error) {
-        console.error("Failed to send test email:", error);
-        return { success: false, message: "Failed to send test email." };
-    }
-};
-
-
 export const sendEmail = async (formRef: React.RefObject<HTMLFormElement>) => {
     if (!formRef.current) return;
 
     try {
         const response = await emailjs.sendForm(
-            'service_529qzso',
-            'template_jj4z6fk',
+            "service_zds5xi3",
+            "template_nyvk1ep",
             formRef.current,
-            'user_00yKrhJ5D0m_ow_w2'
+            'user_PiBgwjGtX3mA0xO-H'
         );
         alert('Email sent successfully!');
         return response;
@@ -132,7 +108,6 @@ export const sendEmail = async (formRef: React.RefObject<HTMLFormElement>) => {
     }
 };
 
-    
 const EmailForm: React.FC = () => {
     const formRef = React.useRef<HTMLFormElement>(null);
 

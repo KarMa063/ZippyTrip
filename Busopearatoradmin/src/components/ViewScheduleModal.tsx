@@ -88,7 +88,7 @@ const ViewScheduleModal = ({ isOpen, onClose, schedule }: ViewScheduleModalProps
               <div className="text-sm text-muted-foreground">Fare</div>
               <div className="flex items-center">
                 <DollarSign className="h-4 w-4 mr-2 text-zippy-purple" />
-                ₹{schedule.fare}
+                रू{schedule.fare}
               </div>
             </div>
           </div>

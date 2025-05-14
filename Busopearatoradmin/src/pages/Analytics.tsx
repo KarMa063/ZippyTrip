@@ -217,7 +217,7 @@ const Analytics = () => {
             <div className="text-2xl font-bold">NPR {dashboardStats.total_revenue.toLocaleString()}</div>
             <div className="flex items-center mt-1 text-green-500 text-sm">
               <TrendingUp className="h-4 w-4 mr-1" />
-              <span>+{dashboardStats.revenue_growth}% from last year</span>
+              
             </div>
           </CardContent>
         </Card>
@@ -235,7 +235,7 @@ const Analytics = () => {
             <div className="text-2xl font-bold">{dashboardStats.total_passengers.toLocaleString()}</div>
             <div className="flex items-center mt-1 text-green-500 text-sm">
               <TrendingUp className="h-4 w-4 mr-1" />
-              <span>+{dashboardStats.passenger_growth}% from last year</span>
+            
             </div>
           </CardContent>
         </Card>
@@ -253,28 +253,12 @@ const Analytics = () => {
             <div className="text-2xl font-bold">{dashboardStats.active_routes}</div>
             <div className="flex items-center mt-1 text-green-500 text-sm">
               <TrendingUp className="h-4 w-4 mr-1" />
-              <span>+{dashboardStats.route_growth} from last year</span>
+              
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-zippy-darkGray border-zippy-gray">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              <div className="flex items-center">
-                <Bus className="h-5 w-5 mr-2 text-zippy-purple" />
-                Fleet Size
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.fleet_size}</div>
-            <div className="flex items-center mt-1 text-green-500 text-sm">
-              <TrendingUp className="h-4 w-4 mr-1" />
-              <span>+{dashboardStats.fleet_growth} from last year</span>
-            </div>
-          </CardContent>
-        </Card>
+        
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">

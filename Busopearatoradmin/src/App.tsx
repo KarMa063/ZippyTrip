@@ -8,7 +8,6 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import RoutesPage from "./pages/Routes";
 import Schedule from "./pages/Schedule";
-import Fleet from "./pages/Fleet";
 import Analytics from "./pages/Analytics";
 import RouteDetail from "./pages/RouteDetail";
 import AddRoute from "./pages/AddRoute";
@@ -60,7 +59,7 @@ const AppRoutes = () => {
         <Route path="routes/:id" element={<RouteDetail />} />
         <Route path="routes/edit/:id" element={<EditRoute />} />
         <Route path="schedule" element={<Schedule />} />
-        <Route path="fleet" element={<Fleet />} />
+        
         <Route path="bookings" element={<Bookings />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />

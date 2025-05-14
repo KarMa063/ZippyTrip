@@ -30,12 +30,7 @@ const Sidebar = () => {
     label: "Schedule",
     icon: <Calendar size={20} />,
     path: "/schedule"
-  }, {
-    id: 4,
-    label: "Fleet",
-    icon: <Bus size={20} />,
-    path: "/fleet"
-  }, {
+  },  {
     id: 5,
     label: "Analytics",
     icon: <BarChart size={20} />,
@@ -129,8 +124,8 @@ const Sidebar = () => {
                         : "text-gray-400 hover:text-gray-100"
                     }
                   >
-                    <Users size={20} />
-                    <span>Manage Users</span>
+                    
+                   
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

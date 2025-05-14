@@ -3,11 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { Plane } from "lucide-react";
 
 import Layout from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -36,8 +37,10 @@ const App = () => (
           <ThemeProvider>
             <SidebarProvider>
               <Routes>
+                {/* Public routes */}
                 <Route path="/sign-in" element={<SignIn />} />
                 
+                {/* Redirect root to dashboard if authenticated, otherwise to sign-in */}
                 <Route path="/" element={
                   <ProtectedRoute>
                     <Layout>
@@ -45,6 +48,8 @@ const App = () => (
                     </Layout>
                   </ProtectedRoute>
                 } />
+                
+                {/* Protected routes */}
                 <Route path="/bookings" element={
                   <ProtectedRoute>
                     <Layout>
@@ -52,6 +57,7 @@ const App = () => (
                     </Layout>
                   </ProtectedRoute>
                 } />
+                
                 <Route path="/analytics" element={
                   <ProtectedRoute>
                     <Layout>
@@ -115,6 +121,7 @@ const App = () => (
                     </Layout>
                   </ProtectedRoute>
                 } />
+                {/* 404 route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </SidebarProvider>
@@ -126,3 +133,8 @@ const App = () => (
 );
 
 export default App;
+// Replace any Heart icon with Plane icon
+// For example:
+// <Heart size={16} className="text-red-400" />
+// becomes:
+// <Plane size={16} className="text-zippy-blue" />

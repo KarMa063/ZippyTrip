@@ -81,7 +81,7 @@ export const ScheduleTable = ({
               <TableCell>{schedule.driver}</TableCell>
               <TableCell>{getStatusBadge(schedule.status)}</TableCell>
               <TableCell>{schedule.bookedSeats}/{schedule.totalSeats}</TableCell>
-              <TableCell>₹{schedule.fare}</TableCell>
+              <TableCell>रू{schedule.fare}</TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

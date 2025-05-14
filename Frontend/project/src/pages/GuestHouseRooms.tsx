@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Moon, Sun, MapPin, Users, Calendar, ArrowLeft, Star, MessageSquare, X } from 'lucide-react';
@@ -291,22 +292,31 @@ const GuestHouseRooms: React.FC = () => {
         
         // Send email confirmation
         if (bookedRoom) {
-          try {
-            // Import the email function
-            const { sendRoomBookingConfirmation } = await import('../pages/EmailController');
-            
+          try {            
+            // Step 1: Calculate number of nights
+            const checkIn = new Date(checkInDate);
+            const checkOut = new Date(checkOutDate);
+
+            // Calculate difference in milliseconds → convert to days
+            const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            // Step 2: Calculate total price
+            const totalPrice = bookedRoom.price * diffDays;
+
+            // Step 3: Pass totalPrice in the email
             await sendRoomBookingConfirmation({
-              email: userData.user_email,
-              guestName: userData.user_name || userData.user_email.split('@')[0],
-              guestHouseName: guestHouse?.name || 'Guesthouse',
-              roomName: bookedRoom.name,
-              checkInDate: checkInDate,
-              checkOutDate: checkOutDate,
-              price: bookedRoom.price,
-              location: guestHouse?.location || 'N/A',
-              guests: bookedRoom.capacity
+                email: userData.user_email,
+                guestName: userData.user_name || userData.user_email.split('@')[0],
+                guestHouseName: guestHouse?.name || 'Guesthouse',
+                roomName: bookedRoom.name,
+                checkInDate: checkInDate,
+                checkOutDate: checkOutDate,
+                price: totalPrice,
+                location: guestHouse?.location || 'N/A',
+                guests: bookedRoom.capacity
             });
-            
+
             console.log('Booking confirmation email sent successfully');
           } catch (emailError) {
             console.error('Failed to send booking confirmation email:', emailError);

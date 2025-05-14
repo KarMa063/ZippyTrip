@@ -92,6 +92,15 @@
     text-wrap: balance;
   }
   
+  /* Add these utility classes for better centering */
+  .center-content {
+    @apply flex items-center justify-center;
+  }
+  
+  .center-column {
+    @apply flex flex-col items-center justify-center;
+  }
+  
   .stat-card {
     @apply glass-card p-6 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/20;
   }

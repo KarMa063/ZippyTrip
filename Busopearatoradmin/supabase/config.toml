@@ -1,5 +1,0 @@
-
-project_id = "aqkerdduceeghlldjdvp"
-
-[functions.cancel-schedule]
-verify_jwt = true

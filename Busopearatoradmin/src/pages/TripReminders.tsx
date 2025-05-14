@@ -17,6 +17,7 @@ import { TripReminder, fetchTripReminders, sendTripReminder } from "@/services/t
 const TripReminders = () => {
   const [reminders, setReminders] = useState<TripReminder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -25,6 +26,7 @@ const TripReminders = () => {
 
   const loadReminders = async () => {
     try {
+      setLoading(true);
       const data = await fetchTripReminders();
       setReminders(data);
     } catch (error) {
@@ -59,22 +61,37 @@ const TripReminders = () => {
         // 2. If 'success' is true, show the success toast with the email
         toast({
           title: "Reminder Sent",
-          description: `Mail sent to ${reminder.passengerInfo.email}`, // Updated description
+          description: `Mail sent to ${reminder.email}`,
         });
+        
+        // 3. Update the local state to reflect the change
+        setReminders(prev => 
+          prev.map(r => r.id === reminderId ? { ...r, status: 'sent' } : r)
+        );
       } else {
-        // 3. If 'success' is false, throw an error to trigger the catch block
+        // 4. If 'success' is false, throw an error to trigger the catch block
         throw new Error("Failed to send reminder");
       }
     } catch (error) {
-      // 4. If there was an error (network issue or API returned failure), show the error toast
+      // 5. If there was an error, show the error toast and update local state
       console.error('Failed to send reminder:', error);
       toast({
         title: "Error",
         description: "Failed to send trip reminder",
         variant: "destructive",
       });
+      
+      setReminders(prev => 
+        prev.map(r => r.id === reminderId ? { ...r, status: 'failed' } : r)
+      );
     }
   };
+
+  // Filter reminders based on search term
+  const filteredReminders = reminders.filter(reminder => 
+    reminder.bookingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    reminder.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -90,9 +107,18 @@ const TripReminders = () => {
           <Input 
             placeholder="Search bookings..." 
             className="pl-8 bg-zippy-darkGray border-zippy-gray"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         </div>
+        <Button 
+          variant="outline" 
+          onClick={loadReminders} 
+          className="bg-zippy-darkGray border-zippy-gray"
+        >
+          Refresh
+        </Button>
       </div>
 
       <div className="rounded-md border border-zippy-gray">
@@ -100,9 +126,9 @@ const TripReminders = () => {
           <TableHeader className="bg-zippy-darkGray">
             <TableRow>
               <TableHead>Booking ID</TableHead>
-              <TableHead>Route Details</TableHead>
-              <TableHead>Travel Date</TableHead>
-              <TableHead>Passenger Info</TableHead>
+              <TableHead>Departure Time</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Seats</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -114,15 +140,22 @@ const TripReminders = () => {
                   Loading reminders...
                 </TableCell>
               </TableRow>
-            ) : reminders.map((reminder) => (
+            ) : filteredReminders.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  {searchTerm ? "No reminders match your search" : "No reminders found"}
+                </TableCell>
+              </TableRow>
+            ) : filteredReminders.map((reminder) => (
               <TableRow key={reminder.id}>
                 <TableCell>{reminder.bookingId}</TableCell>
-                <TableCell>{reminder.routeDetails}</TableCell>
-                <TableCell>{reminder.travelDate}</TableCell>
+                <TableCell>{new Date(reminder.departureTime).toLocaleString()}</TableCell>
+                <TableCell>{reminder.email}</TableCell>
                 <TableCell>
-                  <div>
-                    <div>{reminder.passengerInfo.name}</div>
-                    <div className="text-sm text-muted-foreground">{reminder.passengerInfo.email}</div>
+                  <div className="text-sm">
+                    {Array.isArray(reminder.seat_numbers) 
+                      ? reminder.seat_numbers.join(', ') 
+                      : reminder.seat_numbers}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -141,6 +174,7 @@ const TripReminders = () => {
                     size="sm"
                     onClick={() => handleSendReminder(reminder.id)}
                     className="bg-zippy-darkGray border-zippy-gray"
+                    disabled={reminder.status === 'sent'}
                   >
                     <Bell className="h-4 w-4 mr-2" />
                     Send Reminder

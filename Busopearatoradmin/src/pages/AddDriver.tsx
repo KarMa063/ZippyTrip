@@ -81,7 +81,7 @@ const AddDriver = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    placeholder="e.g., John Doe"
+                    
                     required
                   />
                 </div>
@@ -92,7 +92,7 @@ const AddDriver = () => {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    placeholder="e.g., +91 9876543210"
+                    
                     required
                   />
                 </div>
@@ -106,7 +106,7 @@ const AddDriver = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="e.g., john.doe@example.com"
+                  
                 />
               </div>
               

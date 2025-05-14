@@ -2,6 +2,7 @@
 import { query } from '@/integrations/neon/client';
 import { Json } from "@/integrations/supabase/types";
 
+
 // Type definitions
 export type Bus = {
   id: string;
@@ -56,6 +57,8 @@ export const createBus = async (busData: BusInsert) => {
       [registration_number, model, capacity, amenities, is_active]
     );
     
+    
+    
     return result.rows[0];
   } catch (err) {
     console.error("Error creating bus:", err);
@@ -82,6 +85,9 @@ export const updateBus = async (id: string, busData: BusUpdate) => {
     `;
     
     const result = await query(sqlQuery, [id, ...values]);
+    
+   
+    
     return result.rows[0];
   } catch (err) {
     console.error("Error updating bus:", err);
@@ -91,7 +97,13 @@ export const updateBus = async (id: string, busData: BusUpdate) => {
 
 export const deleteBus = async (id: string) => {
   try {
+    // Get bus details before deletion for activity log
+    const busDetails = await getBus(id);
+    
     await query('DELETE FROM buses WHERE id = $1', [id]);
+    
+    
+    
     return true;
   } catch (err) {
     console.error("Error deleting bus:", err);
