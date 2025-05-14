@@ -3,8 +3,6 @@ import { useForm } from "react-hook-form";
 import { Input } from "../gcomponents/input";
 import { Textarea } from "../gcomponents/textarea";
 import { Button } from "../gcomponents/button";
-import { UploadCloud } from "lucide-react";
-import { useDropzone } from "react-dropzone";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Select,

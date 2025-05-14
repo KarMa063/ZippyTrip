@@ -151,17 +151,23 @@ const GBookings = () => {
     
     if (activeTab === "current") {
       // Show bookings that are not yet checked out or check-out date is in the future
-      return booking.checkin_status !== 'checked_out' && checkOutDate >= today;
-    } else {
+      return booking.checkin_status !== 'checked_out' && checkOutDate >= today && booking.status !== 'cancelled';
+    } else if (activeTab === "previous") {
       // Show bookings that are checked out or check-out date has passed
-      return booking.checkin_status === 'checked_out' || checkOutDate < today;
+      return (booking.checkin_status === 'checked_out' || checkOutDate < today) && booking.status !== 'cancelled';
+    } else if (activeTab === "cancelled") {
+      // Show only cancelled bookings
+      return booking.status === 'cancelled';
     }
+    return true;
   });
 
-  // Apply additional status filter
+  // Apply additional status filter for current and previous tabs
   const statusFilteredBookings = statusFilter === "all"
     ? filteredBookings
-    : filteredBookings.filter(booking => booking.status.toLowerCase() === statusFilter.toLowerCase());
+    : activeTab === "cancelled" 
+      ? filteredBookings // Don't apply status filter to cancelled tab
+      : filteredBookings.filter(booking => booking.status.toLowerCase() === statusFilter.toLowerCase());
 
   if (loading) {
     return (
@@ -182,6 +188,7 @@ const GBookings = () => {
         <TabsList>
           <TabsTrigger value="current">Current Bookings</TabsTrigger>
           <TabsTrigger value="previous">Previous Bookings</TabsTrigger>
+          <TabsTrigger value="cancelled">Cancelled Bookings</TabsTrigger>
         </TabsList>
         
         <TabsContent value="current">
@@ -201,7 +208,6 @@ const GBookings = () => {
                     <SelectItem value="confirmed">Confirmed</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="declined">Declined</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -325,7 +331,7 @@ const GBookings = () => {
                                 setSelectedBooking(booking);
                                 setActionDialog({ open: true, type: 'cancel' });
                               }}
-                              disabled={booking.status === 'cancelled'}
+                              disabled={booking.status === 'cancelled' || booking.status === 'declined'}
                             >
                               Cancel
                             </Button>
@@ -357,7 +363,6 @@ const GBookings = () => {
                     <SelectItem value="confirmed">Confirmed</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="declined">Declined</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -425,6 +430,80 @@ const GBookings = () => {
                       <tr>
                         <td colSpan={6} className="p-4 text-center text-muted-foreground">
                           No previous bookings found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cancelled">
+          <Card>
+            <CardHeader>
+              <CardTitle>Cancelled Bookings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs font-medium">
+                      <th className="p-2">Property & Room</th>
+                      <th className="p-2">Guest Email</th>
+                      <th className="p-2">Check-in</th>
+                      <th className="p-2">Check-out</th>
+                      <th className="p-2">Status</th>
+                      <th className="p-2">Check-in Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statusFilteredBookings.length > 0 ? (
+                      statusFilteredBookings.map(booking => (
+                        <tr key={booking.id} className="border-b">
+                          <td className="p-2">
+                            <div className="font-medium text-sm">{booking.property_name || 'Loading...'}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Room {booking.room_name || 'Loading...'}
+                            </div>
+                          </td>
+                          <td className="p-2 text-xs">
+                            {booking.traveller_email || 'Loading...'}
+                          </td>
+                          <td className="p-2 text-xs">
+                            {new Date(booking.check_in).toLocaleDateString()}
+                          </td>
+                          <td className="p-2 text-xs">
+                            {new Date(booking.check_out).toLocaleDateString()}
+                          </td>
+                          <td className="p-2 text-xs">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
+                              booking.status === 'cancelled' 
+                                ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+                                : ''
+                            }`}>
+                              {booking.status === 'cancelled' ? 'Cancelled' : ''}
+                            </span>
+                          </td>
+                          <td className="p-2 text-xs">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
+                              booking.checkin_status === 'checked_in' 
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
+                                : booking.checkin_status === 'checked_out'
+                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+                            }`}>
+                              {booking.checkin_status === 'checked_in' ? 'Checked In' :
+                              booking.checkin_status === 'checked_out' ? 'Checked Out' : 'Not Checked In'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                          No cancelled bookings found
                         </td>
                       </tr>
                     )}

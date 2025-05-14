@@ -27,7 +27,7 @@ interface Review {
   date: string;
   user_id?: string;
   email?: string;
-  ownerReply?: string;
+  owner_reply?: string;
 }
 
 const PropertyDetails = () => {
@@ -149,7 +149,7 @@ const PropertyDetails = () => {
     try {
       const response = await axios.post(
         `http://localhost:5000/api/gproperties/${propertyId}/reviews/${reviewId}/reply`,
-        { ownerReply: replyText[reviewId] }
+        { owner_reply: replyText[reviewId] }
       );
 
       if (response.data.success) {
@@ -157,7 +157,7 @@ const PropertyDetails = () => {
           ...prev,
           reviews: prev.reviews.map((review: Review) =>
             review.id === reviewId
-              ? { ...review, ownerReply: replyText[reviewId] }
+              ? { ...review, owner_reply: replyText[reviewId] }
               : review
           ),
         }));
@@ -280,10 +280,10 @@ const PropertyDetails = () => {
                     className="h-48 w-full object-cover rounded-t-lg"
                   />
                   <Badge 
-                    variant={room.available ? "outline" : "secondary"} 
+                    variant={room.available === true ? "outline" : "secondary"} 
                     className="absolute top-2 right-2 shadow-sm"
                   >
-                    {room.available ? "Available" : "Occupied"}
+                    {room.available === true ? "Available" : "Occupied"}
                   </Badge>
                 </div>
                 
@@ -420,35 +420,43 @@ const PropertyDetails = () => {
                     {renderStars(review.rating)}
                   </div>
                   <p>{review.comment}</p>
-
-                  {/* Owner response section*/}
-                  {review.ownerReply ? (
+                  {/* Owner response section */}
+                  {review.owner_reply && review.owner_reply.trim() !== '' ? (
                     <div className="mt-3 pl-4 border-l-2 border-muted">
-                      <p className="font-medium">Owner's Response:</p>
-                      <p>{review.ownerReply}</p>
+                      <div className="font-medium text-primary">Owner's Response:</div>
+                      <p className="mt-1">{review.owner_reply}</p>
                     </div>
                   ) : (
-                    <div className="mt-4 space-y-2">
-                      <textarea
-                        rows={2}
-                        placeholder="Write a response..."
-                        className="w-full p-2 text-sm border rounded"
-                        value={replyText[review.id] || ''}
-                        onChange={(e) => setReplyText({ ...replyText, [review.id]: e.target.value })}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => handleReplySubmit(review.id)}
-                      >
-                        Submit Response
-                      </Button>
-                    </div>
+                    /* Only show response form if no response exists */
+                    !review.owner_reply || review.owner_reply.trim() === '' ? (
+                      <div className="mt-4 space-y-2">
+                        <textarea
+                          rows={2}
+                          placeholder="Write a response as the property owner..."
+                          className="w-full p-2 text-sm border rounded"
+                          value={replyText[review.id] || ''}
+                          onChange={(e) => setReplyText({ ...replyText, [review.id]: e.target.value })}
+                        />
+                        <div className="flex justify-end">
+                          <Button
+                            size="sm"
+                            onClick={() => handleReplySubmit(review.id)}
+                          >
+                            Submit Response
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null
                   )}
                 </CardContent>
               </Card>
             ))
           ) : (
-            <p>No reviews available.</p>
+            <Card>
+              <CardContent className="p-5 text-center text-muted-foreground">
+                No reviews available yet.
+              </CardContent>
+            </Card>
           )}
         </div>
       </TabsContent>
