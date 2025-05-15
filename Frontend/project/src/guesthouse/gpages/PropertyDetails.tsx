@@ -86,12 +86,18 @@ const PropertyDetails = () => {
 
         // Calculate stats
         const totalRooms = roomsData.rooms.length;
-        const occupiedRooms = roomsData.rooms.filter((room: any) => !room.available).length;
-        const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+        //const occupiedRooms = roomsData.rooms.filter((room: any) => !room.availability).length;
+        //const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
         const averageRating = reviewsData.reviews.length > 0
           ? reviewsData.reviews.reduce((total: number, review: Review) => total + Number(review.rating), 0) / reviewsData.reviews.length
           : 0;
 
+        // Calculate occupied rooms based on bookings with status 'confirmed'
+        const occupiedRooms = enrichedBookings.filter(
+          (booking: Booking) => booking.status === "confirmed"
+        ).length;
+        const occupancyRate =
+          totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
         setProperty({
           ...propertyData.property,
           totalRooms: totalRooms,
@@ -114,24 +120,24 @@ const PropertyDetails = () => {
 
   const handleDeleteRoom = async (roomId: number) => {
     if (!window.confirm("Are you sure you want to delete this room?")) return;
-  
+
     try {
       const response = await fetch(`http://localhost:5000/api/gproperties/${propertyId}/rooms/${roomId}`, {
         method: 'DELETE',
       });
-  
+
       const data = await response.json();
       if (!data.success) {
         throw new Error(data.message || "Failed to delete room");
       }
-  
+
       setProperty((prev: any) => ({
         ...prev,
         rooms: prev.rooms.filter((room: any) => room.id !== roomId),
         totalRooms: prev.totalRooms - 1,
-        occupiedRooms: prev.rooms.filter((room: any) => !room.available && room.id !== roomId).length,
+        occupiedRooms: prev.rooms.filter((room: any) => !room.availability && room.id !== roomId).length,
         occupancyRate: prev.totalRooms - 1 > 0
-          ? Math.round((prev.rooms.filter((room: any) => !room.available && room.id !== roomId).length / (prev.totalRooms - 1)) * 100)
+          ? Math.round((prev.rooms.filter((room: any) => !room.availability && room.id !== roomId).length / (prev.totalRooms - 1)) * 100)
           : 0,
       }));
     } catch (error) {
@@ -209,8 +215,8 @@ const PropertyDetails = () => {
         <div className="lg:col-span-2">
           <Card className="overflow-hidden">
             <div className="aspect-video w-full overflow-hidden">
-              <img 
-                src={property.images} 
+              <img
+                src={property.images}
                 alt={property.name}
                 className="h-full w-full object-cover"
               />
@@ -271,77 +277,79 @@ const PropertyDetails = () => {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {property.rooms.map((room: any) => (
-              <Card key={room.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                <div className="relative">
-                  <img 
-                    src={room.images} 
-                    alt={room.name} 
-                    className="h-48 w-full object-cover rounded-t-lg"
-                  />
-                  <Badge 
-                    variant={room.available === true ? "outline" : "secondary"} 
-                    className="absolute top-2 right-2 shadow-sm"
-                  >
-                    {room.available === true ? "Available" : "Occupied"}
-                  </Badge>
-                </div>
-                
-                <CardContent className="p-5 space-y-4">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {room.name}
-                    </h3>
-                    <span className="text-lg font-bold text-primary">
-                      Rs. {room.price || "N/A"}
-                    </span>
+            {property.rooms.map((room: any) => {
+              return (
+                <Card key={room.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                  <div className="relative">
+                    <img
+                      src={room.images}
+                      alt={room.name}
+                      className="h-48 w-full object-cover rounded-t-lg"
+                    />
+                    <Badge
+                      variant={room.availability === true ? "success" : "secondary"}
+                      className="absolute top-2 right-2 shadow-sm"
+                    >
+                      {room.availability === true ? "Available" : "Occupied"}
+                    </Badge>
                   </div>
-                  
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <UserCheck className="h-4 w-4" />
-                    <span>Capacity: {room.capacity} {room.capacity > 1 ? 'guests' : 'guest'}</span>
-                  </div>
-                  
-                  {room.amenities && room.amenities.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-muted-foreground">Amenities</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {room.amenities.map((a: string, i: number) => (
-                          <Badge 
-                            key={i} 
-                            variant="outline" 
-                            className="text-xs py-1 px-2 rounded-full"
-                          >
-                            {a}
-                          </Badge>
-                        ))}
-                      </div>
+
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {room.name}
+                      </h3>
+                      <span className="text-lg font-bold text-primary">
+                        Rs. {room.price || "N/A"}
+                      </span>
                     </div>
-                  )}
-                  
-                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-1 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      onClick={() => navigate(`/gproperties/${propertyId}/rooms/${room.id}/edit`)}
-                    >
-                      <Edit className="h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      className="gap-1"
-                      onClick={() => handleDeleteRoom(room.id)}
-                    >
-                      <Trash className="h-4 w-4" />
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <UserCheck className="h-4 w-4" />
+                      <span>Capacity: {room.capacity} {room.capacity > 1 ? 'guests' : 'guest'}</span>
+                    </div>
+
+                    {room.amenities && room.amenities.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-muted-foreground">Amenities</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {room.amenities.map((a: string, i: number) => (
+                            <Badge
+                              key={i}
+                              variant="outline"
+                              className="text-xs py-1 px-2 rounded-full"
+                            >
+                              {a}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        onClick={() => navigate(`/gproperties/${propertyId}/rooms/${room.id}/edit`)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="gap-1"
+                        onClick={() => handleDeleteRoom(room.id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 
@@ -371,7 +379,7 @@ const PropertyDetails = () => {
                         <td className="p-4 text-sm">{new Date(booking.check_out).toLocaleDateString()}</td>
                         <td className="p-4">
                           <Badge variant={
-                            booking.status === "confirmed" ? "success" : 
+                            booking.status === "confirmed" ? "success" :
                             booking.status === "pending" ? "outline" :
                             booking.status === "cancelled" ? "destructive" :
                             booking.status === "declined" ? "destructive" :
@@ -395,74 +403,75 @@ const PropertyDetails = () => {
           </Card>
         </TabsContent>
 
-       <TabsContent value="reviews">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Guest Reviews</h2>
-          <div className="flex items-center gap-2">
-            <span>Average Rating:</span>
-            {renderStars(property.averageRating)}
-            <span className="text-sm text-muted-foreground">({property.totalReviews})</span>
+        <TabsContent value="reviews">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Guest Reviews</h2>
+            <div className="flex items-center gap-2">
+              <span>Average Rating:</span>
+              {renderStars(property.averageRating)}
+              <span className="text-sm text-muted-foreground">({property.totalReviews})</span>
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-4">
-          {property.reviews?.length > 0 ? (
-            property.reviews.map((review: Review) => (
-              <Card key={review.id}>
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">{review.userName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(review.date).toLocaleDateString()}
-                      </div>
-                    </div>
-                    {renderStars(review.rating)}
-                  </div>
-                  <p>{review.comment}</p>
-                  {/* Owner response section */}
-                  {review.owner_reply && review.owner_reply.trim() !== '' ? (
-                    <div className="mt-3 pl-4 border-l-2 border-muted">
-                      <div className="font-medium text-primary">Owner's Response:</div>
-                      <p className="mt-1">{review.owner_reply}</p>
-                    </div>
-                  ) : (
-                    /* Only show response form if no response exists */
-                    !review.owner_reply || review.owner_reply.trim() === '' ? (
-                      <div className="mt-4 space-y-2">
-                        <textarea
-                          rows={2}
-                          placeholder="Write a response as the property owner..."
-                          className="w-full p-2 text-sm border rounded"
-                          value={replyText[review.id] || ''}
-                          onChange={(e) => setReplyText({ ...replyText, [review.id]: e.target.value })}
-                        />
-                        <div className="flex justify-end">
-                          <Button
-                            size="sm"
-                            onClick={() => handleReplySubmit(review.id)}
-                          >
-                            Submit Response
-                          </Button>
+          <div className="space-y-4">
+            {property.reviews?.length > 0 ? (
+              property.reviews.map((review: Review) => (
+                <Card key={review.id}>
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">{review.userName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(review.date).toLocaleDateString()}
                         </div>
                       </div>
-                    ) : null
-                  )}
+                      {renderStars(review.rating)}
+                    </div>
+                    <p>{review.comment}</p>
+                    {/* Owner response section */}
+                    {review.owner_reply && review.owner_reply.trim() !== '' ? (
+                      <div className="mt-3 pl-4 border-l-2 border-muted">
+                        <div className="font-medium text-primary">Owner's Response:</div>
+                        <p className="mt-1">{review.owner_reply}</p>
+                      </div>
+                    ) : (
+                      /* Only show response form if no response exists */
+                      !review.owner_reply || review.owner_reply.trim() === '' ? (
+                        <div className="mt-4 space-y-2">
+                          <textarea
+                            rows={2}
+                            placeholder="Write a response as the property owner..."
+                            className="w-full p-2 text-sm border rounded"
+                            value={replyText[review.id] || ''}
+                            onChange={(e) => setReplyText({ ...replyText, [review.id]: e.target.value })}
+                          />
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => handleReplySubmit(review.id)}
+                            >
+                              Submit Response
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-5 text-center text-muted-foreground">
+                  No reviews available yet.
                 </CardContent>
               </Card>
-            ))
-          ) : (
-            <Card>
-              <CardContent className="p-5 text-center text-muted-foreground">
-                No reviews available yet.
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </TabsContent>
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
 };
 
 export default PropertyDetails;
+
