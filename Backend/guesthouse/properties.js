@@ -23,8 +23,7 @@ async function propertyTableExists() {
                 address TEXT,
                 email TEXT,
                 contact TEXT,
-                images TEXT,
-                rooms INTEGER
+                images TEXT
             );
         `);
 
@@ -61,7 +60,6 @@ router.post("/addproperty", async (req, res) => {
         email,
         phoneNumber,
         images,
-        rooms,
         owner_id
     } = req.body;
 
@@ -69,8 +67,8 @@ router.post("/addproperty", async (req, res) => {
     try {
         const result = await pool.query(
             `INSERT INTO properties 
-            (name, description, address, email, contact, images, rooms, owner_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            (name, description, address, email, contact, images, owner_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *`,
             [
                 name,
@@ -79,7 +77,6 @@ router.post("/addproperty", async (req, res) => {
                 email,
                 phoneNumber,
                 images,
-                rooms,
                 owner_id
             ]
         );
@@ -102,7 +99,6 @@ router.get('/', async (req, res) => {
                 email,
                 contact,
                 images,
-                rooms,
                 owner_id
             FROM properties
         `);
@@ -149,7 +145,7 @@ router.delete('/:id', async (req, res) => {
 // Update property based on ID
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, description, address, email, contact, images, rooms } = req.body;
+    const { name, description, address, email, contact, images} = req.body;
     try {
         const result = await pool.query(
             `UPDATE properties SET 
@@ -159,7 +155,6 @@ router.put('/:id', async (req, res) => {
                 email = $4, 
                 contact = $5, 
                 images = $6, 
-                rooms = $7
             WHERE id = $8
             RETURNING *`,
             [
@@ -169,7 +164,6 @@ router.put('/:id', async (req, res) => {
                 email,
                 contact,
                 images,
-                rooms,
                 id
             ]
         );
