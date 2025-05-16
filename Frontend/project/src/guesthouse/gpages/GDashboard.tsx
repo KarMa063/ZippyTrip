@@ -24,6 +24,7 @@ interface Booking {
   status: 'pending' | 'confirmed' | 'cancelled' | 'declined';
   traveller_email?: string;
   property_name?: string;
+  total_price?: number; // Add total_price to the Booking interface
 }
 
 // Add these interfaces
@@ -55,20 +56,22 @@ const GDashboard = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+
 
   const stats = [
     { title: "Total Properties", value: properties.length.toString(), icon: <Home className="h-5 w-5 text-blue-500" /> },
-    { 
-      title: "Active Bookings", 
-      value: bookings.filter(b => b.status.toLowerCase() === 'confirmed').length.toString(), 
-      icon: <Calendar className="h-5 w-5 text-green-500" /> 
+    {
+      title: "Active Bookings",
+      value: bookings.filter(b => b.status.toLowerCase() === 'confirmed').length.toString(),
+      icon: <Calendar className="h-5 w-5 text-green-500" />
     },
-    { 
-      title: "Pending Requests", 
-      value: bookings.filter(b => b.status.toLowerCase() === 'pending').length.toString(), 
-      icon: <BarChart3 className="h-5 w-5 text-yellow-500" /> 
+    {
+      title: "Pending Requests",
+      value: bookings.filter(b => b.status.toLowerCase() === 'pending').length.toString(),
+      icon: <BarChart3 className="h-5 w-5 text-yellow-500" />
     },
-    { title: "Total Revenue", value: "NRs. 425,000", icon: <DollarSign className="h-5 w-5 text-purple-500" /> },
+    { title: "Total Revenue", value: `NRs. ${totalRevenue}`, icon: <DollarSign className="h-5 w-5 text-purple-500" /> },
   ];
 
   const recentMessages = [
@@ -103,7 +106,7 @@ const GDashboard = () => {
                 axios.get(`http://localhost:5000/api/users/${booking.traveller_id}`),
                 axios.get(`http://localhost:5000/api/gproperties/${booking.property_id}`),
               ]);
-              
+
               return {
                 ...booking,
                 traveller_email: user.data.user.user_email,
@@ -119,8 +122,15 @@ const GDashboard = () => {
             }
           })
         );
-        
+
         setBookings(enrichedBookings);
+
+        // Calculate total revenue here
+        const calculatedRevenue = enrichedBookings.reduce((sum, booking) => {
+          return sum + (booking.status === 'confirmed' ? (booking.total_price || 0) : 0);
+        }, 0);
+        setTotalRevenue(calculatedRevenue);
+
       } catch (error) {
         console.error('Error fetching bookings:', error);
       }
@@ -144,7 +154,7 @@ const GDashboard = () => {
           Object.entries(groupedConversations).map(async ([key, messages]) => {
             const firstMsg = messages[0];
             const lastMsg = messages[messages.length - 1];
-            
+
             try {
               const [userResponse, propertyResponse] = await Promise.all([
                 axios.get(`http://localhost:5000/api/users/${firstMsg.traveller_id}`),
@@ -195,7 +205,7 @@ const GDashboard = () => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 24) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } else if (diffInHours < 48) {
@@ -273,56 +283,55 @@ const GDashboard = () => {
         </Card>
 
         <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Recent Bookings</CardTitle>
-            <CardDescription>Your latest booking activity</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => navigate("/gbookings")}>
-            View All
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b text-left text-sm font-medium">
-                  <th className="pb-3 pr-4">Property</th>
-                  <th className="pb-3 pr-4">Guest</th>
-                  <th className="pb-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.length > 0 ? (
-                  bookings.slice(0, 6).map((booking) => (
-                    <tr key={booking.id} className="border-b text-sm">
-                      <td className="py-3 pr-4">{booking.property_name}</td>
-                      <td className="py-3 pr-4">{booking.traveller_email}</td>
-                      <td className="py-3">
-                        <span
-                          className={`inline-block px-2 py-1 rounded-full text-xs ${
-                            booking.status === "confirmed"
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Recent Bookings</CardTitle>
+              <CardDescription>Your latest booking activity</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => navigate("/gbookings")}>
+              View All
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b text-left text-sm font-medium">
+                    <th className="pb-3 pr-4">Property</th>
+                    <th className="pb-3 pr-4">Guest</th>
+                    <th className="pb-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.length > 0 ? (
+                    bookings.slice(0, 6).map((booking) => (
+                      <tr key={booking.id} className="border-b text-sm">
+                        <td className="py-3 pr-4">{booking.property_name}</td>
+                        <td className="py-3 pr-4">{booking.traveller_email}</td>
+                        <td className="py-3">
+                          <span
+                            className={`inline-block px-2 py-1 rounded-full text-xs ${booking.status === "confirmed"
                               ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
                               : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                          }`}
-                        >
-                          {booking.status}
-                        </span>
+                              }`}
+                          >
+                            {booking.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="py-3 text-center text-sm text-muted-foreground">
+                        No bookings found.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={3} className="py-3 text-center text-sm text-muted-foreground">
-                      No bookings found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -363,9 +372,8 @@ const GDashboard = () => {
                             </span>
                           </div>
                           <p
-                            className={`text-sm ${
-                              !conversation.is_read ? "font-medium" : "text-muted-foreground"
-                            }`}
+                            className={`text-sm ${!conversation.is_read ? "font-medium" : "text-muted-foreground"
+                              }`}
                           >
                             {conversation.sent_by_me && "You: "}
                             {conversation.last_message}

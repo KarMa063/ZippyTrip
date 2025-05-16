@@ -13,7 +13,6 @@ interface PropertyFormData {
   email: string;
   phoneNumber: string;
   images: string;
-  rooms: number;
 }
 
 export default function AddProperty() {
@@ -30,7 +29,6 @@ export default function AddProperty() {
       email: data.email,
       phoneNumber: data.phoneNumber,
       images: data.images,
-      rooms: data.rooms || 1,
     };
 
     try {
@@ -76,10 +74,6 @@ export default function AddProperty() {
         <div>
           <label className="block text-sm font-medium mb-1">Description</label>
           <Textarea placeholder="Describe your property..." {...form.register("description")} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Number of Rooms</label>
-          <Input type="number" min="1" {...form.register("rooms")} />
         </div>
       </section>
 

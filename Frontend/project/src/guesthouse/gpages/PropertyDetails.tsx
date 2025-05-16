@@ -17,6 +17,7 @@ interface Booking {
   status: string;
   traveller_email?: string;
   room_name?: string;
+  total_price?: number;
 }
 
 interface Review {
@@ -27,7 +28,7 @@ interface Review {
   date: string;
   user_id?: string;
   email?: string;
-  ownerReply?: string;
+  owner_reply?: string;
 }
 
 const PropertyDetails = () => {
@@ -60,7 +61,7 @@ const PropertyDetails = () => {
           reviewsRes.json()
         ]);
 
-        // Enrich bookings data
+        // Enrich bookings data with proper total_price calculation
         const enrichedBookings = await Promise.all(
           bookingsData.bookings.map(async (booking: Booking) => {
             try {
@@ -68,10 +69,17 @@ const PropertyDetails = () => {
                 axios.get(`http://localhost:5000/api/users/${booking.traveller_id}`),
                 axios.get(`http://localhost:5000/api/gproperties/${propertyId}/rooms/${booking.room_id}`),
               ]);
+              
+              // Calculate days between check-in and check-out
+              const checkIn = new Date(booking.check_in);
+              const checkOut = new Date(booking.check_out);
+              const days = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+              
               return {
                 ...booking,
                 traveller_email: user.data.user.user_email,
                 room_name: room.data.room.name,
+                total_price: booking.total_price || (room.data.room.price * days),
               };
             } catch (error) {
               console.error(`Error enriching booking ${booking.id}:`, error);
@@ -79,6 +87,7 @@ const PropertyDetails = () => {
                 ...booking,
                 traveller_email: 'Not available',
                 room_name: 'Not available',
+                total_price: 0,
               };
             }
           })
@@ -86,15 +95,23 @@ const PropertyDetails = () => {
 
         // Calculate stats
         const totalRooms = roomsData.rooms.length;
-        const occupiedRooms = roomsData.rooms.filter((room: any) => !room.available).length;
+        const occupiedRooms = enrichedBookings.filter(
+          (booking: Booking) => booking.status === "confirmed"
+        ).length;
         const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+
+        // Calculate total revenue from confirmed bookings
+        const totalRevenue = enrichedBookings
+          .filter((booking: Booking) => booking.status === "confirmed")
+          .reduce((sum: number, booking: Booking) => sum + (Number(booking.total_price) || 0), 0);
+
         const averageRating = reviewsData.reviews.length > 0
           ? reviewsData.reviews.reduce((total: number, review: Review) => total + Number(review.rating), 0) / reviewsData.reviews.length
           : 0;
 
         setProperty({
           ...propertyData.property,
-          totalRooms: totalRooms,
+          totalRooms,
           occupiedRooms,
           occupancyRate,
           rooms: roomsData.rooms,
@@ -102,7 +119,9 @@ const PropertyDetails = () => {
           reviews: reviewsData.reviews,
           averageRating: Number(averageRating.toFixed(1)),
           totalReviews: reviewsData.reviews.length,
+          totalRevenue: Number(totalRevenue.toFixed(2)),
         });
+
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -114,24 +133,24 @@ const PropertyDetails = () => {
 
   const handleDeleteRoom = async (roomId: number) => {
     if (!window.confirm("Are you sure you want to delete this room?")) return;
-  
+
     try {
       const response = await fetch(`http://localhost:5000/api/gproperties/${propertyId}/rooms/${roomId}`, {
         method: 'DELETE',
       });
-  
+
       const data = await response.json();
       if (!data.success) {
         throw new Error(data.message || "Failed to delete room");
       }
-  
+
       setProperty((prev: any) => ({
         ...prev,
         rooms: prev.rooms.filter((room: any) => room.id !== roomId),
         totalRooms: prev.totalRooms - 1,
-        occupiedRooms: prev.rooms.filter((room: any) => !room.available && room.id !== roomId).length,
+        occupiedRooms: prev.bookings.filter((b: Booking) => b.status === "confirmed" && prev.rooms.some((r: any) => r.id === b.room_id && r.id !== roomId)).length,
         occupancyRate: prev.totalRooms - 1 > 0
-          ? Math.round((prev.rooms.filter((room: any) => !room.available && room.id !== roomId).length / (prev.totalRooms - 1)) * 100)
+          ? Math.round((prev.bookings.filter((b: Booking) => b.status === "confirmed" && prev.rooms.some((r: any) => r.id === b.room_id && r.id !== roomId)).length / (prev.totalRooms - 1)) * 100)
           : 0,
       }));
     } catch (error) {
@@ -149,7 +168,7 @@ const PropertyDetails = () => {
     try {
       const response = await axios.post(
         `http://localhost:5000/api/gproperties/${propertyId}/reviews/${reviewId}/reply`,
-        { ownerReply: replyText[reviewId] }
+        { owner_reply: replyText[reviewId] }
       );
 
       if (response.data.success) {
@@ -157,7 +176,7 @@ const PropertyDetails = () => {
           ...prev,
           reviews: prev.reviews.map((review: Review) =>
             review.id === reviewId
-              ? { ...review, ownerReply: replyText[reviewId] }
+              ? { ...review, owner_reply: replyText[reviewId] }
               : review
           ),
         }));
@@ -188,8 +207,10 @@ const PropertyDetails = () => {
   if (!property) {
     return <div className="flex items-center justify-center h-96"><p>Property not found</p></div>;
   }
+
   return (
     <div className="space-y-6">
+      {/* Header Section */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => navigate("/gproperties")}>
@@ -205,12 +226,13 @@ const PropertyDetails = () => {
         </div>
       </div>
 
+      {/* Property Overview Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card className="overflow-hidden">
             <div className="aspect-video w-full overflow-hidden">
-              <img 
-                src={property.images} 
+              <img
+                src={property.images}
                 alt={property.name}
                 className="h-full w-full object-cover"
               />
@@ -243,18 +265,27 @@ const PropertyDetails = () => {
               <Separator />
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2"><BarChart className="h-5 w-5 text-purple-500" /><span>Occupancy Rate</span></div>
-                <Badge variant="outline" className="font-bold">{property.occupancyRate}%</Badge>
+                <span className="font-bold">{property.occupancyRate}%</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2"><span>Total Revenue</span></div>
+                <span className="font-bold">Rs. {property.totalRevenue?.toLocaleString('en-IN') || "0"}</span>
               </div>
               <Separator />
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2"><Star className="h-5 w-5 text-yellow-500" /><span>Average Rating</span></div>
-                <div className="flex items-center">{renderStars(property.averageRating)}<span className="ml-2 text-sm text-muted-foreground">({property.totalReviews})</span></div>
+                <div className="flex items-center">
+                  {renderStars(property.averageRating)}
+                  <span className="ml-2 text-sm text-muted-foreground">({property.totalReviews})</span>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
+      {/* Tabs Section */}
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="rooms"><BedDouble className="h-4 w-4 mr-1" /> Rooms</TabsTrigger>
@@ -262,6 +293,7 @@ const PropertyDetails = () => {
           <TabsTrigger value="reviews"><MessageSquare className="h-4 w-4 mr-1" /> Reviews</TabsTrigger>
         </TabsList>
 
+        {/* Rooms Tab */}
         <TabsContent value="rooms" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Rooms</h2>
@@ -274,26 +306,24 @@ const PropertyDetails = () => {
             {property.rooms.map((room: any) => (
               <Card key={room.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
                 <div className="relative">
-                  <img 
-                    src={room.images} 
-                    alt={room.name} 
+                  <img
+                    src={room.images}
+                    alt={room.name}
                     className="h-48 w-full object-cover rounded-t-lg"
                   />
-                  <Badge 
-                    variant={room.available ? "outline" : "secondary"} 
+                  <Badge
+                    variant={room.availability ? "success" : "secondary"}
                     className="absolute top-2 right-2 shadow-sm"
                   >
-                    {room.available ? "Available" : "Occupied"}
+                    {room.availability ? "Available" : "Occupied"}
                   </Badge>
                 </div>
                 
                 <CardContent className="p-5 space-y-4">
                   <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {room.name}
-                    </h3>
+                    <h3 className="text-lg font-semibold">{room.name}</h3>
                     <span className="text-lg font-bold text-primary">
-                      Rs. {room.price || "N/A"}
+                      Rs. {room.price?.toLocaleString('en-IN') || "N/A"}
                     </span>
                   </div>
                   
@@ -302,16 +332,12 @@ const PropertyDetails = () => {
                     <span>Capacity: {room.capacity} {room.capacity > 1 ? 'guests' : 'guest'}</span>
                   </div>
                   
-                  {room.amenities && room.amenities.length > 0 && (
+                  {room.amenities?.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-muted-foreground">Amenities</h4>
                       <div className="flex flex-wrap gap-2">
                         {room.amenities.map((a: string, i: number) => (
-                          <Badge 
-                            key={i} 
-                            variant="outline" 
-                            className="text-xs py-1 px-2 rounded-full"
-                          >
+                          <Badge key={i} variant="outline" className="text-xs py-1 px-2 rounded-full">
                             {a}
                           </Badge>
                         ))}
@@ -319,24 +345,20 @@ const PropertyDetails = () => {
                     </div>
                   )}
                   
-                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  <div className="flex justify-end gap-3 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => navigate(`/gproperties/${propertyId}/rooms/${room.id}/edit`)}
                     >
-                      <Edit className="h-4 w-4" />
-                      Edit
+                      <Edit className="h-4 w-4" /> Edit
                     </Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      className="gap-1"
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={() => handleDeleteRoom(room.id)}
                     >
-                      <Trash className="h-4 w-4" />
-                      Delete
+                      <Trash className="h-4 w-4" /> Delete
                     </Button>
                   </div>
                 </CardContent>
@@ -345,6 +367,7 @@ const PropertyDetails = () => {
           </div>
         </TabsContent>
 
+        {/* Bookings Tab */}
         <TabsContent value="bookings" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Bookings</h2>
@@ -359,19 +382,20 @@ const PropertyDetails = () => {
                     <th className="p-4">Check-in</th>
                     <th className="p-4">Check-out</th>
                     <th className="p-4">Status</th>
+                    <th className="p-4">Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
                   {property.bookings.length > 0 ? (
                     property.bookings.map((booking: Booking) => (
-                      <tr key={booking.id} className="border-b hover:bg-accent/20 transition-colors">
+                      <tr key={booking.id} className="border-b hover:bg-accent/20">
                         <td className="p-4 font-medium">{booking.traveller_email || 'Not available'}</td>
                         <td className="p-4 text-sm">{booking.room_name || 'Not available'}</td>
                         <td className="p-4 text-sm">{new Date(booking.check_in).toLocaleDateString()}</td>
                         <td className="p-4 text-sm">{new Date(booking.check_out).toLocaleDateString()}</td>
                         <td className="p-4">
                           <Badge variant={
-                            booking.status === "confirmed" ? "success" : 
+                            booking.status === "confirmed" ? "success" :
                             booking.status === "pending" ? "outline" :
                             booking.status === "cancelled" ? "destructive" :
                             booking.status === "declined" ? "destructive" :
@@ -380,11 +404,14 @@ const PropertyDetails = () => {
                             {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                           </Badge>
                         </td>
+                        <td className="p-4">
+                          {booking.status === "confirmed" ? `Rs. ${booking.total_price?.toLocaleString('en-IN') || 0}` : "N/A"}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                      <td colSpan={6} className="p-4 text-center text-muted-foreground">
                         No bookings found
                       </td>
                     </tr>
@@ -395,63 +422,65 @@ const PropertyDetails = () => {
           </Card>
         </TabsContent>
 
-       <TabsContent value="reviews">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Guest Reviews</h2>
-          <div className="flex items-center gap-2">
-            <span>Average Rating:</span>
-            {renderStars(property.averageRating)}
-            <span className="text-sm text-muted-foreground">({property.totalReviews})</span>
+        {/* Reviews Tab */}
+        <TabsContent value="reviews">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Guest Reviews</h2>
+            <div className="flex items-center gap-2">
+              <span>Average Rating:</span>
+              {renderStars(property.averageRating)}
+              <span className="text-sm text-muted-foreground">({property.totalReviews})</span>
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-4">
-          {property.reviews?.length > 0 ? (
-            property.reviews.map((review: Review) => (
-              <Card key={review.id}>
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">{review.userName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(review.date).toLocaleDateString()}
+          <div className="space-y-4">
+            {property.reviews?.length > 0 ? (
+              property.reviews.map((review: Review) => (
+                <Card key={review.id}>
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">{review.userName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(review.date).toLocaleDateString()}
+                        </div>
                       </div>
+                      {renderStars(review.rating)}
                     </div>
-                    {renderStars(review.rating)}
-                  </div>
-                  <p>{review.comment}</p>
-
-                  {/* Owner response section*/}
-                  {review.ownerReply ? (
-                    <div className="mt-3 pl-4 border-l-2 border-muted">
-                      <p className="font-medium">Owner's Response:</p>
-                      <p>{review.ownerReply}</p>
-                    </div>
-                  ) : (
-                    <div className="mt-4 space-y-2">
-                      <textarea
-                        rows={2}
-                        placeholder="Write a response..."
-                        className="w-full p-2 text-sm border rounded"
-                        value={replyText[review.id] || ''}
-                        onChange={(e) => setReplyText({ ...replyText, [review.id]: e.target.value })}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => handleReplySubmit(review.id)}
-                      >
-                        Submit Response
-                      </Button>
-                    </div>
-                  )}
+                    <p>{review.comment}</p>
+                    {review.owner_reply?.trim() ? (
+                      <div className="mt-3 pl-4 border-l-2 border-muted">
+                        <div className="font-medium text-primary">Owner's Response:</div>
+                        <p className="mt-1">{review.owner_reply}</p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 space-y-2">
+                        <textarea
+                          rows={2}
+                          placeholder="Write a response..."
+                          className="w-full p-2 text-sm border rounded"
+                          value={replyText[review.id] || ''}
+                          onChange={(e) => setReplyText({ ...replyText, [review.id]: e.target.value })}
+                        />
+                        <div className="flex justify-end">
+                          <Button size="sm" onClick={() => handleReplySubmit(review.id)}>
+                            Submit Response
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-5 text-center text-muted-foreground">
+                  No reviews available yet.
                 </CardContent>
               </Card>
-            ))
-          ) : (
-            <p>No reviews available.</p>
-          )}
-        </div>
-      </TabsContent>
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );

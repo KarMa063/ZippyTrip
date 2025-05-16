@@ -24,7 +24,7 @@ type Property = {
   contact: string;
   email?: string;
   images: string;
-  rooms: number;
+  roomsCount: number;
 };
 
 const GProperties = () => {
@@ -33,12 +33,33 @@ const GProperties = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    // Fetch properties from the backend
     const fetchProperties = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/gproperties");
-        const data = await response.json();
-        setProperties(data.properties);
+        const propertiesResponse = await fetch("http://localhost:5000/api/gproperties");
+        const propertiesData = await propertiesResponse.json();
+        
+        const propertiesWithRoomCounts = await Promise.all(
+          propertiesData.properties.map(async (property: any) => {
+            try {
+              const roomsResponse = await fetch(
+                `http://localhost:5000/api/gproperties/${property.id}/rooms`
+              );
+              const roomsData = await roomsResponse.json();
+              return {
+                ...property,
+                roomsCount: Array.isArray(roomsData.rooms) ? roomsData.rooms.length : 0
+              };
+            } catch (error) {
+              console.error(`Error fetching rooms for property ${property.id}:`, error);
+              return {
+                ...property,
+                roomsCount: 0
+              };
+            }
+          })
+        );
+
+        setProperties(propertiesWithRoomCounts);
       } catch (error) {
         console.error("Error fetching properties:", error);
       }
@@ -117,7 +138,7 @@ const GProperties = () => {
                   <h3 className="font-semibold text-lg">{property.name}</h3>
                   <p className="text-sm text-muted-foreground">{property.address}</p>
                   <div className="text-sm mt-1 text-primary font-medium">
-                    {property.rooms} {property.rooms === 1 ? "Room" : "Rooms"}
+                    {property.roomsCount} {property.roomsCount === 1 ? "Room" : "Rooms"}
                   </div>
                 </CardContent>
               </Link>
