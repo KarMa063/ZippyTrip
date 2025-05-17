@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Moon, Sun, MapPin, Users, Calendar, ArrowLeft, Star, MessageSquare, X } from 'lucide-react';
@@ -59,11 +58,14 @@ const GuestHouseRooms: React.FC = () => {
         const response = await fetch(url);
         const data = await response.json();
         if (data.success) {
+          console.log('Raw room data:', data.rooms);
+          
           const formattedRooms = data.rooms.map((room: Room) => {
             // Process images
             let processedImages = [];
             
             if (room.images) {
+              console.log(`Room ${room.id} images before processing:`, room.images);
               if (typeof room.images === 'string') {
                 try {
                   // Try to parse if it's a JSON string
@@ -78,6 +80,7 @@ const GuestHouseRooms: React.FC = () => {
                 // If it's already an object (parsed JSONB)
                 processedImages = Object.values(room.images);
               }
+              console.log(`Room ${room.id} images after processing:`, processedImages);
             }
             
             return {
@@ -95,10 +98,33 @@ const GuestHouseRooms: React.FC = () => {
           const guestHouseData = await guestHouseResponse.json();
 
           if (guestHouseData.success) {
+            console.log('Guesthouse data:', guestHouseData.property);
+            
+            // Process guesthouse images
+            let processedImages = [];
+            if (guestHouseData.property.images) {
+              if (typeof guestHouseData.property.images === 'string') {
+                try {
+                  // Try to parse if it's a JSON string
+                  processedImages = JSON.parse(guestHouseData.property.images);
+                } catch (e) {
+                  // If parsing fails, use as is
+                  processedImages = [guestHouseData.property.images];
+                }
+              } else if (Array.isArray(guestHouseData.property.images)) {
+                processedImages = guestHouseData.property.images;
+              } else if (typeof guestHouseData.property.images === 'object') {
+                // If it's already an object (parsed JSONB)
+                processedImages = Object.values(guestHouseData.property.images);
+              }
+              console.log('Processed guesthouse images:', processedImages);
+            }
+            
             setGuestHouse({
               ...guestHouseData.property,
               name: data.guestHouse?.name || guestHouseData.property.name,
-              location: guestHouseData.property.address
+              location: guestHouseData.property.address,
+              images: processedImages
             });
           } else {
             setGuestHouse(data.guestHouse);
@@ -130,7 +156,11 @@ const GuestHouseRooms: React.FC = () => {
           <input
             type="date"
             value={checkInDate}
-            onChange={(e) => setCheckInDate(e.target.value)}
+            onChange={(e) => {
+              setCheckInDate(e.target.value);
+              setBookingStatus('idle');
+              setBookingError(null);
+            }}
             min={new Date().toISOString().split('T')[0]}
             className={`w-full p-2 rounded-lg ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'}`}
           />
@@ -142,7 +172,11 @@ const GuestHouseRooms: React.FC = () => {
           <input
             type="date"
             value={checkOutDate}
-            onChange={(e) => setCheckOutDate(e.target.value)}
+            onChange={(e) => {
+              setCheckOutDate(e.target.value);
+              setBookingStatus('idle');
+              setBookingError(null);
+            }}
             min={checkInDate || new Date().toISOString().split('T')[0]}
             className={`w-full p-2 rounded-lg ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'}`}
           />
@@ -257,7 +291,18 @@ const GuestHouseRooms: React.FC = () => {
     setBookingError(null);
     
     try {
-      // Get authenticated user from Supabase
+      const availabilityResponse = await fetch(
+        `http://localhost:5000/api/bookings/check?room_id=${roomId}&check_in=${checkInDate}&check_out=${checkOutDate}`
+      );
+      const availabilityData = await availabilityResponse.json();
+
+      if (!availabilityData.isAvailable) {
+        setBookingStatus('error');
+        setBookingError('Room is already booked for these dates');
+        alert('Room is already booked for these dates');
+        return;
+      }
+
       const userData = await getCurrentUser();
       
       // If no user is authenticated, show an error
@@ -292,8 +337,7 @@ const GuestHouseRooms: React.FC = () => {
         
         // Send email confirmation
         if (bookedRoom) {
-          try {            
-            // Step 1: Calculate number of nights
+          try {
             const checkIn = new Date(checkInDate);
             const checkOut = new Date(checkOutDate);
 
@@ -301,20 +345,20 @@ const GuestHouseRooms: React.FC = () => {
             const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            // Step 2: Calculate total price
+            //Calculate total price
             const totalPrice = bookedRoom.price * diffDays;
 
-            // Step 3: Pass totalPrice in the email
+            //Pass totalPrice in the email
             await sendRoomBookingConfirmation({
-                email: userData.user_email,
-                guestName: userData.user_name || userData.user_email.split('@')[0],
-                guestHouseName: guestHouse?.name || 'Guesthouse',
-                roomName: bookedRoom.name,
-                checkInDate: checkInDate,
-                checkOutDate: checkOutDate,
-                price: totalPrice,
-                location: guestHouse?.location || 'N/A',
-                guests: bookedRoom.capacity
+              email: userData.user_email,
+              guestName: userData.user_name || userData.user_email.split('@')[0],
+              guestHouseName: guestHouse?.name || 'Guesthouse',
+              roomName: bookedRoom.name,
+              checkInDate: checkInDate,
+              checkOutDate: checkOutDate,
+              price: totalPrice,
+              location: guestHouse?.location || 'N/A',
+              guests: bookedRoom.capacity
             });
 
             console.log('Booking confirmation email sent successfully');
@@ -361,6 +405,32 @@ const GuestHouseRooms: React.FC = () => {
   const averageRating = allReviews.length > 0 
     ? (allReviews.reduce((sum, review) => sum + review.rating, 0) / allReviews.length).toFixed(1)
     : 'No reviews';
+    
+  // Helper function to get image URL - same as in GuestHouseBooking
+  const getImageUrl = (images: any, index: number = 0): string => {
+    if (!images || images.length === 0) {
+      return '/placeholder-room.jpg';
+    }
+    
+    const image = images[index];
+    // Check if the image is a full URL or just a path
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) {
+        return image;
+      } else if (image.startsWith('/')) {
+        // If it starts with a slash, it's a relative path from the server root
+        return `http://localhost:5000${image}`;
+      } else {
+        // If it's a relative path without a leading slash
+        return `http://localhost:5000/${image}`;
+      }
+    } else if (image && typeof image === 'object' && 'url' in image) {
+      // Handle case where image might be an object with a url property
+      return image.url;
+    }
+    
+    return '/placeholder-room.jpg';
+  };
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50'}`}>
@@ -391,15 +461,15 @@ const GuestHouseRooms: React.FC = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Property Details Section - Based on the image */}
+        {/* Property Details Section*/}
         <div className={`mb-8 p-6 rounded-lg shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex flex-col md:flex-row gap-6">
             {/* Property Image */}
             <div className="md:w-1/3">
               <div className="border border-gray-300 rounded-lg overflow-hidden">
                 <img
-                  src={guestHouse?.images?.[0] || '/placeholder-property.jpg'}
-                  alt={guestHouse?.name}
+                  src={getImageUrl(guestHouse?.images)}
+                  alt={guestHouse?.name || 'Guesthouse'}
                   className="w-full h-64 object-cover"
                 />
               </div>
@@ -486,9 +556,19 @@ const GuestHouseRooms: React.FC = () => {
                   >
                     <div className="h-40 relative">
                       <img
-                        src={room.images[0] || '/placeholder-room.jpg'}
-                        alt={room.name}
+                        src={getImageUrl(room.images)}
+                        alt={room.name || 'Room'}
                         className={`w-full h-full object-cover ${!room.isAvailable ? 'filter grayscale' : ''}`}
+                        onError={(e) => {
+                          // Prevent the event from propagating
+                          e.stopPropagation();
+                          
+                          const target = e.target as HTMLImageElement;
+                          if (!target.src.includes('placeholder-room.jpg')) {
+                            target.onerror = null;
+                            target.src = '/placeholder-room.jpg';
+                          }
+                        }}
                       />
                       <div className={`absolute bottom-0 left-0 right-0 py-1 px-2 text-sm ${
                         room.isAvailable 
@@ -571,7 +651,7 @@ const GuestHouseRooms: React.FC = () => {
                 )}
               </div>
               
-              {/* Write a Review Section - Update this part */}
+              {/* Write a Review Section */}
               <div className="mt-6 pt-4 border-t border-gray-300">
                 <h3 className="text-lg font-semibold mb-3">Write a Review</h3>
                 <div className="space-y-3">
@@ -701,7 +781,11 @@ const GuestHouseRooms: React.FC = () => {
                         className={`w-full p-2 rounded-lg ${
                           isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
                         }`}
-                        onChange={(e) => setCheckInDate(e.target.value)}
+                        onChange={(e) => {
+                          setCheckInDate(e.target.value);
+                          setBookingStatus('idle');
+                          setBookingError(null);
+                        }}
                         min={new Date().toISOString().split('T')[0]}
                         value={checkInDate}
                       />
@@ -716,7 +800,11 @@ const GuestHouseRooms: React.FC = () => {
                         className={`w-full p-2 rounded-lg ${
                           isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100'
                         }`}
-                        onChange={(e) => setCheckOutDate(e.target.value)}
+                        onChange={(e) => {
+                          setCheckOutDate(e.target.value);
+                          setBookingStatus('idle');
+                          setBookingError(null);
+                        }}
                         min={checkInDate || new Date().toISOString().split('T')[0]}
                         value={checkOutDate}
                       />
@@ -730,12 +818,20 @@ const GuestHouseRooms: React.FC = () => {
                     
                     <button
                       onClick={() => handleBookRoom(selectedRoom.id)}
-                      disabled={bookingStatus === 'loading' || !checkInDate || !checkOutDate}
-                      className={`w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors ${
-                        bookingStatus === 'loading' || !checkInDate || !checkOutDate ? 'opacity-70 cursor-not-allowed' : ''
+                      disabled={bookingStatus === 'loading' || !checkInDate || !checkOutDate || (checkInDate && checkOutDate && bookingStatus === 'error')}
+                      className={`w-full py-2 rounded-lg text-white transition-colors ${
+                        (checkInDate && checkOutDate && bookingStatus === 'error') 
+                          ? 'bg-red-600 cursor-not-allowed' 
+                          : bookingStatus === 'loading' || !checkInDate || !checkOutDate 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-600 hover:bg-blue-700'
                       }`}
                     >
-                      {bookingStatus === 'loading' ? 'Processing...' : 'Book Now'}
+                      {bookingStatus === 'loading' 
+                        ? 'Processing...' 
+                        : (checkInDate && checkOutDate && bookingStatus === 'error') 
+                          ? 'Room Booked' 
+                          : 'Book Now'}
                     </button>
                   </div>
                 </div>
@@ -743,7 +839,7 @@ const GuestHouseRooms: React.FC = () => {
                 <div className="mb-6">
                   <button
                     disabled
-                    className="w-full bg-gray-400 text-white py-2 rounded-lg cursor-not-allowed"
+                    className="w-full bg-red-600 text-white py-2 rounded-lg cursor-not-allowed"
                   >
                     Not Available
                   </button>
