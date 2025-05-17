@@ -295,7 +295,9 @@ const BusRentalPage: React.FC = () => {
           alert('Please select a valid departure date.');
           return;
         }
-        const formattedDepartureDate = '2023-12-31';
+        
+        // Use the date from searchParams instead of hardcoded value
+        const formattedDepartureDate = searchParams.date;
         console.log('Formatted departure date:', formattedDepartureDate);
         
         const bookingData = {
@@ -307,7 +309,7 @@ const BusRentalPage: React.FC = () => {
           payment_status: 'pending',
           payment_method: 'card',
           booking_date: new Date().toISOString(),
-          departure_date: formattedDepartureDate, // Use the date directly
+          departure_date: formattedDepartureDate,
           origin: selectedBus.from,
           destination: selectedBus.to,
           email: userEmail              
