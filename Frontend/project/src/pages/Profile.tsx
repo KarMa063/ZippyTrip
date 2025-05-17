@@ -87,6 +87,9 @@ const Profile: React.FC = () => {
               ? booking.seat_numbers.split(',') 
               : booking.seat_numbers.split(',').map((seat: string) => `seat-${seat.trim()}`);
             
+            const travelDate = booking.departure_date || booking.travel_date || 
+                              (booking.booking_date ? new Date(booking.booking_date).toISOString().split('T')[0] : null);
+            
             return {
               id: booking.id,
               busId: booking.schedule_id || booking.route_id,
@@ -94,7 +97,7 @@ const Profile: React.FC = () => {
               to: booking.destination || '',
               departure: booking.departure_time || '08:00 AM',
               arrival: booking.arrival_time || '10:00 AM',
-              date: booking.travel_date || new Date(booking.booking_date).toISOString().split('T')[0],
+              date: travelDate,
               operator: 'ZippyBus Express',
               price: booking.total_fare,
               seats: seatNumbers,
@@ -207,17 +210,8 @@ const Profile: React.FC = () => {
           
           setTickets(updatedTickets);
 
-          // Insert into cancelled_bookings
-          const cancelledBooking = response.data.booking;
-          await axios.post('http://localhost:5000/api/cancellations/cancel', {
-            route_details: `${cancelledBooking.from} to ${cancelledBooking.to}`,
-            travel_date: cancelledBooking.date,
-            user_id: cancelledBooking.passengerName,
-            seat_count: cancelledBooking.seats.length,
-            amount: cancelledBooking.price,
-            refund_status: 'pending',
-            cancelled_at: new Date().toISOString()
-          }, { timeout: 5000 });
+          // Show success message instead of error
+          alert('Ticket cancelled successfully. Refund will be processed shortly.');
         } else {
           console.error('Backend cancellation failed:', response.data.message);
           alert('Failed to cancel ticket: ' + response.data.message);
@@ -268,8 +262,33 @@ const Profile: React.FC = () => {
   };
 
   // Helper functions to classify bookings
-  const isFuture = (date: string) => new Date(date) > new Date();
-  const isPast = (date: string) => new Date(date) < new Date();
+  const isFuture = (date: string) => {
+    // Make sure we have a valid date string
+    if (!date) return false;
+    
+    // Parse the date string to a Date object
+    const bookingDate = new Date(date);
+    
+    // Get today's date with time set to beginning of day for fair comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return bookingDate >= today;
+  };
+  
+  const isPast = (date: string) => {
+    // Make sure we have a valid date string
+    if (!date) return false;
+    
+    // Parse the date string to a Date object
+    const bookingDate = new Date(date);
+    
+    // Get today's date with time set to beginning of day for fair comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return bookingDate < today;
+  };
 
   const currentTickets = tickets.filter(ticket => ticket.status === 'active' && isFuture(ticket.date));
   const pastTickets = tickets.filter(ticket => ticket.status === 'active' && isPast(ticket.date));

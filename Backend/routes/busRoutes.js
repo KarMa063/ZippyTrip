@@ -39,7 +39,7 @@ async function createRoutesTable() {
 
 // GET route to search for routes
 router.get('/search', async (req, res) => {
-  const { from, to } = req.query;
+  const { from, to, date } = req.query;
   
   try {
     let query = 'SELECT * FROM routes WHERE is_active = true';
@@ -57,9 +57,13 @@ router.get('/search', async (req, res) => {
     
     const result = await pool.query(query, queryParams.map(param => `%${param}%`));
     
+    // If date is provided, we'll use it to filter available schedules
+    let routes = result.rows;
+    
     res.status(200).json({ 
       success: true, 
-      routes: result.rows 
+      routes: routes,
+      departure_date: date // Include the departure date in the response
     });
   } catch (error) {
     console.error("Error searching routes:", error);
@@ -470,6 +474,41 @@ router.get('/routes/:routeId/schedules', async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching schedules for route:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Internal server error" 
+    });
+  }
+});
+
+router.get('/schedules/search', async (req, res) => {
+  const { route_id, departure_date } = req.query;
+  
+  try {
+    let query = 'SELECT * FROM schedules WHERE is_active = true';
+    const queryParams = [];
+    
+    if (route_id) {
+      queryParams.push(route_id);
+      query += ` AND route_id = $${queryParams.length}`;
+    }
+    
+    if (departure_date) {
+      queryParams.push(departure_date);
+      query += ` AND DATE(departure_time) = $${queryParams.length}`;
+    }
+    
+    query += ' ORDER BY departure_time ASC';
+    
+    const result = await pool.query(query, queryParams);
+    
+    res.status(200).json({ 
+      success: true, 
+      schedules: result.rows,
+      departure_date: departure_date
+    });
+  } catch (error) {
+    console.error("Error searching schedules:", error);
     res.status(500).json({ 
       success: false, 
       message: "Internal server error" 

@@ -1,5 +1,3 @@
-// routes/bookings.js
-
 const express = require('express');
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
@@ -25,6 +23,7 @@ async function createBookingsTable() {
         user_id UUID,
         schedule_id UUID,
         booking_date TIMESTAMP WITH TIME ZONE,
+        departure_date DATE,
         seat_numbers TEXT,
         total_fare NUMERIC,
         status TEXT,
@@ -41,13 +40,13 @@ async function createBookingsTable() {
 
       CREATE UNIQUE INDEX IF NOT EXISTS bookings_pkey ON bookings USING BTREE(id);
     `);
-    console.log("✅ Bookings table created or already exists with updated structure.");
+    console.log("Bookings table created or already exists with updated structure.");
   } catch (error) {
-    console.error("❌ Error creating bookings table:", error);
+    console.error("Error creating bookings table:", error);
   }
 }
 
-// POST /api/bookings - Create new booking
+// POST /api/bus-bookings - Create new booking
 router.post('/', async (req, res) => {
   const { 
     user_id, 
@@ -58,6 +57,7 @@ router.post('/', async (req, res) => {
     payment_status, 
     payment_method, 
     booking_date,
+    departure_date,
     origin,
     destination,
     email
@@ -68,12 +68,66 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const seatNumbersString = Array.isArray(seat_numbers) ? seat_numbers.join(',') : seat_numbers;
+    // Inside the POST route handler
+    // Log the received data for debugging
+    console.log('Received booking data:', JSON.stringify(req.body));
+    console.log('Departure date:', departure_date, typeof departure_date);
+    
+    // Check if any of the requested seats are already booked
+    const seatNumbersArray = Array.isArray(seat_numbers) 
+      ? seat_numbers 
+      : seat_numbers.split(',');
+    
+    const existingBookings = await pool.query(
+      'SELECT seat_numbers FROM bookings WHERE schedule_id = $1 AND status != $2',
+      [schedule_id, 'cancelled']
+    );
+    
+    let alreadyBookedSeats = [];
+    
+    existingBookings.rows.forEach(booking => {
+      if (booking.seat_numbers) {
+        const bookedSeats = typeof booking.seat_numbers === 'string' 
+          ? booking.seat_numbers.split(',') 
+          : booking.seat_numbers;
+          
+        alreadyBookedSeats = [...alreadyBookedSeats, ...bookedSeats];
+      }
+    });
+    
+    // Check for conflicts
+    const conflictingSeats = seatNumbersArray.filter(seat => 
+      alreadyBookedSeats.includes(seat)
+    );
+    
+    if (conflictingSeats.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'seats_already_booked',
+        message: `Seats ${conflictingSeats.join(', ')} are already booked` 
+      });
+    }
+    
+    const seatNumbersString = Array.isArray(seatNumbersArray) ? seatNumbersArray.join(',') : seatNumbersArray;
+
+    // Ensure departure_date is properly formatted for PostgreSQL
+    let formattedDepartureDate = null;
+    if (departure_date && departure_date !== 'undefined' && departure_date !== 'null') {
+      // Make sure it's in YYYY-MM-DD format
+      if (typeof departure_date === 'string') {
+        // Remove any time component if present
+        formattedDepartureDate = departure_date.split('T')[0];
+      } else {
+        formattedDepartureDate = departure_date;
+      }
+    }
+    
+    console.log('Formatted departure date:', formattedDepartureDate);
 
     const result = await pool.query(
       `INSERT INTO bookings 
-        (user_id, schedule_id, seat_numbers, total_fare, status, payment_status, payment_method, booking_date, origin, destination, email)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        (user_id, schedule_id, seat_numbers, total_fare, status, payment_status, payment_method, booking_date, departure_date, origin, destination, email)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         user_id, 
@@ -84,16 +138,24 @@ router.post('/', async (req, res) => {
         payment_status, 
         payment_method, 
         booking_date,
+        formattedDepartureDate,
         origin,
         destination,
         email
       ]
     );
     
+    console.log('Booking created with data:', result.rows[0]);
+    
     res.status(201).json({ success: true, booking: result.rows[0] });
   } catch (error) {
-    console.error("❌ Error creating booking:", error);
-    res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    console.error("Error creating booking:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Internal server error", 
+      error: error.message,
+      stack: error.stack // Include stack trace for debugging
+    });
   }
 });
 
@@ -103,7 +165,7 @@ router.get('/', async (req, res) => {
     const result = await pool.query('SELECT * FROM bookings ORDER BY created_at DESC');
     res.status(200).json({ success: true, bookings: result.rows });
   } catch (error) {
-    console.error("❌ Error fetching bookings:", error);
+    console.error("Error fetching bookings:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
@@ -121,7 +183,7 @@ router.get('/:id', async (req, res) => {
 
     res.status(200).json({ success: true, booking: result.rows[0] });
   } catch (error) {
-    console.error("❌ Error fetching booking by id:", error);
+    console.error("Error fetching booking by id:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
@@ -134,7 +196,41 @@ router.get('/user/:userId', async (req, res) => {
     const result = await pool.query('SELECT * FROM bookings WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     res.status(200).json({ success: true, bookings: result.rows });
   } catch (error) {
-    console.error("❌ Error fetching user bookings:", error);
+    console.error("Error fetching user bookings:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+// GET /api/bus-bookings/schedule/:scheduleId/seats - Get all booked seats for a schedule
+router.get('/schedule/:scheduleId/seats', async (req, res) => {
+  const { scheduleId } = req.params;
+
+  try {
+    const result = await pool.query(
+      'SELECT seat_numbers FROM bookings WHERE schedule_id = $1 AND status != $2',
+      [scheduleId, 'cancelled']
+    );
+    
+    // Collect all booked seat numbers
+    let bookedSeats = [];
+    
+    result.rows.forEach(booking => {
+      if (booking.seat_numbers) {
+        // Handle both array and comma-separated string formats
+        const seatNumbers = typeof booking.seat_numbers === 'string' 
+          ? booking.seat_numbers.split(',') 
+          : booking.seat_numbers;
+          
+        bookedSeats = [...bookedSeats, ...seatNumbers];
+      }
+    });
+    
+    res.status(200).json({ 
+      success: true, 
+      bookedSeats: bookedSeats
+    });
+  } catch (error) {
+    console.error("Error fetching booked seats:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });

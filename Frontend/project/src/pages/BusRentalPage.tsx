@@ -47,7 +47,10 @@ const BusRentalPage: React.FC = () => {
   const [buses, setBuses] = useState<BusRoute[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [bookedSeats, setBookedSeats] = useState<Record<string, string[]>>({});
+  // Add the selectedDate state here at the component level
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  
   useEffect(() => {
     const fetchBuses = async () => {
       setIsLoading(true);
@@ -66,20 +69,38 @@ const BusRentalPage: React.FC = () => {
 
         const schedules = data.schedules || [];
         
-        const transformedBuses = schedules.map((schedule: any) => ({
-          id: schedule.id,
-          from: schedule.origin,
-          to: schedule.destination,
-          departure: new Date(schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-          arrival: new Date(schedule.arrival_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-          price: schedule.fare,
-          operator: schedule.route_name || 'ZippyBus Express',
-          duration: schedule.duration || calculateDuration(schedule.departure_time, schedule.arrival_time),
-          amenities: ['wifi', 'charging', 'snacks'],
-          seatsAvailable: schedule.available_seats,
-          type: 'AC',
-          seats: generateSeats(schedule.available_seats)
-        }));
+        // Fetch all booked seats for these schedules
+        const bookedSeatsMap: Record<string, string[]> = {};
+        
+        for (const schedule of schedules) {
+          const bookedSeatsResponse = await fetch(`http://localhost:5000/api/bus-bookings/schedule/${schedule.id}/seats`);
+          if (bookedSeatsResponse.ok) {
+            const bookedSeatsData = await bookedSeatsResponse.json();
+            if (bookedSeatsData.success) {
+              bookedSeatsMap[schedule.id] = bookedSeatsData.bookedSeats || [];
+            }
+          }
+        }
+        
+        setBookedSeats(bookedSeatsMap);
+        
+        const transformedBuses = schedules.map((schedule: any) => {
+          const scheduleBookedSeats = bookedSeatsMap[schedule.id] || [];
+          return {
+            id: schedule.id,
+            from: schedule.origin,
+            to: schedule.destination,
+            departure: new Date(schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            arrival: new Date(schedule.arrival_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            price: schedule.fare,
+            operator: schedule.route_name || 'ZippyBus Express',
+            duration: schedule.duration || calculateDuration(schedule.departure_time, schedule.arrival_time),
+            amenities: ['wifi', 'charging', 'snacks'],
+            seatsAvailable: schedule.available_seats,
+            type: 'AC',
+            seats: generateSeats(schedule.total_seats || 40, scheduleBookedSeats)
+          };
+        });
         
         setBuses(transformedBuses);
       } catch (err) {
@@ -103,15 +124,17 @@ const BusRentalPage: React.FC = () => {
     return `${hours}h ${minutes}m`;
   };
 
-  // Helper function to generate seats
-  const generateSeats = (availableSeats: number) => {
-    const totalSeats = availableSeats + Math.floor(availableSeats * 0.3);
-    return Array.from({ length: totalSeats }, (_, i) => ({
-      id: `seat-${i + 1}`,
-      number: `${i + 1}`,
-      isBooked: i >= availableSeats,
-      type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
-    }));
+  // Helper function to generate seats with actual booked status
+  const generateSeats = (totalSeats: number, bookedSeatNumbers: string[]) => {
+    return Array.from({ length: totalSeats }, (_, i) => {
+      const seatNumber = `${i + 1}`;
+      return {
+        id: `seat-${seatNumber}`,
+        number: seatNumber,
+        isBooked: bookedSeatNumbers.includes(seatNumber),
+        type: i % 3 === 0 ? 'sleeper' : i % 2 === 0 ? 'window' : 'aisle'
+      };
+    });
   };
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -139,20 +162,38 @@ const BusRentalPage: React.FC = () => {
       
       const schedules = data.schedules || [];
       
-      const transformedBuses = schedules.map((schedule: any) => ({
-        id: schedule.id,
-        from: schedule.origin,
-        to: schedule.destination,
-        departure: new Date(schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-        arrival: new Date(schedule.arrival_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-        price: schedule.fare,
-        operator: schedule.route_name || 'ZippyBus Express',
-        duration: schedule.duration || calculateDuration(schedule.departure_time, schedule.arrival_time),
-        amenities: ['wifi', 'charging', 'snacks'],
-        seatsAvailable: schedule.available_seats,
-        type: 'AC',
-        seats: generateSeats(schedule.available_seats)
-      }));
+      // Fetch all booked seats for these schedules
+      const bookedSeatsMap: Record<string, string[]> = {};
+      
+      for (const schedule of schedules) {
+        const bookedSeatsResponse = await fetch(`http://localhost:5000/api/bus-bookings/schedule/${schedule.id}/seats`);
+        if (bookedSeatsResponse.ok) {
+          const bookedSeatsData = await bookedSeatsResponse.json();
+          if (bookedSeatsData.success) {
+            bookedSeatsMap[schedule.id] = bookedSeatsData.bookedSeats || [];
+          }
+        }
+      }
+      
+      setBookedSeats(bookedSeatsMap);
+      
+      const transformedBuses = schedules.map((schedule: any) => {
+        const scheduleBookedSeats = bookedSeatsMap[schedule.id] || [];
+        return {
+          id: schedule.id,
+          from: schedule.origin,
+          to: schedule.destination,
+          departure: new Date(schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          arrival: new Date(schedule.arrival_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          price: schedule.fare,
+          operator: schedule.route_name || 'ZippyBus Express',
+          duration: schedule.duration || calculateDuration(schedule.departure_time, schedule.arrival_time),
+          amenities: ['wifi', 'charging', 'snacks'],
+          seatsAvailable: schedule.available_seats,
+          type: 'AC',
+          seats: generateSeats(schedule.total_seats || 40, scheduleBookedSeats)
+        };
+      });
       
       setBuses(transformedBuses);
     } catch (err) {
@@ -166,10 +207,16 @@ const BusRentalPage: React.FC = () => {
 
   const handleBusSelection = (bus: BusRoute) => {
     setSelectedBus(bus);
+    setSelectedSeats([]);
     setStep('seats');
   };
 
-  const handleSeatSelection = (seatId: string) => {
+  const handleSeatSelection = (seatId: string, isBooked: boolean) => {
+    if (isBooked) {
+      // Don't allow selection of already booked seats
+      return;
+    }
+    
     setSelectedSeats(prev => {
       const isSelected = prev.includes(seatId);
       const maxSeats = parseInt(searchParams.passengers);
@@ -204,19 +251,71 @@ const BusRentalPage: React.FC = () => {
         
         const userIdString = typeof userId === 'object' ? userId.user_id : userId;
         
+        // Check if any of the selected seats are already booked
+        const scheduleBookedSeats = bookedSeats[selectedBus.id] || [];
+        const seatNumbers = selectedSeats.map(seatId => seatId.replace('seat-', ''));
+        
+        const alreadyBookedSeats = seatNumbers.filter(seat => scheduleBookedSeats.includes(seat));
+        
+        if (alreadyBookedSeats.length > 0) {
+          alert(`Sorry, seats ${alreadyBookedSeats.join(', ')} have just been booked by someone else. Please select different seats.`);
+          
+          // Refresh the seat data
+          const bookedSeatsResponse = await fetch(`http://localhost:5000/api/bus-bookings/schedule/${selectedBus.id}/seats`);
+          if (bookedSeatsResponse.ok) {
+            const bookedSeatsData = await bookedSeatsResponse.json();
+            if (bookedSeatsData.success) {
+              const updatedBookedSeats = {...bookedSeats};
+              updatedBookedSeats[selectedBus.id] = bookedSeatsData.bookedSeats || [];
+              setBookedSeats(updatedBookedSeats);
+              
+              // Update the selected bus with new seat information
+              if (selectedBus) {
+                setSelectedBus({
+                  ...selectedBus,
+                  seats: generateSeats(selectedBus.seats.length, updatedBookedSeats[selectedBus.id] || [])
+                });
+              }
+              
+              // Clear selected seats that are now booked
+              setSelectedSeats(prev => prev.filter(seatId => {
+                const seatNumber = seatId.replace('seat-', '');
+                return !updatedBookedSeats[selectedBus.id].includes(seatNumber);
+              }));
+            }
+          }
+          
+          return;
+        }
+
+        console.log('Original date from searchParams:', searchParams.date);
+        
+        // Make sure we have a valid date
+        if (!searchParams.date) {
+          alert('Please select a valid departure date.');
+          return;
+        }
+        
+        // Use the date from searchParams instead of hardcoded value
+        const formattedDepartureDate = searchParams.date;
+        console.log('Formatted departure date:', formattedDepartureDate);
+        
         const bookingData = {
           user_id: userIdString,
           schedule_id: selectedBus.id,
-          seat_numbers: selectedSeats,
-          total_fare: selectedBus.price * selectedSeats.length,
+          seat_numbers: seatNumbers,
+          total_fare: selectedBus.price * seatNumbers.length,
           status: 'confirmed',
           payment_status: 'pending',
           payment_method: 'card',
           booking_date: new Date().toISOString(),
+          departure_date: formattedDepartureDate,
           origin: selectedBus.from,
           destination: selectedBus.to,
           email: userEmail              
         };
+
+        console.log('Sending booking data:', JSON.stringify(bookingData));
 
         const response = await fetch('http://localhost:5000/api/bus-bookings', {
           method: 'POST',
@@ -226,12 +325,21 @@ const BusRentalPage: React.FC = () => {
           body: JSON.stringify(bookingData),
         });
 
+        const responseData = await response.json();
+        
         if (!response.ok) {
-          throw new Error('Failed to create booking');
+          if (responseData.error === 'seats_already_booked') {
+            alert(`Sorry, some of the seats you selected are already booked. Please select different seats.`);
+            return;
+          }
+          
+          // More detailed error handling
+          console.error('Booking error:', responseData);
+          alert(`Failed to create booking: ${responseData.message || 'Unknown error'}`);
+          return;
         }
         
-        const bookingResponse = await response.json();
-        console.log('Booking created:', bookingResponse);
+        console.log('Booking created:', responseData);
 
         const emailResponse = await sendBusReminder({
           email: userEmail,
@@ -242,7 +350,7 @@ const BusRentalPage: React.FC = () => {
           operator: selectedBus.operator,
           date: searchParams.date,
           passengerName: userName,
-          seats: selectedSeats,
+          seats: seatNumbers,
           busType: selectedBus.type,
         });
 
