@@ -67,12 +67,7 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ success: false, message: 'user_id is required' });
   }
 
-  try {
-    // Inside the POST route handler
-    // Log the received data for debugging
-    console.log('Received booking data:', JSON.stringify(req.body));
-    console.log('Departure date:', departure_date, typeof departure_date);
-    
+  try {   
     // Check if any of the requested seats are already booked
     const seatNumbersArray = Array.isArray(seat_numbers) 
       ? seat_numbers 
@@ -113,7 +108,6 @@ router.post('/', async (req, res) => {
     // Ensure departure_date is properly formatted for PostgreSQL
     let formattedDepartureDate = null;
     if (departure_date && departure_date !== 'undefined' && departure_date !== 'null') {
-      // Make sure it's in YYYY-MM-DD format
       if (typeof departure_date === 'string') {
         // Remove any time component if present
         formattedDepartureDate = departure_date.split('T')[0];
@@ -154,7 +148,7 @@ router.post('/', async (req, res) => {
       success: false, 
       message: "Internal server error", 
       error: error.message,
-      stack: error.stack // Include stack trace for debugging
+      stack: error.stack
     });
   }
 });

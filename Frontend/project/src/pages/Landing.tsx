@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plane, Building2 } from 'lucide-react';
-import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
-import { supabase } from '../lib/supabase';
+import { Plane } from 'lucide-react';
+import { useGlobalTheme } from '../components/GlobalThemeContext';
 
 const images = [
   'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fA%3D%3D&auto=format&fit=crop&w=2021&q=80',
@@ -14,7 +13,7 @@ const images = [
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
-  const { isDarkMode } = useGlobalTheme(); // Use global theme
+  const { isDarkMode } = useGlobalTheme();
   const [bgImage, setBgImage] = useState<string>(images[0]);
 
   useEffect(() => {
@@ -27,10 +26,6 @@ const Landing: React.FC = () => {
 
   const handleGetStarted = () => {
     navigate('/auth?mode=signup');
-  };
-
-  const handleStaysClick = () => {
-    navigate('/guesthouses');
   };
 
   return (

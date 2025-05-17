@@ -13,7 +13,6 @@ import Profile from './pages/Profile';
 import GuestHouseRooms from './pages/GuestHouseRooms';
 
 import GLogin from './guesthouse/gpages/GLogin';
-import GSignup from './guesthouse/gpages/GSignUp';
 import GDashboard from './guesthouse/gpages/GDashboard';
 import GProperties from './guesthouse/gpages/GProperties';
 import PropertyDetails from './guesthouse/gpages/PropertyDetails';
@@ -47,7 +46,6 @@ function App() {
 
           {/* Guesthouse Owner Routes*/}
           <Route path="/glogin" element={<GLogin />} />
-          <Route path='/gsignup' element={<GSignup />} />
           <Route element={
             <ThemeProvider defaultTheme="dark">
               <Layout />

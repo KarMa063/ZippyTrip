@@ -86,6 +86,7 @@ const GuestHouseRooms: React.FC = () => {
             return {
               ...room,
               images: processedImages,
+              // Each room maintains its own availability status independently
               isAvailable: room.isAvailable === undefined ? true : room.isAvailable,
               reviews: room.reviews || []
             };
@@ -291,6 +292,7 @@ const GuestHouseRooms: React.FC = () => {
     setBookingError(null);
     
     try {
+      // Check availability for THIS SPECIFIC ROOM only
       const availabilityResponse = await fetch(
         `http://localhost:5000/api/bookings/check?room_id=${roomId}&check_in=${checkInDate}&check_out=${checkOutDate}`
       );
@@ -369,7 +371,7 @@ const GuestHouseRooms: React.FC = () => {
         
         alert('Room booked successfully!');
         
-        // Update the room's availability in both state variables
+        // Update ONLY the booked room's availability, not all rooms
         const updatedRooms = rooms.map(room => 
           room.id === roomId ? { ...room, isAvailable: false } : room
         );
@@ -552,7 +554,7 @@ const GuestHouseRooms: React.FC = () => {
                         ? 'cursor-pointer transition-transform hover:scale-105' 
                         : 'opacity-75 cursor-not-allowed'
                     } ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}
-                    onClick={() => room.isAvailable ? setSelectedRoom(room) : null}
+                    onClick={() => handleRoomSelection(room)}
                   >
                     <div className="h-40 relative">
                       <img

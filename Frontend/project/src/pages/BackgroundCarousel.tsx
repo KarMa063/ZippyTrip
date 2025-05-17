@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
+import { useGlobalTheme } from '../components/GlobalThemeContext';
 
 const backgrounds = [
   'https://images.unsplash.com/photo-1469474968028-56623f02e42e',
@@ -11,7 +11,7 @@ const backgrounds = [
 ].map((url) => `${url}?auto=format&fit=crop&w=2000&q=80`);
 
 const BackgroundCarousel: React.FC = () => {
-  const { isDarkMode } = useGlobalTheme(); // Use global theme
+  const { isDarkMode } = useGlobalTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {

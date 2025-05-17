@@ -63,7 +63,7 @@ router.get('/search', async (req, res) => {
     res.status(200).json({ 
       success: true, 
       routes: routes,
-      departure_date: date // Include the departure date in the response
+      departure_date: date
     });
   } catch (error) {
     console.error("Error searching routes:", error);
