@@ -14,6 +14,7 @@ const pool = new Pool({
 // Ensure the properties table exists
 async function propertyTableExists() {
     try {
+        // First create the table if it doesn't exist
         await pool.query(`
             CREATE TABLE IF NOT EXISTS properties(
                 id SERIAL PRIMARY KEY,
@@ -22,10 +23,26 @@ async function propertyTableExists() {
                 address TEXT,
                 email TEXT,
                 contact TEXT,
-                images JSONB,
-                rooms INTEGER
+                images TEXT
             );
         `);
+
+        // Then check if owner_id column exists and add it if it doesn't
+        const columnCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'properties' 
+            AND column_name = 'owner_id';
+        `);
+
+        if (columnCheck.rows.length === 0) {
+            await pool.query(`
+                ALTER TABLE properties 
+                ADD COLUMN owner_id VARCHAR;
+            `);
+            console.log("Added owner_id column to properties table");
+        }
+
         console.log("Properties table checked/created successfully.");
     } catch (error) {
         console.error("Error checking or creating the table:", error);
@@ -43,14 +60,14 @@ router.post("/addproperty", async (req, res) => {
         email,
         phoneNumber,
         images,
-        rooms,
+        owner_id
     } = req.body;
 
     const address = `${streetAddress}, ${city}, ${district}`;
     try {
         const result = await pool.query(
             `INSERT INTO properties 
-            (name, description, address, email, contact, images, rooms)
+            (name, description, address, email, contact, images, owner_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *`,
             [
@@ -59,8 +76,8 @@ router.post("/addproperty", async (req, res) => {
                 address,
                 email,
                 phoneNumber,
-                JSON.stringify(images),
-                rooms,
+                images,
+                owner_id
             ]
         );
         res.status(201).json({ success: true, property: result.rows[0] });
@@ -82,7 +99,7 @@ router.get('/', async (req, res) => {
                 email,
                 contact,
                 images,
-                rooms
+                owner_id
             FROM properties
         `);
         res.status(200).json({ success: true, properties: result.rows });
@@ -128,7 +145,7 @@ router.delete('/:id', async (req, res) => {
 // Update property based on ID
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, description, address, email, contact, images, rooms } = req.body;
+    const { name, description, address, email, contact, images} = req.body;
     try {
         const result = await pool.query(
             `UPDATE properties SET 
@@ -138,7 +155,6 @@ router.put('/:id', async (req, res) => {
                 email = $4, 
                 contact = $5, 
                 images = $6, 
-                rooms = $7
             WHERE id = $8
             RETURNING *`,
             [
@@ -147,8 +163,7 @@ router.put('/:id', async (req, res) => {
                 address,
                 email,
                 contact,
-                JSON.stringify(images),
-                rooms,
+                images,
                 id
             ]
         );

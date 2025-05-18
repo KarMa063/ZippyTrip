@@ -72,7 +72,7 @@ export function BookingList({ serviceType }: BookingListProps) {
                   <TableCell>
                     <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">${booking.price}</TableCell>
+                  <TableCell className="text-right">NPR {booking.price}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

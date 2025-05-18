@@ -3,18 +3,12 @@ import { useForm } from "react-hook-form";
 import { Textarea } from "../gcomponents/textarea";
 import { Button } from "../gcomponents/button";
 import { Input } from "../gcomponents/input";
-import { UploadCloud } from "lucide-react";
-import { useDropzone } from "react-dropzone";
 import { useNavigate, useParams } from "react-router-dom";
-import placeholderImage from "../images/placeholder.png";
-
-type FileWithPreview = File & { preview: string };
 
 export default function EditProperty() {
   const { id } = useParams();
   const navigate = useNavigate();
   const form = useForm();
-  const [images, setImages] = useState<(string | FileWithPreview)[]>([]);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -33,7 +27,7 @@ export default function EditProperty() {
           form.setValue("district", property.address.split(",")[2]?.trim());
           form.setValue("email", property.email);
           form.setValue("phoneNumber", property.contact);
-          setImages(property.images);
+          form.setValue("images", property.images);
         } else {
           setNotFound(true);
         }
@@ -46,18 +40,6 @@ export default function EditProperty() {
     fetchProperty();
   }, [id, form]);
 
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: { "image/*": [] },
-    maxFiles: 10,
-    onDrop: (acceptedFiles) => {
-      const filesWithPreview = acceptedFiles.map((file) =>
-        Object.assign(file, {
-          preview: URL.createObjectURL(file),
-        })
-      ) as FileWithPreview[];
-      setImages((prev) => [...prev, ...filesWithPreview].slice(0, 10));
-    },
-  });
 
   const onSubmit = async (data: any) => {
     const updatedProperty = {
@@ -67,19 +49,12 @@ export default function EditProperty() {
       address: `${data.streetAddress}, ${data.city}, ${data.district}`,
       email: data.email,
       contact: data.phoneNumber,
+      images: data.images,
       rooms: parseInt(data.rooms, 10) || 1,
     };
 
     const formData = new FormData();
     formData.append("property", JSON.stringify(updatedProperty));
-
-    // images.forEach((image) => {
-    //   if (typeof image === "string") {
-    //     formData.append("existingImages", image); // for server to retain existing ones
-    //   } else {
-    //     formData.append("newImages", image); // new uploads
-    //   }
-    // });
 
     try {
       const url = `http://localhost:5000/api/gproperties/${id}`;
@@ -186,32 +161,9 @@ export default function EditProperty() {
 
       <section className="space-y-4 border rounded-lg p-4">
         <h2 className="text-xl font-semibold">Property Images</h2>
-        <div {...getRootProps()} className="border-dashed border-2 rounded-lg p-6 text-center cursor-pointer">
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center gap-2">
-            <UploadCloud className="w-6 h-6" />
-            <p className="text-sm">Drag & drop images here, or click to select files</p>
-            <p className="text-xs text-muted-foreground">JPEG, JPG, PNG, or WebP (max 10 images)</p>
-          </div>
+        <div>
+          <Input placeholder="Enter image url" {...form.register("images")} />
         </div>
-
-        {/* {images.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {images.map((img, i) => (
-              <img
-                key={i}
-                src={typeof img === "string" ? img : img.preview}
-                alt={`Uploaded ${i}`}
-                className="rounded-lg h-28 object-cover w-full"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-sm text-muted-foreground">
-            <img src={placeholderImage} className="mx-auto h-20 opacity-30" alt="No images" />
-            <p>No images uploaded</p>
-          </div>
-        )} */}
       </section>
 
       <div className="text-right">

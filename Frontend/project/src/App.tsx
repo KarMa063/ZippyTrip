@@ -8,12 +8,12 @@ import Preferences from './pages/Preferences';
 import GuestHouseBooking from './pages/GuestHouseBooking';
 import SettingsPage from './pages/SettingsPage';
 import BusRentalPage from './pages/BusRentalPage';
-//import MyTickets from './pages/MyTickets';
-import PopularDestinations from './pages/PopularDestinations';
+import PopularDestinations from './pages/PopularDestinationsPage';
 import Profile from './pages/Profile';
 import GuestHouseRooms from './pages/GuestHouseRooms';
 
 import GLogin from './guesthouse/gpages/GLogin';
+import GSignup from './guesthouse/gpages/GSignUp';
 import GDashboard from './guesthouse/gpages/GDashboard';
 import GProperties from './guesthouse/gpages/GProperties';
 import PropertyDetails from './guesthouse/gpages/PropertyDetails';
@@ -41,13 +41,13 @@ function App() {
           <Route path="/setting" element={<SettingsPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/bus" element={<BusRentalPage />} />
-          {/*<Route path="/tickets" element={<MyTickets />} />*/}
           <Route path="/attractions" element={<PopularDestinations />} />
           <Route path="/guesthouses" element={<GuestHouseBooking />} />
           <Route path="/guesthouse/:id/rooms" element={<GuestHouseRooms />} />
 
           {/* Guesthouse Owner Routes*/}
           <Route path="/glogin" element={<GLogin />} />
+          <Route path='/gsignup' element={<GSignup />} />
           <Route element={
             <ThemeProvider defaultTheme="dark">
               <Layout />

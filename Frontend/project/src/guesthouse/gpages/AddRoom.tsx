@@ -3,10 +3,7 @@ import { useForm } from "react-hook-form";
 import { Input } from "../gcomponents/input";
 import { Textarea } from "../gcomponents/textarea";
 import { Button } from "../gcomponents/button";
-import { UploadCloud } from "lucide-react";
-import { useDropzone } from "react-dropzone";
 import { useNavigate, useParams } from "react-router-dom";
-import placeholderImage from "../images/placeholder.png";
 import {
   Select,
   SelectContent,
@@ -20,19 +17,7 @@ export default function AddRoom() {
   const { id } = useParams();
   const form = useForm();
   const navigate = useNavigate();
-  const [images, setImages] = useState<string[]>([]);
   const [available, setAvailable] = useState("true");
-
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: { "image/*": [] },
-    maxFiles: 10,
-    onDrop: (acceptedFiles) => {
-      const imagePreviews = acceptedFiles.map((file) =>
-        URL.createObjectURL(file)
-      );
-      setImages((prev) => [...prev, ...imagePreviews].slice(0, 10));
-    },
-  });
 
   const onSubmit = async (data: any) => {
     const roomData = {
@@ -44,7 +29,7 @@ export default function AddRoom() {
         .split(",")
         .map((a: string) => a.trim())
         .filter(Boolean),
-      images: images,
+      images: data.images,
     };
 
     try {
@@ -120,43 +105,9 @@ export default function AddRoom() {
 
       <section className="space-y-4 border rounded-lg p-4">
         <h2 className="text-xl font-semibold">Room Images</h2>
-        <div
-          {...getRootProps()}
-          className="border-dashed border-2 rounded-lg p-6 text-center cursor-pointer"
-        >
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center gap-2">
-            <UploadCloud className="w-6 h-6" />
-            <p className="text-sm">
-              Drag & drop images here, or click to select files
-            </p>
-            <p className="text-xs text-muted-foreground">
-              JPEG, JPG, PNG, or WebP (max 10 images)
-            </p>
-          </div>
+        <div>
+          <Input placeholder="Enter image url" {...form.register("images")} />
         </div>
-
-        {/* {images.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {images.map((src, i) => (
-              <img
-                key={i}
-                src={src}
-                alt={`Uploaded ${i}`}
-                className="rounded-lg h-28 object-cover w-full"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-sm text-muted-foreground">
-            <img
-              src={placeholderImage}
-              className="mx-auto h-20 opacity-30"
-              alt="No images"
-            />
-            <p>No images uploaded</p>
-          </div>
-        )} */}
       </section>
 
       <div className="text-right">

@@ -79,7 +79,7 @@ export default function SignIn() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zippy-darker relative overflow-hidden">
+    <div className="flex min-h-screen w-full items-center justify-center bg-zippy-darker relative overflow-hidden">
       {/* Background animated elements */}
       <div className="absolute inset-0 z-0">
         <div className="diamond-bg diamond-bg-1"></div>
@@ -87,8 +87,8 @@ export default function SignIn() {
         <div className="diamond-bg diamond-bg-3"></div>
       </div>
       
-      {/* Center container - changed to flex with justify-center */}
-      <div className="flex justify-center items-center w-full z-10">
+      {/* Main content container - ensure it's centered */}
+      <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto z-10">
         {/* Online status indicator */}
         <div className="absolute top-4 right-4 flex items-center text-sm">
           <Wifi size={16} className={`mr-1 ${isOnline ? 'text-green-400' : 'text-red-400'}`} />
@@ -97,18 +97,18 @@ export default function SignIn() {
           </span>
         </div>
         
-        <div className="flex flex-col items-center mb-8">
-          <div className="logo-container mb-4">
+        {/* Logo and form container */}
+        <div className="flex flex-col items-center w-full">
+          <div className="logo-container mb-4 flex items-center justify-center">
             <div className="text-zippy-blue mr-2 logo-icon">
               <Plane size={40} />
             </div>
             <h1 className="text-4xl font-bold text-white logo-text">ZippyTrip</h1>
           </div>
-          <p className="text-gray-400">Sign in to your account to continue</p>
+          <p className="text-gray-400 text-center">Sign in to your account to continue</p>
           
-          <div className="diamond-border-container mt-8">
-            {/* Fixed width card */}
-            <Card className="border-white/[0.05] bg-zippy-dark shadow-lg relative z-10 diamond-card w-[350px]">
+          <div className="diamond-border-container mt-8 w-full max-w-[350px] mx-auto">
+            <Card className="border-white/[0.05] bg-zippy-dark shadow-lg relative z-10 diamond-card w-full">
               {!isForgotPassword ? (
                 <>
                   <CardHeader className="space-y-1">
@@ -392,6 +392,7 @@ export default function SignIn() {
           align-items: center;
           justify-content: center;
           position: relative;
+          margin: 0 auto;
         }
         
         .logo-icon {

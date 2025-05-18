@@ -35,20 +35,14 @@ const GSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">First Name</p>
-                  <Input id="firstName" defaultValue="John" />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Last Name</p>
-                  <Input id="lastName" defaultValue="Smith" />
-                </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">UserName</p>
+                <Input id="userName" defaultValue="ZippyTrip Guesthouses" />
               </div>
-
+              
               <div className="space-y-2">
                 <p className="text-sm font-medium">Email Address</p>
-                <Input id="email" type="email" defaultValue="john.smith@example.com" />
+                <Input id="email" type="email" defaultValue="zippytrip101@gmail.com" />
               </div>
 
               <div className="space-y-2">

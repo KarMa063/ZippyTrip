@@ -51,10 +51,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true); // Set loading to true when login starts
     try {
       // For demo purposes, hardcoded credentials
-      if (email === "admin@example.com" && password === "password") {
+      if (email === "admin@zippytrip.com" && password === "zippytrip@123") {
         const user = {
           name: "Admin",
-          email: "admin@example.com",
+          email: "admin@zippytrip.com",
           role: "Administrator"
         };
         
