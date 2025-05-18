@@ -38,7 +38,7 @@ interface GuestHouseBooking {
 }
 
 function toLocalDateString(date: string) {
-  return new Date(date).toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+  return new Date(date).toLocaleDateString('en-CA');
 }
 
 const todayStr = new Date().toLocaleDateString('en-CA');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bus, Calendar, Users, Search, MapPin, ArrowRight, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft } from 'lucide-react';
+import { Bus, Calendar, Users, Search, MapPin, ArrowRight, CreditCard, Luggage, Coffee, UtensilsCrossed, Wifi, Power, ArrowLeft, Check } from 'lucide-react';
 import { sendBusReminder } from './EmailController';
 import { useGlobalTheme } from '../components/GlobalThemeContext';
 import Navigation from './Navigation';

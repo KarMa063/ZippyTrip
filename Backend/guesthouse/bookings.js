@@ -433,6 +433,235 @@ router.patch('/:id/check-out', async (req, res) => {
   }
 });
 
+// Check room availability for specific dates
+router.get('/check', async (req, res) => {
+  const { room_id, check_in, check_out } = req.query;
+  
+  try {
+    if (!room_id || !check_in || !check_out) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required parameters: room_id, check_in, and check_out are required' 
+      });
+    }
+
+    // Check if the room exists
+    const roomResult = await pool.query(
+      'SELECT * FROM rooms WHERE id = $1',
+      [room_id]
+    );
+
+    if (roomResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Room not found' 
+      });
+    }
+
+    // Check for overlapping bookings
+    const bookingsResult = await pool.query(
+      `SELECT * FROM gbookings 
+       WHERE room_id = $1 
+       AND status != 'cancelled'
+       AND (
+         (check_in <= $2 AND check_out > $2) OR
+         (check_in < $3 AND check_out >= $3) OR
+         (check_in >= $2 AND check_out <= $3)
+       )`,
+      [room_id, check_in, check_out]
+    );
+
+    const isAvailable = bookingsResult.rows.length === 0;
+
+    res.status(200).json({
+      success: true,
+      isAvailable: isAvailable,
+      room: roomResult.rows[0]
+    });
+  } catch (error) {
+    console.error('Error checking room availability:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to check room availability',
+      error: error.message
+    });
+  }
+});
+
+// Update booking status
+router.patch('/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!['pending', 'confirmed', 'cancelled', 'declined'].includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid status value'
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const bookingResult = await client.query(
+      `SELECT * FROM gbookings WHERE id = $1 FOR UPDATE`,
+      [id]
+    );
+
+    if (bookingResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const booking = bookingResult.rows[0];
+
+    const result = await client.query(
+      `UPDATE gbookings SET status = $1 WHERE id = $2 RETURNING *`,
+      [status, id]
+    );
+
+    if (status === 'confirmed') {
+      await client.query(
+        `UPDATE rooms SET available = false 
+         WHERE id = $1 AND property_id = $2`,
+        [booking.room_id, booking.property_id]
+      );
+    } 
+    else if (status === 'cancelled' || status === 'declined') {
+      const otherBookings = await client.query(
+        `SELECT 1 FROM gbookings
+         WHERE room_id = $1
+         AND id != $2
+         AND status = 'confirmed'
+         AND check_out > CURRENT_DATE`,
+        [booking.room_id, id]
+      );
+
+      if (otherBookings.rows.length === 0) {
+        await client.query(
+          `UPDATE rooms SET available = true 
+           WHERE id = $1 AND property_id = $2`,
+          [booking.room_id, booking.property_id]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, booking: result.rows[0] });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update status' });
+  } finally {
+    client.release();
+  }
+});
+
+// Check-in endpoint
+router.patch('/:id/check-in', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const client = await pool.connect();
+    await client.query('BEGIN');
+    
+    const bookingResult = await client.query(
+      `SELECT * FROM gbookings WHERE id = $1 FOR UPDATE`,
+      [id]
+    );
+
+    if (bookingResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const booking = bookingResult.rows[0];
+    
+    if (booking.status !== 'confirmed') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Only confirmed bookings can be checked in' 
+      });
+    }
+
+    if (booking.checkin_status === 'checked_in') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Guest is already checked in' 
+      });
+    }
+
+    const result = await client.query(
+      `UPDATE gbookings 
+       SET checkin_status = 'checked_in' 
+       WHERE id = $1 
+       RETURNING *`,
+      [id]
+    );
+    
+    await client.query('COMMIT');
+    res.json({ success: true, booking: result.rows[0] });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error during check-in:', error);
+    res.status(500).json({ success: false, message: 'Failed to process check-in' });
+  }
+});
+
+// Check-out endpoint
+router.patch('/:id/check-out', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const client = await pool.connect();
+    await client.query('BEGIN');
+    
+    const bookingResult = await client.query(
+      `SELECT * FROM gbookings WHERE id = $1 FOR UPDATE`,
+      [id]
+    );
+
+    if (bookingResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const booking = bookingResult.rows[0];
+    
+    if (booking.checkin_status !== 'checked_in') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Guest is not checked in' 
+      });
+    }
+
+    const result = await client.query(
+      `UPDATE gbookings 
+       SET checkin_status = 'checked_out' 
+       WHERE id = $1 
+       RETURNING *`,
+      [id]
+    );
+    
+    await client.query(
+      `UPDATE rooms SET available = true 
+       WHERE id = $1`,
+      [booking.room_id]
+    );
+    
+    await client.query('COMMIT');
+    res.json({ success: true, booking: result.rows[0] });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error during check-out:', error);
+    res.status(500).json({ success: false, message: 'Failed to process check-out' });
+  }
+});
+
 module.exports = {
   router,
   bookingsTableExists

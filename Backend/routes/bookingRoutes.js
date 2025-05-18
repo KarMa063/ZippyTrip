@@ -105,7 +105,6 @@ router.post('/', async (req, res) => {
     
     const seatNumbersString = Array.isArray(seatNumbersArray) ? seatNumbersArray.join(',') : seatNumbersArray;
 
-    // Ensure departure_date is properly formatted for PostgreSQL
     let formattedDepartureDate = null;
     if (departure_date && departure_date !== 'undefined' && departure_date !== 'null') {
       if (typeof departure_date === 'string') {
