@@ -177,7 +177,7 @@ const Navigation: React.FC = () => {
 
 <div className="relative">
   <button
-    onClick={handleGuestHouseOwnerClick} // Directly call the login function
+    onClick={handleGuestHouseOwnerClick}
     className={`flex items-center space-x-2 border-2 ${
       isDarkMode
         ? 'border-blue-400 text-blue-400 hover:bg-gray-800'

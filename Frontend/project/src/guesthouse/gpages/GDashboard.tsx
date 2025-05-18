@@ -24,7 +24,7 @@ interface Booking {
   status: 'pending' | 'confirmed' | 'cancelled' | 'declined';
   traveller_email?: string;
   property_name?: string;
-  total_price?: number; // Add total_price to the Booking interface
+  total_price?: number;
 }
 
 // Add these interfaces
@@ -125,7 +125,7 @@ const GDashboard = () => {
 
         setBookings(enrichedBookings);
 
-        // Calculate total revenue here
+        // Calculate total revenue
         const calculatedRevenue = enrichedBookings.reduce((sum, booking) => {
           return sum + (booking.status === 'confirmed' ? (booking.total_price || 0) : 0);
         }, 0);

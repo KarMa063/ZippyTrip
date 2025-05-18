@@ -22,7 +22,7 @@ async function createReviewsTable() {
         email VARCHAR NOT NULL,
         rating NUMERIC NOT NULL,
         review TEXT NOT NULL,
-        ownerReply TEXT,
+        owner_reply TEXT,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -32,7 +32,7 @@ async function createReviewsTable() {
     try {
       await pool.query(`
         ALTER TABLE guesthouse_reviews 
-        ADD COLUMN IF NOT EXISTS ownerReply TEXT;
+        ADD COLUMN IF NOT EXISTS owner_reply TEXT;
       `);
       console.log("ownerReply column added or already exists.");
     } catch (alterError) {
@@ -90,7 +90,7 @@ router.get('/:propertyId/reviews', async (req, res) => {
       comment: review.review,
       date: review.createdat || review.createdAt || new Date().toISOString(),
       email: review.email,
-      ownerReply: review.ownerreply 
+      owner_reply: review.owner_reply 
     }));
 
     res.status(200).json({
@@ -106,7 +106,7 @@ router.get('/:propertyId/reviews', async (req, res) => {
 // POST route to add owner reply to a review
 router.post('/:propertyId/reviews/:reviewId/reply', async (req, res) => {
   const { propertyId, reviewId } = req.params;
-  const { ownerReply } = req.body;
+  const { owner_reply } = req.body;
 
   try {
     // Verify the review exists and belongs to the property
@@ -122,10 +122,10 @@ router.post('/:propertyId/reviews/:reviewId/reply', async (req, res) => {
     // Add the owner's reply
     const result = await pool.query(
       `UPDATE guesthouse_reviews 
-       SET ownerReply = $1
+       SET owner_reply = $1
        WHERE id = $2 AND property_id = $3
        RETURNING *`,
-      [ownerReply, reviewId, propertyId]
+      [owner_reply, reviewId, propertyId]
     );
 
     res.status(200).json({ 

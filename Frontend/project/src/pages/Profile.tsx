@@ -38,7 +38,7 @@ interface GuestHouseBooking {
 }
 
 function toLocalDateString(date: string) {
-  return new Date(date).toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+  return new Date(date).toLocaleDateString('en-CA');
 }
 
 const todayStr = new Date().toLocaleDateString('en-CA');
@@ -266,10 +266,8 @@ const Profile: React.FC = () => {
     // Make sure we have a valid date string
     if (!date) return false;
     
-    // Parse the date string to a Date object
     const bookingDate = new Date(date);
     
-    // Get today's date with time set to beginning of day for fair comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -280,10 +278,8 @@ const Profile: React.FC = () => {
     // Make sure we have a valid date string
     if (!date) return false;
     
-    // Parse the date string to a Date object
     const bookingDate = new Date(date);
     
-    // Get today's date with time set to beginning of day for fair comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     

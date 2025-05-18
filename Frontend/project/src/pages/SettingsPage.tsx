@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { 
-  User, Mail, Lock, Globe, Moon, Sun, 
-  ChevronLeft, Languages, CreditCard, 
+  User, Mail, Globe, Moon, 
+  ChevronLeft, 
   Shield, Bell, BellRing, Eye, EyeOff, Camera 
 } from 'lucide-react';
-import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
+import { useGlobalTheme } from '../components/GlobalThemeContext';
 
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isDarkMode, toggleTheme } = useGlobalTheme(); // Use global theme
+  const { isDarkMode, toggleTheme } = useGlobalTheme();
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [profileUrl, setProfileUrl] = useState<string | null>(null);

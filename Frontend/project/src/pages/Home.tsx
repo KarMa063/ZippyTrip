@@ -1,4 +1,4 @@
-import './Home.css'; // Import external CSS for animations
+import './Home.css';
 import Navigation from './Navigation';
 import BackgroundCarousel from './BackgroundCarousel';
 import PopularDestinations from './PopularDestinations';
@@ -9,7 +9,6 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { getCurrentUser } from '../lib/supabase';
 
-// Define interfaces for our data
 interface GuestHouseBooking {
   id: string;
   guestHouseName: string;

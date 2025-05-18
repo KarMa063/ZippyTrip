@@ -1,6 +1,6 @@
 import React from 'react';
 import { Compass, Map, Heart, Calendar, Clock, Sun } from 'lucide-react';
-import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
+import { useGlobalTheme } from '../components/GlobalThemeContext';
 
 interface Category {
   icon: JSX.Element;
@@ -27,7 +27,7 @@ const categories: Category[] = [
 ];
 
 const TripPlanner: React.FC = () => {
-  const { isDarkMode } = useGlobalTheme(); // Use global theme
+  const { isDarkMode } = useGlobalTheme();
 
   return (
     <div className={`max-w-7xl mx-auto px-4 py-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>

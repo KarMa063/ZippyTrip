@@ -56,19 +56,11 @@ app.get('/', (req, res) => {
   res.json({ message: 'ZippyTrip Backend API is running' });
 });
 
-// Import the guesthouse authentication route
+
 const guesthouseAuthRoutes = require('./routes/guesthouse-auth');
-
-// Import the guesthouse cancellations router
 const guesthouseCancellationsRouter = require('./routes/guesthouse-cancellations');
-
-// Use the cancellations router
 app.use('/api/cancellations', cancellationsRouter);
-
-// Use the guesthouse cancellations router
 app.use('/api/guesthouse-cancellations', guesthouseCancellationsRouter);
-
-// Use the guesthouse authentication route
 app.use('/api/guesthouse-auth', guesthouseAuthRoutes);
 
 // Error handling middleware
@@ -82,7 +74,6 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-// Change app.listen to server.listen for WebSocket support
 server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   
