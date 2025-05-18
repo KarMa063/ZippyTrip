@@ -93,45 +93,6 @@ const Sidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
-        {/* Quick Access */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Quick Access</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink 
-                    to="/routes/add" 
-                    className={({ isActive }) => 
-                      isActive 
-                        ? "text-zippy-purple bg-zippy-darkGray" 
-                        : "text-gray-400 hover:text-gray-100"
-                    }
-                  >
-                    <MapPin size={20} />
-                    <span>Add New Route</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink 
-                    to="/users" 
-                    className={({ isActive }) => 
-                      isActive 
-                        ? "text-zippy-purple bg-zippy-darkGray" 
-                        : "text-gray-400 hover:text-gray-100"
-                    }
-                  >
-                    
-                   
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
       
       <div className="mt-auto p-4 flex flex-col space-y-4" />
