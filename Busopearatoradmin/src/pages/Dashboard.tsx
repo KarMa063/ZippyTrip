@@ -4,8 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { fetchRoutes } from '@/services/api/routes';
-import { fetchSchedules } from '@/services/api/schedules';
-import { fetchDashboardStats } from '@/services/analytics';
 import { formatDistanceToNow, format, addDays, isSameDay } from 'date-fns';
 import { query } from '@/integrations/neon/client';
 import { Badge } from "@/components/ui/badge";
@@ -37,8 +35,7 @@ type ActivityItem = {
   user_id?: string;
 };
 
-// Add this import at the top
-import "./dashboard.css"; // Import custom CSS for animations
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -407,7 +404,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            // In the Upcoming Schedules section
+            
             <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp overflow-hidden backdrop-blur-sm bg-opacity-80 shadow-lg card-hover-effect`} style={{
             animationDelay: '500ms'
           }}>

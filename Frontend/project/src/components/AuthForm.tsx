@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Plane, Lock, Mail, Phone, Loader2, ArrowLeft } from 'lucide-react';
+import { Plane, Lock, Mail, Loader2, ArrowLeft } from 'lucide-react';
 import { supabase, sendUserToBackend } from '../lib/supabase';
 
 export default function AuthForm() {
@@ -11,9 +11,8 @@ export default function AuthForm() {
     location.search.includes('mode=login')
   );
   const [loading, setLoading] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
+
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isResetPassword, setIsResetPassword] = useState(false);
@@ -28,18 +27,16 @@ export default function AuthForm() {
     setLoading(true);
 
     try {
-      const credentials =
-        loginMethod === 'email' ? { email, password } : { phone, password };
+      // Fix: Define credentials properly with email and password
+      const credentials = { email, password };
 
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          ...credentials,
-          options: { persistSession: rememberMe }, // Persist session if "Remember Me" is checked
-        });
+        // Fix: Remove the persistSession property that's causing the TypeScript error
+        const { error } = await supabase.auth.signInWithPassword(credentials);
+        
         if (error) throw error;
         await sendUserToBackend();
         toast.success('Welcome back to ZippyTrip!');
-        console.log(supabase.userid)
         navigate('/home');
       } else {
         // Signup Flow
@@ -94,22 +91,6 @@ export default function AuthForm() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // 🔹 Handle Google Login
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/home` },
-    });
-
-    if (error) {
-      toast.error('Google login failed: ' + error.message);
-    } else {
-      navigate('/home');
-    }
-    setLoading(false);
   };
 
   return (

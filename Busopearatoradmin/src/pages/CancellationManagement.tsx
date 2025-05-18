@@ -49,6 +49,10 @@ const CancellationManagement = () => {
         // Transform the data to match the expected structure
         const transformedData = result.rows.map(booking => ({
           ...booking,
+          // Ensure seat_numbers is an array
+          seat_numbers: Array.isArray(booking.seat_numbers) 
+            ? booking.seat_numbers 
+            : booking.seat_numbers ? booking.seat_numbers.toString().split(',') : [],
           schedules: {
             departure_time: booking.departure_time,
             arrival_time: booking.arrival_time,
@@ -163,9 +167,16 @@ const CancellationManagement = () => {
                       </TableCell>
                       <TableCell>{booking.user_id.substring(0, 8)}</TableCell>
                       <TableCell>
-                        <span className="text-xs">{booking.seat_numbers.join(", ")}</span>
+                        {/* Safely handle seat_numbers display */}
+                        <span className="text-xs">
+                          {Array.isArray(booking.seat_numbers) 
+                            ? booking.seat_numbers.join(", ") 
+                            : booking.seat_numbers || "N/A"}
+                        </span>
                         <span className="text-xs text-muted-foreground block">
-                          {booking.seat_numbers.length} {booking.seat_numbers.length === 1 ? 'seat' : 'seats'}
+                          {Array.isArray(booking.seat_numbers) 
+                            ? `${booking.seat_numbers.length} ${booking.seat_numbers.length === 1 ? 'seat' : 'seats'}`
+                            : ""}
                         </span>
                       </TableCell>
                       <TableCell>{formatNepaliRupees(booking.total_fare)}</TableCell>
