@@ -60,7 +60,7 @@ export const fetchRouteNotifications = async (limit = 5): Promise<RouteNotificat
 /**
  * Marks notifications as read in the database
  * @param notificationIds Array of notification IDs to mark as read
- * @returns Boolean indicating success
+ * @returns 
  */
 export const markNotificationsAsRead = async (notificationIds: string[]): Promise<boolean> => {
   if (!notificationIds.length) return true;

@@ -303,7 +303,7 @@ const Dashboard = () => {
     };
   }, []);
 
-  // Quick actions
+
   const quickActions = [{
     title: 'Add New Route',
     path: '/routes/add',
@@ -330,7 +330,7 @@ const Dashboard = () => {
     icon: <ChevronRight className="h-5 w-5" />
   }];
 
-  // Get status color
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'scheduled': return 'bg-blue-500';

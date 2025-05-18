@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { 
-  User, Mail, Lock, Globe, Moon, Sun, 
-  ChevronLeft, Languages, CreditCard, 
-  Shield, Bell, BellRing, Eye, EyeOff, Camera 
+  User, Mail, Globe, Moon,
+  ChevronLeft,
+  Shield, Bell, BellRing, Eye, EyeOff, Camera
 } from 'lucide-react';
 import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
 

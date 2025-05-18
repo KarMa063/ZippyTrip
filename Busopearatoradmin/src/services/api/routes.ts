@@ -10,6 +10,16 @@ export interface RouteInsert {
   is_active: boolean;
 }
 
+// Type for route update
+export interface RouteUpdate {
+  name?: string;
+  origin?: string;
+  destination?: string;
+  distance?: number | null;
+  duration?: number | null;
+  is_active?: boolean;
+}
+
 // Fetch all routes
 export async function fetchRoutes() {
   try {
@@ -52,7 +62,7 @@ export async function createRoute(routeData: RouteInsert) {
 }
 
 // Update an existing route
-export async function updateRoute(id: string, routeData: Partial<RouteInsert>) {
+export async function updateRoute(id: string, routeData: Partial<RouteUpdate>) {
   try {
     // Build the SET part of the query dynamically based on provided fields
     const updates = Object.entries(routeData)
