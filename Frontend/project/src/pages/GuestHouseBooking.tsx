@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Calendar, Users, Star, Heart, MessageSquare, Moon, Sun } from 'lucide-react';
+import { MapPin, Calendar, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGlobalTheme } from '../components/GlobalThemeContext'; 
 import Navigation from './Navigation';
@@ -20,20 +20,21 @@ interface GuestHouse {
     address: string;
     email?: string;
     contact?: string;
-    images: string[];
-    rooms: number;
+    images: string[] | any;
+    roomsCount: number;
     location?: string;
     price?: number;
     rating?: number;
     amenities?: string[];
     reviews?: Review[];
+    ownerId?: string;
 }
 
 const GuestHouseBooking: React.FC = () => {
     const [guestHousesList, setGuestHousesList] = useState<GuestHouse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { isDarkMode, toggleTheme } = useGlobalTheme();
+    const { isDarkMode } = useGlobalTheme();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -43,7 +44,52 @@ const GuestHouseBooking: React.FC = () => {
                 const data = await response.json();
 
                 if (Array.isArray(data.properties)) {
-                    setGuestHousesList(data.properties);
+                    // Process the properties to ensure images are in the correct format and fetch room counts
+                    const processedProperties = await Promise.all(
+                        data.properties.map(async (property: any) => {
+                            let processedImages = [];
+                            
+                            // Handle different image formats from the backend
+                            if (property.images) {
+                                if (typeof property.images === 'string') {
+                                    try {
+                                        // Try to parse if it's a JSON string
+                                        processedImages = JSON.parse(property.images);
+                                    } catch (e) {
+                                        // If parsing fails, use as is
+                                        processedImages = [property.images];
+                                    }
+                                } else if (Array.isArray(property.images)) {
+                                    processedImages = property.images;
+                                } else if (typeof property.images === 'object') {
+                                    // If it's already an object (parsed JSONB)
+                                    processedImages = Object.values(property.images);
+                                }
+                            }
+                            
+                            // Fetch room count for each property
+                            let roomsCount = 0;
+                            try {
+                                const roomsResponse = await fetch(
+                                    `http://localhost:5000/api/gproperties/${property.id}/rooms`
+                                );
+                                const roomsData = await roomsResponse.json();
+                                roomsCount = Array.isArray(roomsData.rooms) ? roomsData.rooms.length : 0;
+                            } catch (error) {
+                                console.error(`Error fetching rooms for property ${property.id}:`, error);
+                                roomsCount = 0;
+                            }
+                            
+                            return {
+                                ...property,
+                                images: processedImages,
+                                ownerId: property.owner_id,
+                                roomsCount: roomsCount
+                            };
+                        })
+                    );
+                    
+                    setGuestHousesList(processedProperties);
                 } else {
                     console.error('Unexpected response shape:', data);
                     setError('Unexpected data format');
@@ -61,6 +107,26 @@ const GuestHouseBooking: React.FC = () => {
 
     const handleViewRooms = (guestHouseId: number) => {
         navigate(`/guesthouse/${guestHouseId}/rooms`);
+    };
+
+    // Helper function to get image URL
+    const getImageUrl = (images: any, index: number = 0): string => {
+        if (!images || images.length === 0) {
+            return '/placeholder-image.jpg';
+        }
+        
+        const image = images[index];
+        // Check if the image is a full URL or just a path
+        if (typeof image === 'string') {
+            if (image.startsWith('http')) {
+                return image;
+            } else {
+                // If it's a relative path, prepend the backend URL
+                return `http://localhost:5000/${image}`;
+            }
+        }
+        
+        return '/placeholder-image.jpg';
     };
 
     return (
@@ -107,9 +173,13 @@ const GuestHouseBooking: React.FC = () => {
                                 >
                                     <div className="relative h-56">
                                         <img
-                                            src={guestHouse.images?.[0] || '/placeholder-image.jpg'}
+                                            src={getImageUrl(guestHouse.images)}
                                             alt={guestHouse.name}
                                             className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.src = '/placeholder-image.jpg';
+                                            }}
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                         <div className="absolute bottom-4 left-4 text-white">
@@ -132,7 +202,7 @@ const GuestHouseBooking: React.FC = () => {
                                             }`}>
                                                 <Users className="w-5 h-5 mr-2" />
                                                 <span className="font-medium">
-                                                    {guestHouse.rooms} {guestHouse.rooms === 1 ? 'Room' : 'Rooms'}
+                                                    {guestHouse.roomsCount} {guestHouse.roomsCount === 1 ? 'Room' : 'Rooms'}
                                                 </span>
                                             </div>
                                             <button 
@@ -163,7 +233,7 @@ const GuestHouseBooking: React.FC = () => {
                 <ChatWidget 
                     key={guestHouse.id}
                     guestHouseId={guestHouse.id.toString()} 
-                    ownerId={guestHouse.ownerId} 
+                    ownerId={'1'} 
                 />
             ))}
         </div>

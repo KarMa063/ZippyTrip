@@ -15,7 +15,6 @@ import {
   AlertDialogTrigger,
 } from "../gcomponents/alert-dialog";
 import { Search, Plus, Edit, Trash2 } from "lucide-react";
-import placeholderImage from "../images/placeholder.png";
 
 type Property = {
   id: string;
@@ -24,8 +23,8 @@ type Property = {
   description?: string;
   contact: string;
   email?: string;
-  images: string[];
-  rooms: number;
+  images: string;
+  roomsCount: number;
 };
 
 const GProperties = () => {
@@ -34,12 +33,33 @@ const GProperties = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    // Fetch properties from the backend
     const fetchProperties = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/gproperties");
-        const data = await response.json();
-        setProperties(data.properties);
+        const propertiesResponse = await fetch("http://localhost:5000/api/gproperties");
+        const propertiesData = await propertiesResponse.json();
+        
+        const propertiesWithRoomCounts = await Promise.all(
+          propertiesData.properties.map(async (property: any) => {
+            try {
+              const roomsResponse = await fetch(
+                `http://localhost:5000/api/gproperties/${property.id}/rooms`
+              );
+              const roomsData = await roomsResponse.json();
+              return {
+                ...property,
+                roomsCount: Array.isArray(roomsData.rooms) ? roomsData.rooms.length : 0
+              };
+            } catch (error) {
+              console.error(`Error fetching rooms for property ${property.id}:`, error);
+              return {
+                ...property,
+                roomsCount: 0
+              };
+            }
+          })
+        );
+
+        setProperties(propertiesWithRoomCounts);
       } catch (error) {
         console.error("Error fetching properties:", error);
       }
@@ -109,7 +129,7 @@ const GProperties = () => {
               <Link to={`/gproperties/${property.id}`}>
                 <div className="aspect-video overflow-hidden">
                   <img
-                    src={property.images?.[0]}
+                    src={property.images}
                     alt={property.name}
                     className="object-cover w-full h-full group-hover:scale-105 transition-transform"
                   />
@@ -118,7 +138,7 @@ const GProperties = () => {
                   <h3 className="font-semibold text-lg">{property.name}</h3>
                   <p className="text-sm text-muted-foreground">{property.address}</p>
                   <div className="text-sm mt-1 text-primary font-medium">
-                    {property.rooms} {property.rooms === 1 ? "Room" : "Rooms"}
+                    {property.roomsCount} {property.roomsCount === 1 ? "Room" : "Rooms"}
                   </div>
                 </CardContent>
               </Link>

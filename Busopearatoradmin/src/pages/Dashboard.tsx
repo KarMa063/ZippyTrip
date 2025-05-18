@@ -403,7 +403,7 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
-       
+
             <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp overflow-hidden backdrop-blur-sm bg-opacity-80 shadow-lg card-hover-effect`} style={{
             animationDelay: '500ms'
           }}>
