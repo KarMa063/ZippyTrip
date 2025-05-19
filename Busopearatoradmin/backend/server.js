@@ -13,8 +13,8 @@ const server = http.createServer(app);
 const allowedOrigins = [
     "http://localhost:3000", // Example default React port
     "http://localhost:3001", // Example potential second frontend port
-    "http://localhost:5173", // Example default Vite port (check your Busopearatoradmin)
-    // Add the URL for your User Frontend (Frontend\project) if different
+    "http://localhost:5173", 
+    
 ];
 
 app.use(cors({
@@ -28,7 +28,7 @@ app.use(cors({
     return callback(null, true);
   },
   methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true // If you need to handle cookies or authorization headers
+  credentials: true
 }));
 
 // Middleware to parse JSON request bodies
@@ -43,12 +43,7 @@ const io = new Server(server, {
   }
 });
 
-// --- Database Setup (Placeholder) ---
-// TODO: Connect to your chosen database (e.g., MongoDB, PostgreSQL, SQLite)
-// const db = require('./database'); // Example
 
-// --- In-Memory Data Store (Temporary Placeholder) ---
-// Replace this with actual database interaction
 let routes = [];
 let bookings = [];
 let nextRouteId = 1;

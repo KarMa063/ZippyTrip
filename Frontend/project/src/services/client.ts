@@ -2,8 +2,8 @@ import { neon, neonConfig } from '@neondatabase/serverless';
 import { Pool } from '@neondatabase/serverless';
 import { Attraction } from './types';
 
-// Connection string should be stored in environment variables
-const connectionString = "postgresql://ZippyTrip_owner:npg_iX4GFVa3QKZt@ep-fragrant-bar-a1v8zqru-pooler.ap-southeast-1.aws.neon.tech/ZippyTrip?sslmode=require";
+// Use environment variable instead of hardcoded connection string
+const connectionString = import.meta.env.VITE_DATABASE_URL || process.env.DATABASE_URL;
 
 // Enable WebSocket pooling for better performance
 neonConfig.webSocketConstructor = globalThis.WebSocket;

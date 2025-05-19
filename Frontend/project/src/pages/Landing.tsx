@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plane, Building2 } from 'lucide-react';
+import { Plane, } from 'lucide-react';
 import { useGlobalTheme } from '../components/GlobalThemeContext'; // Import the global theme hook
-import { supabase } from '../lib/supabase';
+
 
 const images = [
   'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fA%3D%3D&auto=format&fit=crop&w=2021&q=80',
