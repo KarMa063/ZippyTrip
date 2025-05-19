@@ -357,10 +357,8 @@ const Dashboard = () => {
 
   return <div className="py-6 px-4 sm:px-6 lg:px-8 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        {/* Animated Header with Golden Stroke */}
-        <div className={`mb-8 transform transition-all duration-500 ${loaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`} style={{
-        transitionDelay: '100ms'
-      }}>
+        {/* Header - Simplified */}
+        <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
               <p className="mt-2 text-lg text-muted-foreground">
@@ -382,39 +380,35 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - 2/3 width */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Quick Access Section */}
-            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp backdrop-blur-sm bg-opacity-80 shadow-lg card-hover-effect`} style={{
-            animationDelay: '400ms'
-          }}>
+            {/* Quick Access Section - Simplified */}
+            <Card className="border-zippy-gray bg-zippy-darkGray shadow-md">
               <CardContent className="p-6">
-                <h2 className="text-2xl font-bold mb-6 gold-stroke rainbow-text">Quick Actions</h2>
+                <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {quickActions.map((action, index) => (
                     <Button 
                       key={index} 
                       variant="outline" 
-                      className="bg-zippy-darkGray/70 border-zippy-gray/20 h-auto py-4 flex flex-col items-center justify-center hover:bg-zippy-gray/30 transition-all duration-300 shadow-md action-button"
+                      className="bg-zippy-darkGray border-zippy-gray h-auto py-4 flex flex-col items-center justify-center hover:bg-zippy-gray/30 transition-all duration-300"
                       onClick={() => navigate(action.path)}
                     >
-                      <div className="bg-zippy-purple text-white rounded-full p-2 mb-2 shadow-md action-icon">
+                      <div className="bg-zippy-purple text-white rounded-full p-2 mb-2">
                         {action.icon}
                       </div>
-                      <span className="text-white action-text">{action.title}</span>
+                      <span className="text-white">{action.title}</span>
                     </Button>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp overflow-hidden backdrop-blur-sm bg-opacity-80 shadow-lg card-hover-effect`} style={{
-            animationDelay: '500ms'
-          }}>
+            <Card className="border-zippy-gray bg-zippy-darkGray overflow-hidden shadow-md">
               <CardContent className="p-0">
                 <div className="flex justify-between items-center p-6 border-b border-zippy-gray/30">
-                  <h2 className="text-2xl font-bold gold-stroke rainbow-text">Upcoming Schedules</h2>
+                  <h2 className="text-2xl font-bold">Upcoming Schedules</h2>
                   <Button 
                     variant="outline" 
-                    className="bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white view-all-button"
+                    className="bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white"
                     onClick={() => navigate('/schedule')}
                   >
                     <span>View All</span>
@@ -422,8 +416,8 @@ const Dashboard = () => {
                   </Button>
                 </div>
                 
-                {/* Date Selection - Improved UI */}
-                <div className="flex bg-zippy-darkGray/50 p-2 overflow-x-auto no-scrollbar border-b border-zippy-gray/20">
+                {/* Date Selection - Simplified */}
+                <div className="flex bg-zippy-darkGray p-2 overflow-x-auto border-b border-zippy-gray/20">
                   {getNextSevenDays().map((day) => (
                     <Button
                       key={format(day, 'yyyy-MM-dd')} 
@@ -444,8 +438,8 @@ const Dashboard = () => {
                   ))}
                 </div>
                 
-                {/* Schedules for Selected Day - Improved UI */}
-                <div className="p-6 bg-gradient-to-b from-zippy-darkGray/70 to-zippy-darkGray/90">
+                {/* Schedules for Selected Day - Simplified */}
+                <div className="p-6 bg-zippy-darkGray">
                   {isLoading ? (
                     <div className="flex justify-center p-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zippy-purple"></div>
@@ -455,7 +449,7 @@ const Dashboard = () => {
                       {getSchedulesForSelectedDay().map((schedule) => (
                         <div 
                           key={schedule.id}
-                          className="bg-zippy-darkGray/70 rounded-lg cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 overflow-hidden flex backdrop-blur-sm border border-zippy-gray/20 shadow-md schedule-item"
+                          className="bg-zippy-darkGray rounded-lg cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 overflow-hidden flex border border-zippy-gray/20 shadow-md"
                           onClick={() => navigate(`/schedule?id=${schedule.id}`)}
                         >
                           {/* Status indicator */}
@@ -464,7 +458,7 @@ const Dashboard = () => {
                           <div className="p-3 flex-1">
                             <div className="flex justify-between items-center">
                               <div className="flex items-center space-x-3">
-                                <div className={`${getStatusColor(schedule.status)} rounded-full p-2 shadow-md`}>
+                                <div className={`${getStatusColor(schedule.status)} rounded-full p-2`}>
                                   <Bus className="h-4 w-4 text-white" />
                                 </div>
                                 <div>
@@ -493,7 +487,7 @@ const Dashboard = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-16 px-4 bg-zippy-darkGray/40 rounded-lg border border-zippy-gray/20 backdrop-blur-sm">
+                    <div className="text-center py-16 px-4 bg-zippy-darkGray rounded-lg border border-zippy-gray/20">
                       <Calendar className="h-16 w-16 mx-auto mb-4 text-zippy-purple opacity-40" />
                       <p className="text-lg font-medium text-white">No schedules found for {format(selectedDay, 'dd MMM yyyy')}</p>
                       <p className="text-sm mt-2 text-gray-400">The world is a book and those who do not travel read only one page.</p>
@@ -506,60 +500,68 @@ const Dashboard = () => {
 
           {/* Right Column - 1/3 width */}
           <div className="space-y-6">
-            {/* Popular Routes Section */}
-            <Card className={`border-zippy-gray bg-zippy-darkGray animate-fadeSlideUp h-full backdrop-blur-sm bg-opacity-80 shadow-lg`} style={{
-            animationDelay: '600ms'
-          }}>
+            {/* Routes Section - Simplified */}
+            <Card className="border-zippy-gray bg-zippy-darkGray h-full shadow-md">
               <CardContent className="p-6">
-                <h2 className="text-2xl font-bold mb-6 gold-stroke">Routes</h2>
-                
+                <h2 className="text-2xl font-bold mb-6">Routes</h2>
                 {isLoading ? (
                   <div className="flex justify-center p-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zippy-purple"></div>
                   </div>
                 ) : routes.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {routes.slice(0, 5).map((route) => (
                       <div 
                         key={route.id}
-                        className="bg-zippy-darkGray/70 rounded-lg p-3 cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 border border-zippy-gray/20 shadow-md"
-                        onClick={() => navigate(`/routes/${route.id}`)}
+                        className="bg-zippy-darkGray rounded-lg cursor-pointer hover:bg-zippy-gray/30 transition-all duration-300 overflow-hidden flex border border-zippy-gray/20 shadow-md"
+                        onClick={() => navigate(`/routes?id=${route.id}`)}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="bg-zippy-purple rounded-full p-2 shadow-md">
-                              <RouteIcon className="h-4 w-4 text-white" />
-                            </div>
+                        {/* Status indicator */}
+                        <div className={`w-1.5 ${getRouteStatusColor(route.status || 'active')}`}></div>
+                        
+                        <div className="p-3 flex-1">
+                          <div className="flex justify-between items-center">
                             <div>
-                              <h3 className="font-medium text-white">{route.name}</h3>
-                              <p className="text-sm text-gray-400">{route.distance} km</p>
+                              <h3 className="font-medium text-white">{route.name || 'Unnamed Route'}</h3>
+                              <p className="text-sm text-gray-400 flex items-center">
+                                <MapPin className="h-3 w-3 mr-1 inline" /> {route.origin} to {route.destination}
+                              </p>
                             </div>
                           </div>
-                          <Badge className={`${getRouteStatusColor(route.status || 'active')} text-white px-2 py-0.5 text-xs rounded-md`}>
-                            {(route.status || 'Active').charAt(0).toUpperCase() + (route.status || 'active').slice(1)}
-                          </Badge>
-                        </div>
-                        <div className="mt-2 flex items-center text-sm text-gray-400">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          <span>{route.origin} to {route.destination}</span>
+                          <div className="mt-2 flex justify-between items-center text-sm">
+                            <span className="text-gray-400">{route.distance || '0'} km</span>
+                            <Badge className={`${getRouteStatusColor(route.status || 'active')} text-white px-2 py-0.5 text-xs rounded-md`}>
+                              {(route.status || 'Active').charAt(0).toUpperCase() + (route.status || 'active').slice(1)}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                     ))}
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full bg-zippy-darkGray border-zippy-gray hover:bg-zippy-gray/30 transition-all duration-300 text-white mt-4"
+                      onClick={() => navigate('/routes')}
+                    >
+                      <span>View All Routes</span>
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
                   </div>
                 ) : (
-                  <div className="text-center py-8 px-4 bg-zippy-darkGray/40 rounded-lg border border-zippy-gray/20">
-                    <RouteIcon className="h-12 w-12 mx-auto mb-4 text-zippy-purple opacity-40" />
-                    <p className="text-lg font-medium text-white">No routes available</p>
-                    <p className="text-sm mt-2 text-gray-400">Add routes to see them here</p>
+                  <div className="text-center py-16 px-4 bg-zippy-darkGray rounded-lg border border-zippy-gray/20">
+                    <RouteIcon className="h-16 w-16 mx-auto mb-4 text-zippy-purple opacity-40" />
+                    <p className="text-lg font-medium text-white">No routes found</p>
+                    <p className="text-sm mt-2 text-gray-400">Create your first route to get started</p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4 bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white"
+                      onClick={() => navigate('/routes/add')}
+                    >
+                      <span>Add New Route</span>
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
                   </div>
                 )}
-                
-                <div className="mt-4 text-center">
-                  <Button variant="outline" className="bg-zippy-purple/10 border-zippy-purple/30 hover:bg-zippy-purple/20 transition-all duration-300 text-white" onClick={() => navigate('/routes')}>
-                    <span>View All Routes</span>
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </div>
