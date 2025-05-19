@@ -163,9 +163,17 @@ const CancellationManagement = () => {
                       </TableCell>
                       <TableCell>{booking.user_id.substring(0, 8)}</TableCell>
                       <TableCell>
-                        <span className="text-xs">{booking.seat_numbers.join(", ")}</span>
+                        <span className="text-xs">
+                          {Array.isArray(booking.seat_numbers) 
+                            ? booking.seat_numbers.join(", ")
+                            : typeof booking.seat_numbers === 'string'
+                              ? booking.seat_numbers
+                              : 'N/A'}
+                        </span>
                         <span className="text-xs text-muted-foreground block">
-                          {booking.seat_numbers.length} {booking.seat_numbers.length === 1 ? 'seat' : 'seats'}
+                          {Array.isArray(booking.seat_numbers) 
+                            ? `${booking.seat_numbers.length} ${booking.seat_numbers.length === 1 ? 'seat' : 'seats'}`
+                            : '0 seats'}
                         </span>
                       </TableCell>
                       <TableCell>{formatNepaliRupees(booking.total_fare)}</TableCell>

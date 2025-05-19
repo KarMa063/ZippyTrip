@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getUserProfile, UserProfile } from "@/services/profile";
 import { RouteNotification, fetchRouteNotifications } from "@/services/api/uiNotifications";
-import "./header.css"; // Import custom CSS for animations
+
 
 const Header = () => {
   const { user, logout } = useAuth();
