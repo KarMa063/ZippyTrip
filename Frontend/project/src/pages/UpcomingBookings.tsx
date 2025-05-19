@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Bus, Home, Calendar, Clock, MapPin } from 'lucide-react';
+import { Bus, Home, Calendar, Clock, MapPin, ArrowRight } from 'lucide-react';
 import { useGlobalTheme } from '../components/GlobalThemeContext';
 import { getCurrentUser } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 interface Ticket {
@@ -37,6 +38,7 @@ interface GuestHouseBooking {
 }
 
 const UpcomingBookings: React.FC = () => {
+  const navigate = useNavigate();
   const { isDarkMode } = useGlobalTheme();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [guestHouseBookings, setGuestHouseBookings] = useState<GuestHouseBooking[]>([]);
@@ -63,27 +65,32 @@ const UpcomingBookings: React.FC = () => {
         });
         
         if (busResponse.data.success) {
+          // Filter active bookings and future dates only
           const transformedTickets = busResponse.data.bookings
             .filter((booking: any) => {
-              const bookingDate = new Date(booking.booking_date);
-              return bookingDate > new Date() && booking.status !== 'cancelled';
+              const bookingDate = new Date(booking.departure_date || booking.travel_date || booking.booking_date);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              return booking.status !== 'cancelled' && bookingDate >= today;
             })
             .map((booking: any) => ({
               id: String(booking.id),
               busId: booking.schedule_id || booking.route_id,
               from: booking.origin || '',
               to: booking.destination || '',
-              departure: '08:00 AM',
-              arrival: '10:00 AM',
-              date: new Date(booking.booking_date).toISOString().split('T')[0],
+              departure: booking.departure_time || '08:00 AM',
+              arrival: booking.arrival_time || '10:00 AM',
+              date: new Date(booking.departure_date || booking.travel_date || booking.booking_date).toISOString().split('T')[0],
               operator: 'ZippyBus Express',
               price: booking.total_fare,
-              seats: booking.seat_numbers.split(','),
+              seats: typeof booking.seat_numbers === 'string' ? booking.seat_numbers.split(',') : booking.seat_numbers,
               passengerName: userIdString,
               busType: 'AC',
               status: booking.status === 'cancelled' ? 'cancelled' : 'active',
               bookingDate: booking.booking_date
-            }));
+            }))
+            .slice(0, 2); // Only show up to 2 bookings
+          
           setTickets(transformedTickets);
         }
 
@@ -99,6 +106,7 @@ const UpcomingBookings: React.FC = () => {
                 const checkInDate = new Date(booking.check_in);
                 return checkInDate > new Date() && booking.status !== 'cancelled';
               })
+              .slice(0, 2) // Only process up to 2 bookings
               .map(async (booking: any) => {
                 try {
                   const [property, room] = await Promise.all([
@@ -138,7 +146,7 @@ const UpcomingBookings: React.FC = () => {
           setGuestHouseBookings(transformedGuestHouseBookings);
         }
 
-        // Set default tab
+        // Set default tab based on which has more bookings
         if (busResponse?.data?.success && busResponse.data.bookings.length > 0) {
           setActiveTab('bus');
         } else if (guesthouseResponse?.data?.success && guesthouseResponse.data.bookings.length > 0) {
@@ -153,6 +161,10 @@ const UpcomingBookings: React.FC = () => {
     };
     fetchUserData();
   }, []);
+
+  const handleSeeMoreClick = () => {
+    navigate('/profile', { state: { activeTab } });
+  };
 
   if (isLoading) {
     return (
@@ -178,9 +190,20 @@ const UpcomingBookings: React.FC = () => {
 
   return (
     <div className="py-8">
-      <h2 className="text-2xl font-bold mb-6">Your Upcoming Bookings</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Your Upcoming Bookings</h2>
+        <button 
+          onClick={handleSeeMoreClick}
+          className={`flex items-center text-sm font-medium transition-all duration-300 hover:translate-x-1 ${
+            isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+          }`}
+        >
+          View all bookings <ArrowRight className="ml-1 h-4 w-4" />
+        </button>
+      </div>
+      
       {/* Tab Switcher */}
-      <div className="flex mb-8 gap-4">
+      <div className="flex mb-6 gap-4">
         <button
           className={`flex items-center px-4 py-2 rounded-lg font-semibold transition-colors duration-200 border-b-2 focus:outline-none ${
             activeTab === 'bus'
@@ -216,30 +239,30 @@ const UpcomingBookings: React.FC = () => {
       {/* Bus Tickets */}
       {activeTab === 'bus' && tickets.length > 0 && (
         <div className="mb-8">
-          <div className="grid gap-6">
+          <div className="grid gap-4">
             {tickets.map((ticket) => (
               <div
                 key={ticket.id}
-                className={`p-6 rounded-xl shadow-md border transition-transform duration-150 hover:scale-[1.01] ${
+                className={`p-4 rounded-xl shadow-md border transition-transform duration-150 hover:scale-[1.01] ${
                   isDarkMode
                     ? 'bg-gray-800 border-gray-700 hover:bg-gray-700'
                     : 'bg-white border-gray-200 hover:bg-blue-50'
                 }`}
               >
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-3">
                   <div>
                     <h4 className="text-lg font-bold">{ticket.operator}</h4>
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{ticket.busType} • Booking ID: <span className="font-mono text-blue-500">{ticket.id.substring(0, 8)}</span></p>
                   </div>
-                  <div className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>Rs. {ticket.price}</div>
+                  <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>Rs. {ticket.price}</div>
                 </div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex-1">
                     <div className="text-lg font-semibold">{ticket.from}</div>
                     <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Origin</div>
                   </div>
                   <div className="flex-1 flex justify-center">
-                    <div className={`w-20 h-0.5 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} relative`}>
+                    <div className={`w-16 h-0.5 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} relative`}>
                       <Bus className={`absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
                     </div>
                   </div>
@@ -248,27 +271,14 @@ const UpcomingBookings: React.FC = () => {
                     <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Destination</div>
                   </div>
                 </div>
-                <div className="flex flex-col md:flex-row md:justify-between gap-4">
+                <div className="flex flex-wrap gap-4">
                   <div className="flex items-center space-x-2">
-                    <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-                    <div>
-                      <p className="font-medium">Travel Date</p>
-                      <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{new Date(ticket.date).toLocaleDateString()}</p>
-                    </div>
+                    <Calendar className={`h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{new Date(ticket.date).toLocaleDateString()}</p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-                    <div>
-                      <p className="font-medium">Departure</p>
-                      <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{ticket.departure}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Clock className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-                    <div>
-                      <p className="font-medium">Arrival</p>
-                      <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{ticket.arrival}</p>
-                    </div>
+                    <Clock className={`h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{ticket.departure}</p>
                   </div>
                 </div>
               </div>
@@ -280,43 +290,35 @@ const UpcomingBookings: React.FC = () => {
       {/* Guesthouse Bookings */}
       {activeTab === 'guesthouse' && guestHouseBookings.length > 0 && (
         <div>
-          <div className="grid gap-6">
+          <div className="grid gap-4">
             {guestHouseBookings.map((booking) => (
               <div
                 key={booking.id}
-                className={`p-6 rounded-xl shadow-md border transition-transform duration-150 hover:scale-[1.01] ${
+                className={`p-4 rounded-xl shadow-md border transition-transform duration-150 hover:scale-[1.01] ${
                   isDarkMode
                     ? 'bg-gray-800 border-gray-700 hover:bg-gray-700'
                     : 'bg-white border-gray-200 hover:bg-blue-50'
                 }`}
               >
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-3">
                   <div>
                     <h4 className="text-lg font-bold">{booking.guestHouseName}</h4>
-                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{booking.roomType} • Booking ID: <span className="font-mono text-blue-500">{booking.id.substring(0, 8)}</span></p>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{booking.roomType}</p>
                   </div>
-                  <div className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                  <div className={`text-xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
                     NRs. {booking.total_price}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2 mb-4">
-                  <MapPin className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{booking.location}</p>
+                <div className="flex items-center space-x-2 mb-3">
+                  <MapPin className={`h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{booking.location}</p>
                 </div>
-                <div className="flex flex-col md:flex-row md:justify-between gap-4">
+                <div className="flex flex-wrap gap-4">
                   <div className="flex items-center space-x-2">
-                    <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-                    <div>
-                      <p className="font-medium">Check-in</p>
-                      <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{new Date(booking.checkIn).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Calendar className={`h-5 w-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-                    <div>
-                      <p className="font-medium">Check-out</p>
-                      <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{new Date(booking.checkOut).toLocaleDateString()}</p>
-                    </div>
+                    <Calendar className={`h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {new Date(booking.checkIn).toLocaleDateString()} - {new Date(booking.checkOut).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               </div>

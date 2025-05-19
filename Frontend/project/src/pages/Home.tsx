@@ -105,51 +105,28 @@ const Home = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-xl font-semibold mb-4 flex items-center"><HomeIcon className="h-6 w-6 mr-2 text-green-500" /> Guesthouses</h3>
             <div className="space-y-4">
-              {isLoading ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500"></div>
+              {/* Always show these specific guesthouses */}
+              <div className="flex items-center justify-between p-4 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition cursor-pointer" onClick={() => navigate('/guesthouses')}>
+                <div className="flex items-center">
+                  <HomeIcon className="h-10 w-10 text-green-400 mr-4" />
+                  <div>
+                    <div className="font-semibold">Hotel Pristine Himalaya</div>
+                    <div className="text-gray-500 dark:text-gray-400 text-sm">Sarangkot Road, Pokhara, Kaski</div>
+                  </div>
                 </div>
-              ) : recentGuesthouses.length > 0 ? (
-                // Show actual bookings
-                recentGuesthouses.map(booking => (
-                  <div key={booking.id} className="flex items-center justify-between p-4 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition cursor-pointer" onClick={() => navigate('/profile', { state: { activeTab: 'guesthouse' } })}>
-                    <div className="flex items-center">
-                      <HomeIcon className="h-10 w-10 text-green-400 mr-4" />
-                      <div>
-                        <div className="font-semibold">{booking.guestHouseName}</div>
-                        <div className="text-gray-500 dark:text-gray-400 text-sm">{booking.location}</div>
-                      </div>
-                    </div>
-                    <button className="px-4 py-1 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700">View</button>
+                <button className="px-4 py-1 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700">View Rooms</button>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition cursor-pointer" onClick={() => navigate('/guesthouses')}>
+                <div className="flex items-center">
+                  <HomeIcon className="h-10 w-10 text-green-400 mr-4" />
+                  <div>
+                    <div className="font-semibold">Hotel Jungle Crown</div>
+                    <div className="text-gray-500 dark:text-gray-400 text-sm">Tigerpoint, Baghmara, Sauraha, Sauraha</div>
                   </div>
-                ))
-              ) : (
-                // Show sample guesthouses if no bookings
-                <>
-                  {/* Sample Guesthouse 1 */}
-                  <div className="flex items-center justify-between p-4 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition cursor-pointer" onClick={() => navigate('/guesthouses')}>
-                    <div className="flex items-center">
-                      <HomeIcon className="h-10 w-10 text-green-400 mr-4" />
-                      <div>
-                        <div className="font-semibold">Hotel Lo Mustang</div>
-                        <div className="text-gray-500 dark:text-gray-400 text-sm">Thamel, Kathmandu</div>
-                      </div>
-                    </div>
-                    <button className="px-4 py-1 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700">View</button>
-                  </div>
-                  {/* Sample Guesthouse 2 */}
-                  <div className="flex items-center justify-between p-4 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition cursor-pointer" onClick={() => navigate('/guesthouses')}>
-                    <div className="flex items-center">
-                      <HomeIcon className="h-10 w-10 text-green-400 mr-4" />
-                      <div>
-                        <div className="font-semibold">Everest Guesthouse</div>
-                        <div className="text-gray-500 dark:text-gray-400 text-sm">Lakeside, Pokhara</div>
-                      </div>
-                    </div>
-                    <button className="px-4 py-1 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700">View</button>
-                  </div>
-                </>
-              )}
+                </div>
+                <button className="px-4 py-1 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700">View Rooms</button>
+              </div>
             </div>
           </div>
         </div>

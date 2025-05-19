@@ -137,9 +137,7 @@ router.post('/', async (req, res) => {
         email
       ]
     );
-    
-    console.log('Booking created with data:', result.rows[0]);
-    
+        
     res.status(201).json({ success: true, booking: result.rows[0] });
   } catch (error) {
     console.error("Error creating booking:", error);
