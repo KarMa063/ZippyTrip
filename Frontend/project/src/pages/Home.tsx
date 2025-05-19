@@ -112,7 +112,7 @@ const Home = () => {
               ) : recentGuesthouses.length > 0 ? (
                 // Show actual bookings
                 recentGuesthouses.map(booking => (
-                  <div key={booking.id} className="flex items-center justify-between p-4 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition cursor-pointer" onClick={() => navigate('/profile', { state: { activeTab: 'guesthouse' } })}>
+                  <div key={booking.id} className="flex items-center justify-between p-4 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition cursor-pointer" onClick={() => navigate('/guesthouses')}>
                     <div className="flex items-center">
                       <HomeIcon className="h-10 w-10 text-green-400 mr-4" />
                       <div>
