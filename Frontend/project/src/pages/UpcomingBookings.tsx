@@ -65,9 +65,9 @@ const UpcomingBookings: React.FC = () => {
         });
         
         if (busResponse.data.success) {
-          // Filter active bookings and future dates only
           const transformedTickets = busResponse.data.bookings
             .filter((booking: any) => {
+              if (booking.user_id && booking.user_id !== userIdString) {return false;}
               const bookingDate = new Date(booking.departure_date || booking.travel_date || booking.booking_date);
               const today = new Date();
               today.setHours(0, 0, 0, 0);
@@ -84,7 +84,7 @@ const UpcomingBookings: React.FC = () => {
               operator: 'ZippyBus Express',
               price: booking.total_fare,
               seats: typeof booking.seat_numbers === 'string' ? booking.seat_numbers.split(',') : booking.seat_numbers,
-              passengerName: userIdString,
+              passengerName: booking.passenger_name,
               busType: 'AC',
               status: booking.status === 'cancelled' ? 'cancelled' : 'active',
               bookingDate: booking.booking_date
@@ -103,6 +103,7 @@ const UpcomingBookings: React.FC = () => {
           const bookingsWithDetails = await Promise.all(
             guesthouseResponse.data.bookings
               .filter((booking: any) => {
+                if (booking.traveller_id && booking.traveller_id !== userIdString) {return false;}
                 const checkInDate = new Date(booking.check_in);
                 return checkInDate > new Date() && booking.status !== 'cancelled';
               })
@@ -143,6 +144,7 @@ const UpcomingBookings: React.FC = () => {
             bookingDate: booking.created_at || new Date().toISOString(),
             location: property?.address || 'Unknown Location'
           }));
+          console.log('Transformed guesthouse bookings:', transformedGuestHouseBookings);
           setGuestHouseBookings(transformedGuestHouseBookings);
         }
 
@@ -215,7 +217,6 @@ const UpcomingBookings: React.FC = () => {
                 : 'border-transparent text-gray-500 hover:text-blue-600 hover:bg-blue-100'
           }`}
           onClick={() => setActiveTab('bus')}
-          disabled={tickets.length === 0}
         >
           <Bus className="h-5 w-5 mr-2" /> Bus Tickets
         </button>
@@ -230,7 +231,6 @@ const UpcomingBookings: React.FC = () => {
                 : 'border-transparent text-gray-500 hover:text-blue-600 hover:bg-blue-100'
           }`}
           onClick={() => setActiveTab('guesthouse')}
-          disabled={guestHouseBookings.length === 0}
         >
           <Home className="h-5 w-5 mr-2" /> Guesthouse Bookings
         </button>

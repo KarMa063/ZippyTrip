@@ -39,6 +39,65 @@ const PropertyDetails = () => {
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState<{ [key: number]: string }>({});
 
+  const getOccupiedRoomsCount = (bookings: Booking[]) => {
+    const today = new Date();
+    return new Set(
+      bookings
+        .filter((booking) => {
+          const checkIn = new Date(booking.check_in);
+          const checkOut = new Date(booking.check_out);
+          return (
+            booking.status === "confirmed" &&
+            today >= checkIn &&
+            today <= checkOut
+          );
+        })
+        .map((booking) => booking.room_id)
+    ).size;
+  };
+
+  const getOccupancyRate = (bookings: Booking[], totalRooms: number) => {
+    if (totalRooms === 0) return 0;
+
+    // Determine the date range to analyze (e.g., last 30 days)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
+
+    // Filter bookings that overlap with our date range
+    const relevantBookings = bookings.filter(booking => {
+      const bookingCheckIn = new Date(booking.check_in);
+      const bookingCheckOut = new Date(booking.check_out);
+      return (
+        booking.status === "confirmed" &&
+        bookingCheckOut > startDate && 
+        bookingCheckIn < endDate
+      );
+    });
+
+    // Calculate total occupied room nights in the period
+    const occupiedNights = relevantBookings.reduce((sum, booking) => {
+      const checkIn = new Date(booking.check_in);
+      const checkOut = new Date(booking.check_out);
+      
+      // Adjust dates to fit within our analysis period
+      const effectiveCheckIn = checkIn < startDate ? startDate : checkIn;
+      const effectiveCheckOut = checkOut > endDate ? endDate : checkOut;
+      
+      const nights = Math.ceil(
+        (effectiveCheckOut.getTime() - effectiveCheckIn.getTime()) / 
+        (1000 * 60 * 60 * 24)
+      );
+      
+      return sum + nights;
+    }, 0);
+
+    // Total possible room nights in the period
+    const totalAvailableNights = totalRooms * 30;
+
+    return Math.round((occupiedNights / totalAvailableNights) * 100);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -95,14 +154,16 @@ const PropertyDetails = () => {
 
         // Calculate stats
         const totalRooms = roomsData.rooms.length;
-        const occupiedRooms = enrichedBookings.filter(
-          (booking: Booking) => booking.status === "confirmed"
-        ).length;
-        const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+        const occupiedRooms = getOccupiedRoomsCount(enrichedBookings);
+        const occupancyRate = getOccupancyRate(enrichedBookings, totalRooms);
 
-        // Calculate total revenue from confirmed bookings
+        // Calculate total revenue from completed confirmed bookings (where checkout date has passed)
+        const today = new Date();
         const totalRevenue = enrichedBookings
-          .filter((booking: Booking) => booking.status === "confirmed")
+          .filter((booking: Booking) => {
+            const checkOut = new Date(booking.check_out);
+            return booking.status === "confirmed" && today > checkOut;
+          })
           .reduce((sum: number, booking: Booking) => sum + (Number(booking.total_price) || 0), 0);
 
         const averageRating = reviewsData.reviews.length > 0
@@ -144,15 +205,23 @@ const PropertyDetails = () => {
         throw new Error(data.message || "Failed to delete room");
       }
 
-      setProperty((prev: any) => ({
-        ...prev,
-        rooms: prev.rooms.filter((room: any) => room.id !== roomId),
-        totalRooms: prev.totalRooms - 1,
-        occupiedRooms: prev.bookings.filter((b: Booking) => b.status === "confirmed" && prev.rooms.some((r: any) => r.id === b.room_id && r.id !== roomId)).length,
-        occupancyRate: prev.totalRooms - 1 > 0
-          ? Math.round((prev.bookings.filter((b: Booking) => b.status === "confirmed" && prev.rooms.some((r: any) => r.id === b.room_id && r.id !== roomId)).length / (prev.totalRooms - 1)) * 100)
-          : 0,
-      }));
+      setProperty((prev: any) => {
+        const remainingBookings = prev.bookings.filter(
+          (b: Booking) => b.room_id !== roomId
+        );
+        const newTotalRooms = prev.totalRooms - 1;
+        const newOccupiedRooms = getOccupiedRoomsCount(remainingBookings);
+        
+        return {
+          ...prev,
+          rooms: prev.rooms.filter((room: any) => room.id !== roomId),
+          totalRooms: newTotalRooms,
+          occupiedRooms: newOccupiedRooms,
+          occupancyRate: newTotalRooms > 0 
+            ? Math.round((newOccupiedRooms / newTotalRooms) * 100) 
+            : 0,
+        };
+      });
     } catch (error) {
       console.error("Delete failed:", error);
       alert("Could not delete room.");
@@ -303,67 +372,82 @@ const PropertyDetails = () => {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {property.rooms.map((room: any) => (
-              <Card key={room.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                <div className="relative">
-                  <img
-                    src={room.images}
-                    alt={room.name}
-                    className="h-48 w-full object-cover rounded-t-lg"
-                  />
-                  <Badge
-                    variant={room.availability ? "success" : "secondary"}
-                    className="absolute top-2 right-2 shadow-sm"
-                  >
-                    {room.availability ? "Available" : "Occupied"}
-                  </Badge>
-                </div>
-                
-                <CardContent className="p-5 space-y-4">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-semibold">{room.name}</h3>
-                    <span className="text-lg font-bold text-primary">
-                      Rs. {room.price?.toLocaleString('en-IN') || "N/A"}
-                    </span>
+            {property.rooms.map((room: any) => {
+              // Determine if room is currently occupied
+              const isOccupied = property.bookings.some((b: Booking) => {
+                const today = new Date();
+                const checkIn = new Date(b.check_in);
+                const checkOut = new Date(b.check_out);
+                return (
+                  b.room_id === room.id &&
+                  b.status === "confirmed" &&
+                  today >= checkIn &&
+                  today <= checkOut
+                );
+              });
+
+              return (
+                <Card key={room.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                  <div className="relative">
+                    <img
+                      src={room.images}
+                      alt={room.name}
+                      className="h-48 w-full object-cover rounded-t-lg"
+                    />
+                    <Badge
+                      variant={isOccupied ? "secondary" : "success"}
+                      className="absolute top-2 right-2 shadow-sm"
+                    >
+                      {isOccupied ? "Occupied" : "Available"}
+                    </Badge>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <UserCheck className="h-4 w-4" />
-                    <span>Capacity: {room.capacity} {room.capacity > 1 ? 'guests' : 'guest'}</span>
-                  </div>
-                  
-                  {room.amenities?.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-muted-foreground">Amenities</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {room.amenities.map((a: string, i: number) => (
-                          <Badge key={i} variant="outline" className="text-xs py-1 px-2 rounded-full">
-                            {a}
-                          </Badge>
-                        ))}
-                      </div>
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-lg font-semibold">{room.name}</h3>
+                      <span className="text-lg font-bold text-primary">
+                        Rs. {room.price?.toLocaleString('en-IN') || "N/A"}
+                      </span>
                     </div>
-                  )}
-                  
-                  <div className="flex justify-end gap-3 pt-4 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/gproperties/${propertyId}/rooms/${room.id}/edit`)}
-                    >
-                      <Edit className="h-4 w-4" /> Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteRoom(room.id)}
-                    >
-                      <Trash className="h-4 w-4" /> Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <UserCheck className="h-4 w-4" />
+                      <span>Capacity: {room.capacity} {room.capacity > 1 ? 'guests' : 'guest'}</span>
+                    </div>
+                    
+                    {room.amenities?.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-muted-foreground">Amenities</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {room.amenities.map((a: string, i: number) => (
+                            <Badge key={i} variant="outline" className="text-xs py-1 px-2 rounded-full">
+                              {a}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/gproperties/${propertyId}/rooms/${room.id}/edit`)}
+                      >
+                        <Edit className="h-4 w-4" /> Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteRoom(room.id)}
+                      >
+                        <Trash className="h-4 w-4" /> Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 
@@ -387,28 +471,32 @@ const PropertyDetails = () => {
                 </thead>
                 <tbody>
                   {property.bookings.length > 0 ? (
-                    property.bookings.map((booking: Booking) => (
-                      <tr key={booking.id} className="border-b hover:bg-accent/20">
-                        <td className="p-4 font-medium">{booking.traveller_email || 'Not available'}</td>
-                        <td className="p-4 text-sm">{booking.room_name || 'Not available'}</td>
-                        <td className="p-4 text-sm">{new Date(booking.check_in).toLocaleDateString()}</td>
-                        <td className="p-4 text-sm">{new Date(booking.check_out).toLocaleDateString()}</td>
-                        <td className="p-4">
-                          <Badge variant={
-                            booking.status === "confirmed" ? "success" :
-                            booking.status === "pending" ? "outline" :
-                            booking.status === "cancelled" ? "destructive" :
-                            booking.status === "declined" ? "destructive" :
-                            "secondary"
-                          }>
-                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          {booking.status === "confirmed" ? `Rs. ${booking.total_price?.toLocaleString('en-IN') || 0}` : "N/A"}
-                        </td>
-                      </tr>
-                    ))
+                    property.bookings
+                      .sort((a: Booking, b: Booking) => 
+                        new Date(b.check_in).getTime() - new Date(a.check_in).getTime()
+                      )
+                      .map((booking: Booking) => (
+                        <tr key={booking.id} className="border-b hover:bg-accent/20">
+                          <td className="p-4 font-medium">{booking.traveller_email || 'Not available'}</td>
+                          <td className="p-4 text-sm">{booking.room_name || 'Not available'}</td>
+                          <td className="p-4 text-sm">{new Date(booking.check_in).toLocaleDateString()}</td>
+                          <td className="p-4 text-sm">{new Date(booking.check_out).toLocaleDateString()}</td>
+                          <td className="p-4">
+                            <Badge variant={
+                              booking.status === "confirmed" ? "success" :
+                              booking.status === "pending" ? "outline" :
+                              booking.status === "cancelled" ? "destructive" :
+                              booking.status === "declined" ? "destructive" :
+                              "secondary"
+                            }>
+                              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                            </Badge>
+                          </td>
+                          <td className="p-4">
+                            {booking.status === "confirmed" ? `Rs. ${booking.total_price?.toLocaleString('en-IN') || 0}` : "N/A"}
+                          </td>
+                        </tr>
+                      ))
                   ) : (
                     <tr>
                       <td colSpan={6} className="p-4 text-center text-muted-foreground">

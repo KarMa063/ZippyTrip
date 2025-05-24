@@ -32,8 +32,10 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// List of allowed guesthouse owner emails
-const ALLOWED_GUESTHOUSE_EMAILS = ['zippytrip101@gmail.com', 'zippyguest'];
+// List of allowed guesthouse owner emails and passwords
+const ALLOWED_CREDENTIALS = [
+  { email: "zippytrip101@gmail.com", password: "zippy123" }
+]
 
 const GLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -49,32 +51,35 @@ const GLogin = () => {
   });
 
   const onSubmit = async (data: FormValues) => {
-    setIsLoading(true);
-    setAuthError(null);
-    
-    try {
-      // Check if email is in the allowed list
-      if (!ALLOWED_GUESTHOUSE_EMAILS.includes(data.email)) {
-        setAuthError("You are not authorized to access the guesthouse owner portal.");
-        toast.error("Unauthorized access attempt");
-        return;
-      }
-      
-      setTimeout(() => {
-        localStorage.setItem('guesthouseOwner', JSON.stringify({
-          email: data.email,
-          role: "guesthouse_owner"
-        }));
-        
-        toast.success("Login successful. Welcome back!");
-        navigate("/gdashboard");
-      }, 1000);
-    } catch (error) {
-      toast.error("Login failed. Please check your credentials.");
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+  setAuthError(null);
+
+  try {
+    const isValidUser = ALLOWED_CREDENTIALS.find(
+      (cred) => cred.email === data.email && cred.password === data.password
+    );
+
+    if (!isValidUser) {
+      setAuthError("Invalid email or password.");
+      toast.error("Unauthorized access attempt");
+      return;
     }
-  };
+
+    setTimeout(() => {
+      localStorage.setItem("guesthouseOwner", JSON.stringify({
+        email: data.email,
+        role: "guesthouse_owner",
+      }));
+
+      toast.success("Login successful. Welcome back!");
+      navigate("/gdashboard");
+    }, 1000);
+  } catch (error) {
+    toast.error("Login failed. Please check your credentials.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -116,7 +121,7 @@ const GLogin = () => {
                         <div className="relative">
                           <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Input
-                            placeholder="name@example.com"
+                            placeholder="Enter your mail"
                             className="pl-10"
                             {...field}
                             disabled={isLoading}
@@ -161,14 +166,6 @@ const GLogin = () => {
             </Form>
           </CardContent>
 
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-center text-muted-foreground">
-              Don't have an account?{" "}
-              <Link to="/gsignup" className="text-primary underline-offset-4 hover:underline">
-                Sign up
-              </Link>
-            </div>
-          </CardFooter>
         </Card>
       </main>
 

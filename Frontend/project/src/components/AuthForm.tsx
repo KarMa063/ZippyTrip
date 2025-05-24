@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Plane, Lock, Mail, Phone, Loader2, ArrowLeft } from 'lucide-react';
+import { Plane, Lock, Mail, Loader2, ArrowLeft } from 'lucide-react';
 import { supabase, sendUserToBackend } from '../lib/supabase';
 
 export default function AuthForm() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isLogin, setIsLogin] = useState(
-    location.search.includes('mode=login')
-  );
+  const [isLogin, setIsLogin] = useState(location.search.includes('mode=login'));
   const [loading, setLoading] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isResetPassword, setIsResetPassword] = useState(false);
@@ -22,43 +18,44 @@ export default function AuthForm() {
     setIsLogin(location.search.includes('mode=login'));
   }, [location]);
 
-  // 🔹 Handle Email/Phone Authentication
+  // 🔹 Handle Email Authentication
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const credentials =
-        loginMethod === 'email' ? { email, password } : { phone, password };
+      const credentials = { email, password };
 
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
           ...credentials,
-          options: { persistSession: rememberMe }, // Persist session if "Remember Me" is checked
+          options: { persistSession: rememberMe },
         });
         if (error) throw error;
+
         await sendUserToBackend();
+
+        // Get user ID (if needed for debug)
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log('User ID:', user?.id);
+
         toast.success('Welcome back to ZippyTrip!');
-        console.log(supabase.userid)
         navigate('/home');
       } else {
-        // Signup Flow
+        // Signup flow
         const { error } = await supabase.auth.signUp({
           ...credentials,
           options: {
             emailRedirectTo: `${window.location.origin}/home`,
-            data: { email_confirm: false },
           },
         });
 
         if (error?.message.includes('confirmation')) {
-          toast.success(
-            'Check your email to confirm your account before logging in.'
-          );
+          toast.success('Check your email to confirm your account before logging in.');
         } else if (error) {
           throw error;
         } else {
-          await sendUserToBackend();         
+          await sendUserToBackend();
           toast.success('Welcome to ZippyTrip! Your account has been created.');
           navigate('/Preferences');
         }
@@ -99,17 +96,21 @@ export default function AuthForm() {
   // 🔹 Handle Google Login
   const handleGoogleLogin = async () => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/home` },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/home` },
+      });
 
-    if (error) {
-      toast.error('Google login failed: ' + error.message);
-    } else {
+      if (error) throw error;
+
+      await sendUserToBackend();
       navigate('/home');
+    } catch (error: any) {
+      toast.error('Google login failed: ' + error.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -235,6 +236,18 @@ export default function AuthForm() {
               )}
             </button>
           </form>
+
+          {!isResetPassword && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="text-sm text-white underline hover:text-blue-400"
+              >
+                {loading ? 'Processing...' : 'Continue with Google'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

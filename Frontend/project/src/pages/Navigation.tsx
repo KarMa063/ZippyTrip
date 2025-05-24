@@ -6,7 +6,6 @@ import {
   MapPin,
   Moon,
   Sun,
-  Bell,
   User,
   Settings,
   LogOut,
@@ -166,13 +165,6 @@ const Navigation: React.FC = () => {
               ) : (
                 <Moon className="h-5 w-5 text-gray-600 hover-text" />
               )}
-            </button>
-            <button
-              className={`p-2 rounded-full ${
-                isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
-              } transition-colors`}
-            >
-              <Bell className="h-5 w-5 hover-text" />
             </button>
 
 <div className="relative">
