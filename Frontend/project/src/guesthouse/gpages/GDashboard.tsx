@@ -15,6 +15,7 @@ interface Property {
   phoneNumber: string;
   images: string[];
   rooms: any[];
+  roomCount?: number;
 }
 
 interface Booking {
@@ -22,6 +23,8 @@ interface Booking {
   traveller_id: string;
   property_id: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'declined';
+  check_in: string;
+  check_out: string;
   traveller_email?: string;
   property_name?: string;
   total_price?: number;
@@ -58,37 +61,50 @@ const GDashboard = () => {
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [totalRevenue, setTotalRevenue] = useState<number>(0);
 
-
   const stats = [
     { title: "Total Properties", value: properties.length.toString(), icon: <Home className="h-5 w-5 text-blue-500" /> },
     {
       title: "Active Bookings",
-      value: bookings.filter(b => b.status.toLowerCase() === 'confirmed').length.toString(),
+      value: bookings.filter(b => {
+        const today = new Date();
+        const checkIn = new Date(b.check_in);
+        const checkOut = new Date(b.check_out);
+        return b.status.toLowerCase() === 'confirmed' && today >= checkIn && today <= checkOut;
+      }).length.toString(),
       icon: <Calendar className="h-5 w-5 text-green-500" />
     },
     {
       title: "Pending Requests",
-      value: bookings.filter(b => b.status.toLowerCase() === 'pending').length.toString(),
+      value: bookings.filter(b => {
+        const today = new Date();
+        const checkIn = new Date(b.check_in);
+        return b.status.toLowerCase() === 'pending' && today <= checkIn;
+      }).length.toString(),
       icon: <BarChart3 className="h-5 w-5 text-yellow-500" />
     },
     { title: "Total Revenue", value: `NRs. ${totalRevenue}`, icon: <DollarSign className="h-5 w-5 text-purple-500" /> },
-  ];
-
-  const recentMessages = [
-    { id: 1, guest: "John Doe", message: "Hi, I have a question about the Himalyan Retreat.", time: "10:23 AM", isRead: true, sentByMe: false },
-    { id: 2, guest: "Jane Smith", message: "Thanks for the information!", time: "Yesterday", isRead: false, sentByMe: false },
-    { id: 3, guest: "Sandra Williams", message: "I've sent over the booking confirmation.", time: "5 days ago", isRead: true, sentByMe: true },
   ];
 
   useEffect(() => {
     const fetchProperties = async () => {
       try {
         const response = await fetch("http://localhost:5000/api/gproperties/");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
-        setProperties(data.properties || []);
+
+        const propertiesWithRoomCount = await Promise.all(
+          data.properties.map(async (property: Property) => {
+            const roomsResponse = await fetch(`http://localhost:5000/api/gproperties/${property.id}/rooms`);
+            const roomsData = roomsResponse.ok ? await roomsResponse.json() : { rooms: [] };
+            
+            return {
+              ...property,
+              roomCount: roomsData.rooms ? roomsData.rooms.length : 0,
+            };
+          })
+        );
+
+        setProperties(propertiesWithRoomCount);
       } catch (error) {
         console.error("Failed to fetch properties:", error);
       }
@@ -266,7 +282,7 @@ const GDashboard = () => {
                     <p className="text-sm text-muted-foreground">{property.address}</p>
                   </div>
                   <div className="text-sm">
-                    <div>{property.rooms} Rooms</div>
+                    <div>{property.roomCount} Rooms</div>
                   </div>
                 </div>
               ))}
@@ -304,25 +320,30 @@ const GDashboard = () => {
                 </thead>
                 <tbody>
                   {bookings.length > 0 ? (
-                    bookings.slice(0, 6).map((booking) => (
-                      <tr key={booking.id} className="border-b text-sm">
-                        <td className="py-3 pr-4">{booking.property_name}</td>
-                        <td className="py-3 pr-4">{booking.traveller_email}</td>
-                        <td className="py-3">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs ${booking.status === "confirmed"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                              : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                              }`}
-                          >
-                            {booking.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                    bookings
+                      .sort((a, b) => new Date(b.check_in).getTime() - new Date(a.check_in).getTime())
+                      .slice(0, 5)
+                      .map((booking) => (
+                        <tr key={booking.id} className="border-b text-sm">
+                          <td className="py-3 pr-4">{booking.property_name}</td>
+                          <td className="py-3 pr-4">{booking.traveller_email}</td>
+                          <td className="py-3">
+                            <span
+                              className={`inline-block px-2 py-1 rounded-full text-xs ${booking.status === "confirmed"
+                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                                : booking.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                                }`}
+                            >
+                              {booking.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
                   ) : (
                     <tr>
-                      <td colSpan={3} className="py-3 text-center text-sm text-muted-foreground">
+                      <td colSpan={4} className="py-3 text-center text-sm text-muted-foreground">
                         No bookings found.
                       </td>
                     </tr>

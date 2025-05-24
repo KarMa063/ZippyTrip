@@ -8,10 +8,6 @@ const GSettings = () => {
     console.log("Profile updated");
   };
 
-  const handleSaveNotifications = () => {
-    console.log("Notification preferences saved");
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -22,7 +18,6 @@ const GSettings = () => {
       <Tabs defaultValue="profile">
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
 
@@ -52,62 +47,6 @@ const GSettings = () => {
 
               <div className="flex justify-end">
                 <Button onClick={handleSaveProfile}>Save Changes</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>
-                Control which notifications you receive and how they are delivered
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Email Notifications</h3>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium">New Bookings</p>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications when a new booking is made
-                    </p>
-                  </div>
-                  <input type="checkbox" defaultChecked />
-                </div>
-
-                <hr className="my-4" />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium">Booking Cancellations</p>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications when a booking is cancelled
-                    </p>
-                  </div>
-                  <input type="checkbox" defaultChecked />
-                </div>
-
-                <hr className="my-4" />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium">Guest Messages</p>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications when guests send you messages
-                    </p>
-                  </div>
-                  <input type="checkbox" defaultChecked />
-                </div>
-
-                <hr className="my-4" />
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={handleSaveNotifications}>Save Preferences</Button>
               </div>
             </CardContent>
           </Card>
